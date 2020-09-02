@@ -1191,10 +1191,123 @@ saveRDS(denoised.sce.dellOrso, file = "./../saved/denoised_sce_dellOrso")
 
 
 ## 12. Clustering
+  - Graph-based clustering (i.e. SNN, Shared nearest neighbor) is a flexible and scalable technique for clustering large scRNA-seq datasets
+  - The major advantage of graph-based clustering lies in its scalability. It only requires a k-nearest neighbor search that can be done in log-linear time on average
+
 ### 12.1 Primary data (no cell cycle correction)
+```{r}
+dimensions <- ncol(reducedDim(denoised.sce))
+snng <- buildSNNGraph(denoised.sce, d = dimensions)
+clust <- igraph::cluster_louvain(snng)$membership
+denoised.sce$cluster <- factor(clust)
+
+set.seed(123)
+reducedDim(denoised.sce, "force") <- igraph::layout_with_fr(snng)
+table(clust)
+
+# Plot clustering results
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force")
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "PCA")
+
+denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP")
+
+denoised.sce <- runTSNE(denoised.sce, dimred = "PCA")
+plotTSNE(denoised.sce, colour_by = "sample")
+```
+
 ### 12.2 Primary data (Seurat cell cycle correction)
+```{r}
+# Perform clustering
+dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
+snng.cc <- buildSNNGraph(denoised.sce.cc, d = dimensions.cc, assay.type = "counts")
+clust.cc <- igraph::cluster_louvain(snng.cc)$membership
+denoised.sce.cc$cluster <- factor(clust.cc)
+
+set.seed(123)
+reducedDim(denoised.sce.cc, "force") <- igraph::layout_with_fr(snng.cc)
+table(clust.cc)
+
+# Plot results
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force")
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA")
+
+denoised.sce.cc <- runUMAP(denoised.sce.cc, dimred = "PCA", n_dimred = dimensions.cc)
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP")
+
+denoised.sce.cc <- runTSNE(denoised.sce.cc, dimred = "PCA")
+plotTSNE(denoised.sce.cc, colour_by = "sample")
+```
+
+
 ### 12.3 Primary data (Reference-based cell cycle correction)
+```{r}
+# Perform clustering
+dimensions.cc.2 <- ncol(reducedDim(denoised.sce.cc.2))
+snng.cc.2 <- buildSNNGraph(denoised.sce.cc.2, d = dimensions.cc.2, assay.type = "corrected")
+clust.cc.2 <- igraph::cluster_louvain(snng.cc.2)$membership
+denoised.sce.cc.2$cluster <- factor(clust.cc.2)
+
+set.seed(123)
+reducedDim(denoised.sce.cc.2, "force") <- igraph::layout_with_fr(snng.cc.2)
+table(clust.cc.2)
+
+# Plot results
+plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "force")
+plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "PCA")
+
+denoised.sce.cc.2 <- runUMAP(denoised.sce.cc.2, dimred = "PCA", n_dimred = dimensions.cc.2)
+plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "UMAP")
+
+denoised.sce.cc.2 <- runTSNE(denoised.sce.cc.2, dimred = "PCA")
+plotTSNE(denoised.sce.cc.2, colour_by = "sample")
+```
+
 ### 12.4 De Micheli et al. (2020) reference data
+```{r}
+# Perform clustering
+dimensions.deMicheli <- ncol(reducedDim(denoised.sce.deMicheli))
+snng.deMicheli <- buildSNNGraph(denoised.sce.deMicheli, use.dimred = 'PCA')
+clust.deMicheli <- igraph::cluster_louvain(snng.deMicheli)$membership
+denoised.sce.deMicheli$cluster <- factor(clust.deMicheli)
+
+set.seed(123)
+reducedDim(denoised.sce.deMicheli, "force") <- igraph::layout_with_fr(snng.deMicheli)
+table(clust.deMicheli)
+
+# Plot results
+plotReducedDim(denoised.sce.deMicheli, colour_by = "sampleID", dimred = "force")
+plotReducedDim(denoised.sce.deMicheli, colour_by = "sampleID", dimred = "PCA")
+
+denoised.sce.deMicheli <- runUMAP(denoised.sce.deMicheli, dimred = "PCA", n_dimred = dimensions.deMicheli)
+plotReducedDim(denoised.sce.deMicheli, colour_by = "sampleID", dimred = "UMAP")
+
+denoised.sce.deMicheli <- runTSNE(denoised.sce.deMicheli, dimred = "PCA")
+plotTSNE(denoised.sce.deMicheli, colour_by = "sampleID")
+```
+
+
 ### 12.5 Dell'Orso et al. (2019) reference data
+```{r}
+# Perform clustering
+dimensions.dellOrso <- ncol(reducedDim(denoised.sce.dellOrso))
+snng.dellOrso <- buildSNNGraph(denoised.sce.dellOrso, d = dimensions.dellOrso)
+clust.dellOrso <- igraph::cluster_louvain(snng.dellOrso)$membership
+denoised.sce.dellOrso$cluster <- factor(clust.dellOrso)
+
+set.seed(123)
+reducedDim(denoised.sce.dellOrso, "force") <- igraph::layout_with_fr(snng.dellOrso)
+table(clust.dellOrso)
+
+# Plot results
+plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "force")
+plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "PCA")
+
+denoised.sce.dellOrso <- runUMAP(denoised.sce.dellOrso, dimred = "PCA", n_dimred = dimensions.dellOrso)
+plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "UMAP")
+
+denoised.sce.dellOrso <- runTSNE(denoised.sce.dellOrso, dimred = "PCA")
+plotTSNE(denoised.sce.dellOrso, colour_by = "sample")
+```
 
 
