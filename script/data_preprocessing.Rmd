@@ -1033,11 +1033,162 @@ saveRDS(sce.cc.2, file = "./../saved/sce_cc_2")
 
 
 ## 11. Dimension reduction
+  - PCA is performed on the log-normalized expression values by using runPCA() function
+  - Methods for choosing the number of PCs to use:
+      - Find elbow point in the % of variance explained by successive PCs
+      - Remove PCs corresponding to technical noise
+
 ### 11.1 Primary data (no cell cycle correction)
+```{r}
+# Dimension reduction
+set.seed(123)
+sce.n <- runPCA(sce.n, subset_row = hvgs.data)
+plotReducedDim(sce.n, dimred = "PCA", colour_by = "sample")
+
+# Compute the variance explained by each PC
+percent.var <- attr(reducedDim(sce.n), "percentVar")
+chosen.elbow <- PCAtools::findElbowPoint(percent.var)
+chosen.elbow
+
+# Plot variance explained by PCs
+par(mfrow=c(1,1))
+plot(percent.var, xlab = "PC", ylab = "Variance explained (%)")
+abline(v = chosen.elbow, col = "red")
+
+# Remove PCs corresponding to technical noise
+set.seed(123)
+denoised.sce <- denoisePCA(sce.n, technical = dec.data, subset.row = hvgs.data)
+
+# Dimensions of denoised PCA
+ncol(reducedDim(denoised.sce))
+
+# Save the sce object
+saveRDS(denoised.sce, file = "./../saved/denoised_sce")
+```
+
 ### 11.2 Primary data (Seurat cell cycle correction)
+```{r}
+# Dimension reduction
+set.seed(123)
+sce.cc <- runPCA(x = sce.cc,
+                 subset_row = hvgs.data,
+                 exprs_values = "counts")
+
+plotReducedDim(sce.cc, dimred = "PCA", colour_by = "sample")
+
+# Compute variance explained by each PC
+percent.var.cc <- attr(reducedDim(sce.cc), "percentVar")
+chosen.elbow.cc <- PCAtools::findElbowPoint(percent.var.cc)
+chosen.elbow.cc
+
+# Plot variance explained by PCs
+par(mfrow=c(1,1))
+plot(percent.var.cc, xlab = "PC", ylab = "Variance explained (%)")
+abline(v = chosen.elbow.cc, col = "red")
+
+# Remove PCs corresponding to technical noise
+set.seed(123)
+denoised.sce.cc <- denoisePCA(sce.cc, technical = dec.data, subset.row = hvgs.data,
+                              assay.type = "counts")
+
+# Dimensions of denoised PCA
+ncol(reducedDim(denoised.sce.cc))
+
+# Save the sce object
+saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc")
+```
+
 ### 11.3 Primary data (Reference-based cell cycle correction)
+```{r}
+# Dimension reduction
+set.seed(123)
+sce.cc.2 <- runPCA(sce.cc.2, subset_row = hvgs.data, exprs_values = "corrected")
+plotReducedDim(sce.cc.2, dimred = "PCA", colour_by = "sample")
+
+# Compute variance explained by each PC
+percent.var.cc.2 <- attr(reducedDim(sce.cc.2), "percentVar")
+chosen.elbow.cc.2 <- PCAtools::findElbowPoint(percent.var.cc.2)
+chosen.elbow.cc.2
+
+# Plot variance explained by PCs
+par(mfrow=c(1,1))
+plot(percent.var.cc.2, xlab = "PC", ylab = "Variance explained (%)")
+abline(v = chosen.elbow.cc.2, col = "red")
+
+# Remove PCs corresponding to technical noise
+set.seed(123)
+denoised.sce.cc.2 <- denoisePCA(sce.cc.2, 
+                                technical = dec.data,
+                                subset.row = hvgs.data,
+                                assay.type = "corrected")
+
+# Dimensions of denoised PCA
+ncol(reducedDim(denoised.sce.cc.2))
+
+# Save the sce object
+saveRDS(denoised.sce.cc.2, file = "./../saved/denoised_sce_cc_2")
+```
+
+
 ### 11.4 De Micheli et al. (2020) reference data
+```{r}
+# Perform dimension reduction
+sce.deMicheli.n <- runPCA(sce.deMicheli.n, subset_row = hvgs.deMicheli)
+plotReducedDim(sce.deMicheli.n, dimred = "PCA", colour_by = "sampleID")
+
+# Compute the variance explained by each PC
+percent.var.deMicheli <- attr(reducedDim(sce.deMicheli.n), "percentVar")
+chosen.elbow.deMicheli <- PCAtools::findElbowPoint(percent.var.deMicheli)
+chosen.elbow.deMicheli
+
+# Plot variance explained by PCs
+par(mfrow=c(1,1))
+plot(percent.var.deMicheli, xlab = "PC", ylab = "Variance explained (%)")
+abline(v=chosen.elbow.deMicheli, col = "red")
+
+# Remove PCs corresponding to technical noise
+set.seed(123)
+denoised.sce.deMicheli <- denoisePCA(sce.deMicheli.n,
+                                     technical = dec.deMicheli,
+                                     subset.row = hvgs.deMicheli)
+
+# Dimensions of denoised PCA
+ncol(reducedDim(denoised.sce.deMicheli))
+
+# Save sce object
+saveRDS(denoised.sce.deMicheli, file = "./../saved/denoised_sce_deMicheli")
+```
+
 ### 11.5 Dell'Orso et al. (2019) reference data
+```{r}
+# Perform dimension reduction
+sce.dellOrso.n <- runPCA(sce.dellOrso.n, subset_row = hvgs.dellOrso)
+plotReducedDim(sce.dellOrso.n, dimred = "PCA", colour_by = "sample")
+
+# Compute the variance explained by each PC
+percent.var.dellOrso <- attr(reducedDim(sce.dellOrso.n), "percentVar")
+chosen.elbow.dellOrso <- PCAtools::findElbowPoint(percent.var.dellOrso)
+chosen.elbow.dellOrso
+
+# Plot variance explained by PCs
+par(mfrow=c(1,1))
+plot(percent.var.dellOrso, xlab = "PC", ylab = "Variance explained (%)")
+abline(v=chosen.elbow.dellOrso, col = "red")
+
+# Remove PCs corresponding to technical noise
+set.seed(123)
+denoised.sce.dellOrso <- denoisePCA(sce.dellOrso.n,
+                                    technical = dec.dellOrso,
+                                    subset.row = hvgs.dellOrso)
+
+# Dimensions of denoised PCA
+ncol(reducedDim(denoised.sce.dellOrso))
+
+# Save sce object
+saveRDS(denoised.sce.dellOrso, file = "./../saved/denoised_sce_dellOrso")
+```
+
+
 
 ## 12. Clustering
 ### 12.1 Primary data (no cell cycle correction)
