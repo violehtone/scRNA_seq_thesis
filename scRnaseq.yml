@@ -1,0 +1,27 @@
+name: scRnaseq
+channels:
+- conda-forge
+- bioconda
+- defaults
+dependencies:
+- r
+- bioconductor-scater
+- bioconductor-aucell
+- bioconductor-scran
+- r-xml
+- bioconductor-biomart
+- r-gplots
+- r-msigdbr
+- bioconductor-keggrest
+- r-seurat
+- r-biocmanager
+- r-devtools
+- r-rcolorbrewer
+- bioconductor-singler
+- bioconductor-scmap
+- bioconductor-singlecellexperiment
+- bioconductor-pcatools
+- bioconductor-edger
+- r-pheatmap
+- r-glmpca
+- rstudio
