@@ -25,48 +25,9 @@ The data sets are available in NCBI GEO:
   - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE126834
   - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE143435
 
-### 1.1 Folder breakdown
- -- script
-    |_ data_preprocessing.Rmd
- -- saved
- -- results
- -- data
-    |_ filtered_feature_bc_matrix
-        |_ barcodes.tsv.gz
-        |_ features.tsv.gz
-        |_ matrix.mtx.gz
-    |_ GSE143435
-        |_ GSE143435_DeMicheli_D0_FACSatlas_metadata.txt
-        |_ GSE143435_DeMicheli_D0_FACSatlas_rawdata.txt
-        |_ GSE143435_DeMicheli_D5_FACSatlas_metadata.txt
-        |_ GSE143435_DeMicheli_D5_FACSatlas_rawdata.txt
-        |_ GSE143435_DeMicheli_D7_FACSatlas_metadata.txt
-        |_ GSE143435_DeMicheli_D7_FACSatlas_rawdata.txt
-    |_ GSE126834
-        |_ homeostatic_muscs_1
-                |_ barcodes.tsv
-                |_ genes.tsv
-                |_ matrix.mtx
-        |_ homeostatic_muscs_2
-                |_ barcodes.tsv
-                |_ genes.tsv
-                |_ matrix.mtx
-        |_ inj_60h_muscs_1
-                |_ barcodes.tsv
-                |_ genes.tsv
-                |_ matrix.mtx
-        |_ inj_60h_muscs_2
-                |_ barcodes.tsv
-                |_ genes.tsv
-                |_ matrix.mtx
-        |_ primary_MB
-                |_ barcodes.tsv
-                |_ genes.tsv
-                |_ matrix.mtx
-
 
 ## 2. Load packages
-```{r}
+```{r message=FALSE echo = FALSE}
 library(scater)
 library(scran)
 library(SingleCellExperiment)
@@ -109,47 +70,11 @@ cellcodes$samples <- as.vector(samples[cellcodes$libcodes])
 
 ### 4.2 De Micheli et al. (2020) reference data
 ```{r}
-# Load GSE143435 data set (FACS sorted samples: d0, d5, d7)
-GSE143435_meta_d0 <- read.delim("./../data/GSE143435/GSE143435_DeMicheli_D0_FACSatlas_metadata.txt")
-GSE143435_raw_d0 <- read.delim("./../data/GSE143435/GSE143435_DeMicheli_D0_FACSatlas_rawdata.txt")
-GSE143435_meta_d5 <- read.delim("./../data/GSE143435/GSE143435_DeMicheli_D5_FACSatlas_metadata.txt")
-GSE143435_raw_d5 <- read.delim("./../data/GSE143435/GSE143435_DeMicheli_D5_FACSatlas_rawdata.txt")
-GSE143435_meta_d7 <- read.delim("./../data/GSE143435/GSE143435_DeMicheli_D7_FACSatlas_metadata.txt")
-GSE143435_raw_d7 <- read.delim("./../data/GSE143435/GSE143435_DeMicheli_D7_FACSatlas_rawdata.txt")
-GSE143435_raw_d0 <- firstColumnToRowNames(GSE143435_raw_d0)
-GSE143435_meta_d0 <- firstColumnToRowNames(GSE143435_meta_d0)
-GSE143435_raw_d5 <- firstColumnToRowNames(GSE143435_raw_d5)
-GSE143435_meta_d5 <- firstColumnToRowNames(GSE143435_meta_d5)
-GSE143435_raw_d7 <- firstColumnToRowNames(GSE143435_raw_d7)
-GSE143435_meta_d7 <- firstColumnToRowNames(GSE143435_meta_d7)
-
-# Remove cells that do not exist in metadata
-GSE143435_raw_d0 <- GSE143435_raw_d0 %>% dplyr::select(rownames(GSE143435_meta_d0))
-GSE143435_raw_d5 <- GSE143435_raw_d5 %>% dplyr::select(rownames(GSE143435_meta_d5))
-GSE143435_raw_d7 <- GSE143435_raw_d7 %>% dplyr::select(rownames(GSE143435_meta_d7))
-
-# Add zero counts to make the dimensions (genes) of data sets similar
-# d0
-GSE143435_raw_d0[setdiff(rownames(GSE143435_raw_d5), rownames(GSE143435_raw_d0)), ] <- 0
-GSE143435_raw_d0[setdiff(rownames(GSE143435_raw_d7), rownames(GSE143435_raw_d0)), ] <- 0
-# d5
-GSE143435_raw_d5[setdiff(rownames(GSE143435_raw_d0), rownames(GSE143435_raw_d5)), ] <- 0
-GSE143435_raw_d5[setdiff(rownames(GSE143435_raw_d7), rownames(GSE143435_raw_d5)), ] <- 0
-# d7
-GSE143435_raw_d7[setdiff(rownames(GSE143435_raw_d0), rownames(GSE143435_raw_d7)), ] <- 0
-GSE143435_raw_d7[setdiff(rownames(GSE143435_raw_d5), rownames(GSE143435_raw_d7)), ] <- 0
-
-# Fix colnames of d5 metadata (for some reason it had percent.mito instead of percent_mito)
-names(GSE143435_meta_d5)[names(GSE143435_meta_d5) == "percent.mito"] <- "percent_mito"
-
-# Add unique identifier for column names of each dataset
-colnames(GSE143435_raw_d0) <- paste(colnames(GSE143435_raw_d0), "d0", sep = "_")
-colnames(GSE143435_raw_d5) <- paste(colnames(GSE143435_raw_d5), "d5", sep = "_")
-colnames(GSE143435_raw_d7) <- paste(colnames(GSE143435_raw_d7), "d7", sep = "_")
-
-rownames(GSE143435_meta_d0) <- paste(rownames(GSE143435_meta_d0), "d0", sep = "_")
-rownames(GSE143435_meta_d5) <- paste(rownames(GSE143435_meta_d5), "d5", sep = "_")
-rownames(GSE143435_meta_d7) <- paste(rownames(GSE143435_meta_d7), "d7", sep = "_")
+# Load GSE143437 data set (non-FACS sorted samples: d0, d5, d7)
+GSE143437_raw <- read.delim("./../data/GSE143437/GSE143437_DeMicheli_MuSCatlas_rawdata.txt")
+GSE143437_meta <- read.delim("./../data/GSE143437/GSE143437_DeMicheli_MuSCatlas_metadata.txt")
+GSE143437_raw <- firstColumnToRowNames(GSE143437_raw)
+GSE143437_meta <- firstColumnToRowNames(GSE143437_meta)
 ```
 
 ### 4.3 Dell'Orso et al. (2019) reference data
@@ -179,6 +104,7 @@ colnames(GSE126834_mb) <- paste(colnames(GSE126834_mb), "mb", sep = "_")
 ## 5 Build sce objects
 ### 5.1 Primary data
 ```{r}
+# Create an sce object and add sample for each cell
 sce <- SingleCellExperiment(assays=list(counts=counts))
 colData(sce)$sample <- as.vector(cellcodes$samples)
 
@@ -191,34 +117,19 @@ remove(counts)
 
 ### 5.2 De Micheli et al. (2020) reference data
 ```{r}
-# merge raw data into a single object
-sce_GSE143435_d0 <- SingleCellExperiment(assays = list(counts = as.matrix(GSE143435_raw_d0)),
-                                         colData = GSE143435_meta_d0)
-sce_GSE143435_d5 <- SingleCellExperiment(assays = list(counts = as.matrix(GSE143435_raw_d5)),
-                                         colData = GSE143435_meta_d5)
-sce_GSE143435_d7 <- SingleCellExperiment(assays = list(counts = as.matrix(GSE143435_raw_d7)),
-                                         colData = GSE143435_meta_d7)
+# Create a sce object
+sce.deMicheli <- SingleCellExperiment(assays = list(counts = as.matrix(GSE143437_raw)),
+                                      colData = GSE143437_meta)
 
-# Merge samples into a single sce object
-sce.deMicheli <- cbind(sce_GSE143435_d0, sce_GSE143435_d5, sce_GSE143435_d7, deparse.level = 1)
-
-# Remove biologically unrelevant samples
+# Filter only relevant samples for building the MuSC trajectory
 sce.deMicheli <- sce.deMicheli[, sce.deMicheli$cell_annotation %in% c('MuSCs and progenitors', 'Mature skeletal muscle')]
 
 # Save sce object
 #saveRDS(sce.deMicheli, file = "./../saved/sce_deMicheli")
 
 # free memory
-remove(sce_GSE143435_d0)
-remove(sce_GSE143435_d5)
-remove(sce_GSE143435_d7)
-remove(GSE143435_raw_d0)
-remove(GSE143435_raw_d5)
-remove(GSE143435_raw_d7)
-remove(GSE143435_meta_d0)
-remove(GSE143435_meta_d2)
-remove(GSE143435_meta_d5)
-remove(GSE143435_meta_d7)
+remove(GSE143437_raw)
+remove(GSE143437_meta)
 ```
 
 ### 5.3 Dell'Orso et al. (2019) reference data
@@ -416,34 +327,58 @@ rowData(sce.deMicheli)$mito <- FALSE
 rowData(sce.deMicheli)$mito[grep("^mt-", rownames(sce.deMicheli))] <- TRUE
 
 # Find outliers from total counts for each cell (sum)
-qc.lib.d0 <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D0_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.lib.d0)
-qc.lib.d2 <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D2_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.lib.d2)
-qc.lib.d5 <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D5_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.lib.d5)
-qc.lib.d7 <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D7_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.lib.d7)
+qc.lib.d0A <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D0_A"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d0A)
+qc.lib.d0B <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D0_B"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d0B)
+qc.lib.d0C <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D0_Cv3"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d0C)
+qc.lib.d5A <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D5_A"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d5A)
+qc.lib.d5B <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D5_B"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d5B)
+qc.lib.d5C <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D5_C"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d5C)
+qc.lib.d7C <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D7_C"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d7C)
+qc.lib.d7D <- isOutlier(sce.deMicheli$sum[sce.deMicheli$sampleID == "D7_D"], log = TRUE, type = "both", nmads = 3)
+summary(qc.lib.d7D)
 
 # Find outliers from total number of detected genes
-qc.nexprs.d0 <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D0_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.nexprs.d0)
-qc.nexprs.d2 <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D2_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.nexprs.d2)
-qc.nexprs.d5 <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D5_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.nexprs.d5)
-qc.nexprs.d7 <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D7_FACS"], log = TRUE, type = "both", nmads = 3)
-summary(qc.nexprs.d7)
+qc.nexprs.d0A <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D0_A"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d0A)
+qc.nexprs.d0B <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D0_B"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d0B)
+qc.nexprs.d0C <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D0_Cv3"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d0C)
+qc.nexprs.d5A <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D5_A"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d5A)
+qc.nexprs.d5B <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D5_B"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d5B)
+qc.nexprs.d5C <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D5_C"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d5C)
+qc.nexprs.d7C <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D7_C"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d7C)
+qc.nexprs.d7D <- isOutlier(sce.deMicheli$detected[sce.deMicheli$sampleID == "D7_D"], log = TRUE, type = "both", nmads = 3)
+summary(qc.nexprs.d7D)
 
 # Find outliers from percentage of reads mapped to mitochondrial transcripts
-qc.mito.d0 <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D0_FACS"] > 20
-summary(qc.mito.d0)
-qc.mito.d2 <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D2_FACS"] > 20
-summary(qc.mito.d2)
-qc.mito.d5 <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D5_FACS"] > 20
-summary(qc.mito.d5)
-qc.mito.d7 <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D7_FACS"] > 20
-summary(qc.mito.d7)
+qc.mito.d0A <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D0_A"] > 20
+summary(qc.mito.d0A)
+qc.mito.d0B <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D0_B"] > 20
+summary(qc.mito.d0B)
+qc.mito.d0C <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D0_Cv3"] > 20
+summary(qc.mito.d0C)
+qc.mito.d5A <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D5_A"] > 20
+summary(qc.mito.d5A)
+qc.mito.d5B <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D5_B"] > 20
+summary(qc.mito.d5B)
+qc.mito.d5C <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D5_C"] > 20
+summary(qc.mito.d5C)
+qc.mito.d7C <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D7_C"] > 20
+summary(qc.mito.d7C)
+qc.mito.d7D <- sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D7_D"] > 20
+summary(qc.mito.d7D)
 
 # Check if QC metrics correlate
 cdf.deMicheli <- colData(sce.deMicheli)[c("subsets_Mito_percent","sum","detected")]
@@ -451,38 +386,66 @@ cors.deMicheli <- cor(as.matrix(cdf.deMicheli))
 cors.deMicheli
 
 # Combine discards
-discard.d0 <- qc.lib.d0 | qc.nexprs.d0 | qc.mito.d0
-discard.d2 <- qc.lib.d2 | qc.nexprs.d2 | qc.mito.d2
-discard.d5 <- qc.lib.d5 | qc.nexprs.d5 | qc.mito.d5
-discard.d7 <- qc.lib.d7 | qc.nexprs.d7 | qc.mito.d7
+discard.d0A <- qc.lib.d0A | qc.nexprs.d0A | qc.mito.d0A
+discard.d0B <- qc.lib.d0B | qc.nexprs.d0B | qc.mito.d0B
+discard.d0C <- qc.lib.d0C | qc.nexprs.d0C | qc.mito.d0C
+
+discard.d5A <- qc.lib.d5A | qc.nexprs.d5A | qc.mito.d5A
+discard.d5B <- qc.lib.d5B | qc.nexprs.d5B | qc.mito.d5B
+discard.d5C <- qc.lib.d5C | qc.nexprs.d5C | qc.mito.d5C
+
+discard.d7C <- qc.lib.d7C | qc.nexprs.d7C | qc.mito.d7C
+discard.d7D <- qc.lib.d7D | qc.nexprs.d7D | qc.mito.d7D
 
 # Summarize the number of cells removed for each reason
-discardSummary.d0 <- DataFrame(LibSize = sum(qc.lib.d0),
-                               NExprs = sum(qc.nexprs.d0),
-                               MitoProp = sum(qc.mito.d0),
-                               Total = sum(discard.d0))
-discardSummary.d2 <- DataFrame(LibSize = sum(qc.lib.d2),
-                               NExprs = sum(qc.nexprs.d2),
-                               MitoProp = sum(qc.mito.d2),
-                               Total = sum(discard.d2))
-discardSummary.d5 <- DataFrame(LibSize = sum(qc.lib.d5),
-                               NExprs = sum(qc.nexprs.d5),
-                               MitoProp = sum(qc.mito.d5),
-                               Total = sum(discard.d5))
-discardSummary.d7 <- DataFrame(LibSize = sum(qc.lib.d7),
-                               NExprs = sum(qc.nexprs.d7),
-                               MitoProp = sum(qc.mito.d7),
-                               Total = sum(discard.d7))
+discardSummary.d0A <- DataFrame(LibSize = sum(qc.lib.d0A),
+                               NExprs = sum(qc.nexprs.d0A),
+                               MitoProp = sum(qc.mito.d0A),
+                               Total = sum(discard.d0A))
+discardSummary.d0B <- DataFrame(LibSize = sum(qc.lib.d0B),
+                               NExprs = sum(qc.nexprs.d0B),
+                               MitoProp = sum(qc.mito.d0B),
+                               Total = sum(discard.d0B))
+discardSummary.d0C <- DataFrame(LibSize = sum(qc.lib.d0C),
+                               NExprs = sum(qc.nexprs.d0C),
+                               MitoProp = sum(qc.mito.d0C),
+                               Total = sum(discard.d0C))
 
-discardSummary.d0
-discardSummary.d2
-discardSummary.d5
-discardSummary.d7
+discardSummary.d5A <- DataFrame(LibSize = sum(qc.lib.d5A),
+                               NExprs = sum(qc.nexprs.d5A),
+                               MitoProp = sum(qc.mito.d5A),
+                               Total = sum(discard.d5A))
+discardSummary.d5B <- DataFrame(LibSize = sum(qc.lib.d5B),
+                               NExprs = sum(qc.nexprs.d5B),
+                               MitoProp = sum(qc.mito.d5B),
+                               Total = sum(discard.d5B))
+discardSummary.d5C <- DataFrame(LibSize = sum(qc.lib.d5C),
+                               NExprs = sum(qc.nexprs.d5C),
+                               MitoProp = sum(qc.mito.d5C),
+                               Total = sum(discard.d5C))
 
-sce.deMicheli$discard <- c(discard.d0, discard.d2, discard.d5, discard.d7)
+discardSummary.d7C <- DataFrame(LibSize = sum(qc.lib.d7C),
+                               NExprs = sum(qc.nexprs.d7C),
+                               MitoProp = sum(qc.mito.d7C),
+                               Total = sum(discard.d7C))
+discardSummary.d7D <- DataFrame(LibSize = sum(qc.lib.d7D),
+                               NExprs = sum(qc.nexprs.d7D),
+                               MitoProp = sum(qc.mito.d7D),
+                               Total = sum(discard.d7D))
+
+discardSummary.d0A
+discardSummary.d0B
+discardSummary.d0C
+discardSummary.d5A
+discardSummary.d5B
+discardSummary.d5C
+discardSummary.d7C
+discardSummary.d7D
+
+all_discards <- c(discard.d0A, discard.d0B, discard.d0C, discard.d5A, discard.d5B, discard.d5C, discard.d7C, discard.d7D)
+sce.deMicheli$discard <- all_discards
 
 # Plot Quality control metrics
-#TODO: find out why sce.deMicheli$subsets_Mito_percent[sce.deMicheli$sampleID == "D5_FACS"] returns only zeros
 gridExtra::grid.arrange(
   plotColData(sce.deMicheli, x = "sampleID", y = "sum", colour_by = "discard", point_size = 0.3) +
     scale_y_log10() +
@@ -504,8 +467,8 @@ gridExtra::grid.arrange(
 sce.deMicheli.f <- sce.deMicheli[, sce.deMicheli$discard == FALSE]
 
 # Check for cell type enrichments in the discarded pool
-lost <- calculateAverage(counts(sce.deMicheli)[,c(discard.d0, discard.d2, discard.d5, discard.d7)])
-kept <- calculateAverage(counts(sce.deMicheli)[,!c(discard.d0, discard.d2, discard.d5, discard.d7)])
+lost <- calculateAverage(counts(sce.deMicheli)[, all_discards])
+kept <- calculateAverage(counts(sce.deMicheli)[, !all_discards])
 
 logged <- cpm(cbind(lost, kept), log=TRUE, prior.count=2)
 logFC <- logged[,1] - logged[,2]
@@ -522,7 +485,7 @@ changed <- logFC > 1 | logFC < -1
 rownames(sce.deMicheli)[changed]
 
 # Save filtered sce file
-#saveRDS(sce.deMicheli.f, file = "./../saved/sce_deMicheli_f")
+saveRDS(sce.deMicheli.f, file = "./../saved/sce_deMicheli_f")
 ```
 
 ### 6.3 Dell'Orso et al. (2019) reference data
@@ -824,6 +787,63 @@ hvgs.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.1)
 
 ## 9. Diagnosing batch effects
 Here we inspect whether replicate samples in the Dell'Orso dataset cluster together or if they create separate clusters, in which case there would be a batch effect present in the data.
+
+### 8.2 De Micheli et al. (2020) reference data
+```{r}
+#d0
+set.seed(123)
+uncorrected.deMicheli.d0 <- runPCA(sce.deMicheli.n[, sce.deMicheli.n$injury == "Day 0"],
+                                   subset_row = hvgs.deMicheli,
+                                   BSPARAM = BiocSingular::RandomParam())
+
+snn.gr.deMicheli.d0 <- buildSNNGraph(uncorrected.deMicheli.d0, use.dimred = "PCA")
+clusters.deMicheli.d0 <- igraph::cluster_walktrap(snn.gr.deMicheli.d0)$membership
+tab.d0 <- table(Cluster = clusters.deMicheli.d0, Batch = uncorrected.deMicheli.d0$sampleID)
+tab.d0
+
+set.seed(123)
+uncorrected.deMicheli.d0 <- runTSNE(uncorrected.deMicheli.d0, dimred = "PCA")
+
+#d5
+set.seed(123)
+uncorrected.deMicheli.d5 <- runPCA(sce.deMicheli.n[, sce.deMicheli.n$injury == "Day 5"],
+                                   subset_row = hvgs.deMicheli,
+                                   BSPARAM = BiocSingular::RandomParam())
+
+snn.gr.deMicheli.d5 <- buildSNNGraph(uncorrected.deMicheli.d5, use.dimred = "PCA")
+clusters.deMicheli.d5 <- igraph::cluster_walktrap(snn.gr.deMicheli.d5)$membership
+tab.d5 <- table(Cluster = clusters.deMicheli.d5, Batch = uncorrected.deMicheli.d5$sampleID)
+tab.d5
+
+set.seed(123)
+uncorrected.deMicheli.d5 <- runTSNE(uncorrected.deMicheli.d5, dimred = "PCA")
+
+#d7
+set.seed(123)
+uncorrected.deMicheli.d7 <- runPCA(sce.deMicheli.n[, sce.deMicheli.n$injury == "Day 7"],
+                                   subset_row = hvgs.deMicheli,
+                                   BSPARAM = BiocSingular::RandomParam())
+
+snn.gr.deMicheli.d7 <- buildSNNGraph(uncorrected.deMicheli.d7, use.dimred = "PCA")
+clusters.deMicheli.d7 <- igraph::cluster_walktrap(snn.gr.deMicheli.d7)$membership
+tab.d7 <- table(Cluster = clusters.deMicheli.d7, Batch = uncorrected.deMicheli.d7$sampleID)
+tab.d7
+
+set.seed(123)
+uncorrected.deMicheli.d7 <- runTSNE(uncorrected.deMicheli.d7, dimred = "PCA")
+
+# plots
+p.d0 <- plotTSNE(uncorrected.deMicheli.d0, colour_by = "sampleID") + ggtitle("Day 0") 
+p.d0b <- plotTSNE(uncorrected.deMicheli.d0, colour_by = "cell_annotation") + ggtitle("Day 0") 
+p.d5 <- plotTSNE(uncorrected.deMicheli.d5, colour_by = "sampleID") + ggtitle("Day 5")
+p.d5b <- plotTSNE(uncorrected.deMicheli.d5, colour_by = "cell_annotation") + ggtitle("Day 5")
+p.d7 <- plotTSNE(uncorrected.deMicheli.d7, colour_by = "sampleID") + ggtitle("Day 7") 
+p.d7b <- plotTSNE(uncorrected.deMicheli.d7, colour_by = "cell_annotation") + ggtitle("Day 7") 
+gridExtra::grid.arrange(p.d0, p.d0b, p.d5, p.d5b, p.d7, p.d7b)
+
+```
+ - As can be seen from the plot, the clusters seem to separate mostly by the cell types
+ - In the Day 7 sample, however, the samples seem to create separate clusters which cannot be explained by the differences in cell types.
 
 
 ### 9.1 Dell'Orso et al. (2019) reference data
@@ -1132,7 +1152,7 @@ ncol(reducedDim(denoised.sce.cc.2))
 ```{r}
 # Perform dimension reduction
 sce.deMicheli.n <- runPCA(sce.deMicheli.n, subset_row = hvgs.deMicheli)
-plotReducedDim(sce.deMicheli.n, dimred = "PCA", colour_by = "sampleID")
+plotReducedDim(sce.deMicheli.n, dimred = "PCA", colour_by = "injury")
 
 # Compute the variance explained by each PC
 percent.var.deMicheli <- attr(reducedDim(sce.deMicheli.n), "percentVar")
@@ -1274,14 +1294,14 @@ reducedDim(denoised.sce.deMicheli, "force") <- igraph::layout_with_fr(snng.deMic
 table(clust.deMicheli)
 
 # Plot results
-plotReducedDim(denoised.sce.deMicheli, colour_by = "sampleID", dimred = "force")
-plotReducedDim(denoised.sce.deMicheli, colour_by = "sampleID", dimred = "PCA")
+plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "force")
+plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "PCA")
 
 denoised.sce.deMicheli <- runUMAP(denoised.sce.deMicheli, dimred = "PCA", n_dimred = dimensions.deMicheli)
-plotReducedDim(denoised.sce.deMicheli, colour_by = "sampleID", dimred = "UMAP")
+plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "UMAP")
 
 denoised.sce.deMicheli <- runTSNE(denoised.sce.deMicheli, dimred = "PCA")
-plotTSNE(denoised.sce.deMicheli, colour_by = "sampleID")
+plotTSNE(denoised.sce.deMicheli, colour_by = "injury")
 ```
 
 
