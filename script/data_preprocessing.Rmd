@@ -27,7 +27,7 @@ The data sets are available in NCBI GEO:
 
 
 ## 2. Load packages
-```{r message=FALSE echo = FALSE}
+```{r message=FALSE, echo=FALSE}
 library(scater)
 library(scran)
 library(SingleCellExperiment)
@@ -56,7 +56,7 @@ firstColumnToRowNames <- function(data) {
 
 ## 4. Load data
 ### 4.1 Primary data
-```{r}
+```{r eval=FALSE, echo=FALSE}
 counts <- Read10X("./../data/filtered_feature_bc_matrix/")
 counts <- counts[rowSums(counts) > 0, ]
 
@@ -69,7 +69,7 @@ cellcodes$samples <- as.vector(samples[cellcodes$libcodes])
 ```
 
 ### 4.2 De Micheli et al. (2020) reference data
-```{r}
+```{r eval=FALSE, echo=FALSE}
 # Load GSE143437 data set (non-FACS sorted samples: d0, d5, d7)
 GSE143437_raw <- read.delim("./../data/GSE143437/GSE143437_DeMicheli_MuSCatlas_rawdata.txt")
 GSE143437_meta <- read.delim("./../data/GSE143437/GSE143437_DeMicheli_MuSCatlas_metadata.txt")
@@ -78,11 +78,11 @@ GSE143437_meta <- firstColumnToRowNames(GSE143437_meta)
 ```
 
 ### 4.3 Dell'Orso et al. (2019) reference data
-```{r}
+```{r eval=FALSE, echo=FALSE}
 # Get the sample directory paths
-samples <- c("./../data/GSE126834/homeostatic_muscs_1", 
+samples <- c("./../data/GSE126834/homeostatic_muscs_1",
              "./../data/GSE126834/homeostatic_muscs_2",
-             "./../data/GSE126834/inj_60h_muscs_1", 
+             "./../data/GSE126834/inj_60h_muscs_1",
              "./../data/GSE126834/inj_60h_muscs_2",
              "./../data/GSE126834/primary_MB")
 
@@ -103,7 +103,7 @@ colnames(GSE126834_mb) <- paste(colnames(GSE126834_mb), "mb", sep = "_")
 
 ## 5 Build sce objects
 ### 5.1 Primary data
-```{r}
+```{r eval=FALSE, echo=FALSE}
 # Create an sce object and add sample for each cell
 sce <- SingleCellExperiment(assays=list(counts=counts))
 colData(sce)$sample <- as.vector(cellcodes$samples)
@@ -116,7 +116,7 @@ remove(counts)
 ```
 
 ### 5.2 De Micheli et al. (2020) reference data
-```{r}
+```{r eval=FALSE, echo=FALSE}
 # Create a sce object
 sce.deMicheli <- SingleCellExperiment(assays = list(counts = as.matrix(GSE143437_raw)),
                                       colData = GSE143437_meta)
@@ -133,7 +133,7 @@ remove(GSE143437_meta)
 ```
 
 ### 5.3 Dell'Orso et al. (2019) reference data
-```{r}
+```{r eval=FALSE, echo=FALSE}
 # Create sce objects
 sce_GSE126834_hom1 <- SingleCellExperiment(assays = list(counts = GSE126834_hom1))
 sce_GSE126834_hom2 <- SingleCellExperiment(assays = list(counts = GSE126834_hom2))
@@ -170,6 +170,14 @@ remove(GSE126834_inj2)
 remove(GSE126834_mb)
 ```
 
+
+### Shortcut: Load sce files directly
+```{r}
+sce <- readRDS("./../saved/sce")
+sce.deMicheli <- readRDS("./../saved/sce_deMicheli")
+sce.dellOrso <- readRDS("./../saved/sce_dellOrso")
+```
+
 ## 6 Quality Control (QC)
 Metrics of low quality:
  - Cells with small library sizes (Library size = total sum of counts across all relevant features for each cell)
@@ -186,7 +194,7 @@ Outlier detection:
   - A value is considered an outlier if it is more than 3 MADs from the median
 
 ### 6.1 Primary data
-```{r}
+```{r primary-data-qc}
 # Compute per cell quality control metrics
 sce <- addPerCellQC(sce,subsets=list(Mito=grep("mt-", rownames(sce))))
 rowData(sce)$mito <- FALSE
@@ -320,7 +328,7 @@ rownames(sce)[changed]
 ```
 
 ### 6.2 De Micheli et al. (2020) reference data
-```{r}
+```{r de-micheli-qc}
 # Compute per cell quality control metrics
 sce.deMicheli <- addPerCellQC(sce.deMicheli, subsets = list(Mito=grep("mt-", rownames(sce.deMicheli))))
 rowData(sce.deMicheli)$mito <- FALSE
@@ -489,7 +497,7 @@ saveRDS(sce.deMicheli.f, file = "./../saved/sce_deMicheli_f")
 ```
 
 ### 6.3 Dell'Orso et al. (2019) reference data
-```{r}
+```{r dellOrso-qc}
 # Compute per cell quality control metrics
 sce.dellOrso <- addPerCellQC(sce.dellOrso, subsets = list(Mito=grep("mt-", rownames(sce.dellOrso))))
 rowData(sce.dellOrso)$mito <- FALSE
@@ -626,7 +634,7 @@ Here we:
   - The size factor for each cell represents the estimate of the relative bias in that cell, so division of its counts by its size factor should remove that bias
   - Once size factors are computed, we use logNormCounts() to compute normalized exp. values for each cell
 
-```{r}
+```{r normalization-objects}
 # Make new sce objects for normalization purposes
 sce.n <- sce.f
 sce.dellOrso.n <- sce.dellOrso.f
@@ -635,7 +643,7 @@ sce.deMicheli.n <- sce.deMicheli.f
 
 
 ### 7.1 Primary data
-```{r}
+```{r primary-data-normalization}
 # Compute size factors
 lib.sf <- librarySizeFactors(sce.n)
 summary(lib.sf)
@@ -662,7 +670,7 @@ sce.n <- logNormCounts(sce.n)
 ```
 
 ### 7.2 De Micheli et al. (2020) reference data
-```{r}
+```{r deMicheli-normalization}
 # Compute size factors
 lib.sf.deMicheli <- librarySizeFactors(sce.deMicheli.n)
 summary(lib.sf.deMicheli)
@@ -691,7 +699,7 @@ sce.deMicheli.n <- logNormCounts(sce.deMicheli.n)
 
 
 ### 7.3 Dell'Orso et al. (2019) reference data
-```{r}
+```{r dellOrso-normalization}
 # Compute size factors
 lib.sf.dellOrso <- librarySizeFactors(sce.dellOrso.n)
 summary(lib.sf.dellOrso)
@@ -726,7 +734,7 @@ The simplest approach to quantifying per-gene variation is to simply compute the
   - Here we select top 10% of the genes with the largest values for relevant variance metric
 
 ### 8.1 Primary data
-```{r}
+```{r primary-data-feature-selection}
 # Model per-gene variance
 dec.data <- modelGeneVar(sce.n)
 
@@ -746,7 +754,7 @@ hvgs.data <- getTopHVGs(dec.data, prop = 0.1)
 
 
 ### 8.2 De Micheli et al. (2020) reference data
-```{r}
+```{r deMicheli-feature-selection}
 # Model per-gene variance (technical & biological variation)
 dec.deMicheli <- modelGeneVar(sce.deMicheli.n)
 
@@ -765,7 +773,7 @@ hvgs.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.1)
 ```
 
 ### 8.3 Dell'Orso et al. (2019) reference data
-```{r}
+```{r dellOrso-feature-selection}
 # Model per-gene variance (technical & biological variation)
 dec.dellOrso <- modelGeneVar(sce.dellOrso.n)
 
@@ -789,7 +797,7 @@ hvgs.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.1)
 Here we inspect whether replicate samples in the Dell'Orso dataset cluster together or if they create separate clusters, in which case there would be a batch effect present in the data.
 
 ### 8.2 De Micheli et al. (2020) reference data
-```{r}
+```{r deMicheli-batch-effects}
 #d0
 set.seed(123)
 uncorrected.deMicheli.d0 <- runPCA(sce.deMicheli.n[, sce.deMicheli.n$injury == "Day 0"],
@@ -847,7 +855,7 @@ gridExtra::grid.arrange(p.d0, p.d0b, p.d5, p.d5b, p.d7, p.d7b)
 
 
 ### 9.1 Dell'Orso et al. (2019) reference data
-```{r}
+```{r dellOrso-batch-effects}
 set.seed(123)
 uncorrected.dellOrso <- runPCA(sce.dellOrso.n, subset_row = hvgs.dellOrso,
                                 BSPARAM = BiocSingular::RandomParam())
@@ -874,7 +882,7 @@ Cell cycle scoring and regression is performed to inspect if the cell cycle phas
 We use two different methods for performing cell cycle correction. First, following a Seurat cell cycle correction (https://satijalab.org/seurat/v3.2/cell_cycle_vignette.html) and then, following a Bioconductor approach (https://osca.bioconductor.org/cell-cycle-assignment.html)
 
 ### 10.1 Prepare cell cycle markers and transform from human to mouse genes
-```{r}
+```{r cell-cycle-markers}
 # Make mapping between human and mouse genes
 ensembl.human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 ensembl.mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
@@ -913,7 +921,7 @@ for(g in g2m.genes) {
 
 
 ### 10.2 Primary data (Method 1: Seurat cell cycle correction)
-```{r}
+```{r primary-data-cc1}
 # Convert sce into Seurat object
 data <- as.Seurat(sce.n, counts = "counts", data = "logcounts")
 
@@ -968,7 +976,7 @@ pie(cc_vs_labels$cap50_r16h, labels = rownames(cc_vs_labels), main = "Cap50_r16h
 
 
 ### 10.3 Primary data (Method 2: Bioconductor, using reference profiles)
-```{r}
+```{r primary-data-cc2}
 # Get reference data containing mouse ESCs with known cell cycle phases
 sce.ref <- BuettnerESCData()
 
@@ -1050,14 +1058,14 @@ sce.cc.2$sample <- sce.n$sample
 
 
 
-## 11. Dimension reduction
+## 11. Dimensionality reduction
   - PCA is performed on the log-normalized expression values by using runPCA() function
   - Methods for choosing the number of PCs to use:
       - Find elbow point in the % of variance explained by successive PCs
       - Remove PCs corresponding to technical noise
 
 ### 11.1 Primary data (no cell cycle correction)
-```{r}
+```{r primary-data-dimension-reduction}
 # Dimension reduction
 set.seed(123)
 sce.n <- runPCA(sce.n, subset_row = hvgs.data)
@@ -1085,7 +1093,7 @@ ncol(reducedDim(denoised.sce))
 ```
 
 ### 11.2 Primary data (Seurat cell cycle correction)
-```{r}
+```{r primary-data-cc1-dimension-reduction}
 # Dimension reduction
 set.seed(123)
 sce.cc <- runPCA(x = sce.cc,
@@ -1117,7 +1125,7 @@ ncol(reducedDim(denoised.sce.cc))
 ```
 
 ### 11.3 Primary data (Reference-based cell cycle correction)
-```{r}
+```{r primary-data-cc2-dimension-reduction}
 # Dimension reduction
 set.seed(123)
 sce.cc.2 <- runPCA(sce.cc.2, subset_row = hvgs.data, exprs_values = "corrected")
@@ -1149,7 +1157,7 @@ ncol(reducedDim(denoised.sce.cc.2))
 
 
 ### 11.4 De Micheli et al. (2020) reference data
-```{r}
+```{r deMicheli-dimension-reduction}
 # Perform dimension reduction
 sce.deMicheli.n <- runPCA(sce.deMicheli.n, subset_row = hvgs.deMicheli)
 plotReducedDim(sce.deMicheli.n, dimred = "PCA", colour_by = "injury")
@@ -1178,7 +1186,7 @@ ncol(reducedDim(denoised.sce.deMicheli))
 ```
 
 ### 11.5 Dell'Orso et al. (2019) reference data
-```{r}
+```{r dellOrso-dimension-reduction}
 # Perform dimension reduction
 sce.dellOrso.n <- runPCA(sce.dellOrso.n, subset_row = hvgs.dellOrso)
 plotReducedDim(sce.dellOrso.n, dimred = "PCA", colour_by = "sample")
@@ -1213,7 +1221,7 @@ ncol(reducedDim(denoised.sce.dellOrso))
   - The major advantage of graph-based clustering lies in its scalability. It only requires a k-nearest neighbor search that can be done in log-linear time on average
 
 ### 12.1 Primary data (no cell cycle correction)
-```{r}
+```{r primary-data-clustering}
 dimensions <- ncol(reducedDim(denoised.sce))
 snng <- buildSNNGraph(denoised.sce, d = dimensions)
 clust <- igraph::cluster_louvain(snng)$membership
@@ -1235,7 +1243,7 @@ plotTSNE(denoised.sce, colour_by = "sample")
 ```
 
 ### 12.2 Primary data (Seurat cell cycle correction)
-```{r}
+```{r primary-data-cc-clustering}
 # Perform clustering
 dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
 snng.cc <- buildSNNGraph(denoised.sce.cc, d = dimensions.cc, assay.type = "counts")
@@ -1259,7 +1267,7 @@ plotTSNE(denoised.sce.cc, colour_by = "sample")
 
 
 ### 12.3 Primary data (Reference-based cell cycle correction)
-```{r}
+```{r primary-data-cc2-clustering}
 # Perform clustering
 dimensions.cc.2 <- ncol(reducedDim(denoised.sce.cc.2))
 snng.cc.2 <- buildSNNGraph(denoised.sce.cc.2, d = dimensions.cc.2, assay.type = "corrected")
@@ -1282,7 +1290,7 @@ plotTSNE(denoised.sce.cc.2, colour_by = "sample")
 ```
 
 ### 12.4 De Micheli et al. (2020) reference data
-```{r}
+```{r deMicheli-clustering}
 # Perform clustering
 dimensions.deMicheli <- ncol(reducedDim(denoised.sce.deMicheli))
 snng.deMicheli <- buildSNNGraph(denoised.sce.deMicheli, use.dimred = 'PCA')
@@ -1306,7 +1314,7 @@ plotTSNE(denoised.sce.deMicheli, colour_by = "injury")
 
 
 ### 12.5 Dell'Orso et al. (2019) reference data
-```{r}
+```{r dellOrso-clustering}
 # Perform clustering
 dimensions.dellOrso <- ncol(reducedDim(denoised.sce.dellOrso))
 snng.dellOrso <- buildSNNGraph(denoised.sce.dellOrso, d = dimensions.dellOrso)
@@ -1327,5 +1335,13 @@ plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "UMAP")
 denoised.sce.dellOrso <- runTSNE(denoised.sce.dellOrso, dimred = "PCA")
 plotTSNE(denoised.sce.dellOrso, colour_by = "sample")
 ```
+
+
+# Trajectory inference
+SCORPIUS (https://github.com/rcannood/SCORPIUS) will be used for performing the trajectory inference as it is designed for inferring linear developmental trajectories from scRNA-seq data
+```{r}
+
+```
+
 
 
