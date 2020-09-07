@@ -27,7 +27,7 @@ The data sets are available in NCBI GEO:
 
 
 ## 2. Load packages
-```{r message=FALSE, echo=FALSE}
+```{r message=FALSE}
 library(scater)
 library(scran)
 library(SingleCellExperiment)
@@ -56,7 +56,7 @@ firstColumnToRowNames <- function(data) {
 
 ## 4. Load data
 ### 4.1 Primary data
-```{r eval=FALSE, echo=FALSE}
+```{r eval=FALSE}
 counts <- Read10X("./../data/filtered_feature_bc_matrix/")
 counts <- counts[rowSums(counts) > 0, ]
 
@@ -69,7 +69,7 @@ cellcodes$samples <- as.vector(samples[cellcodes$libcodes])
 ```
 
 ### 4.2 De Micheli et al. (2020) reference data
-```{r eval=FALSE, echo=FALSE}
+```{r eval=FALSE}
 # Load GSE143437 data set (non-FACS sorted samples: d0, d5, d7)
 GSE143437_raw <- read.delim("./../data/GSE143437/GSE143437_DeMicheli_MuSCatlas_rawdata.txt")
 GSE143437_meta <- read.delim("./../data/GSE143437/GSE143437_DeMicheli_MuSCatlas_metadata.txt")
@@ -78,7 +78,7 @@ GSE143437_meta <- firstColumnToRowNames(GSE143437_meta)
 ```
 
 ### 4.3 Dell'Orso et al. (2019) reference data
-```{r eval=FALSE, echo=FALSE}
+```{r eval=FALSE}
 # Get the sample directory paths
 samples <- c("./../data/GSE126834/homeostatic_muscs_1",
              "./../data/GSE126834/homeostatic_muscs_2",
@@ -103,7 +103,7 @@ colnames(GSE126834_mb) <- paste(colnames(GSE126834_mb), "mb", sep = "_")
 
 ## 5 Build sce objects
 ### 5.1 Primary data
-```{r eval=FALSE, echo=FALSE}
+```{r eval=FALSE}
 # Create an sce object and add sample for each cell
 sce <- SingleCellExperiment(assays=list(counts=counts))
 colData(sce)$sample <- as.vector(cellcodes$samples)
@@ -116,7 +116,7 @@ remove(counts)
 ```
 
 ### 5.2 De Micheli et al. (2020) reference data
-```{r eval=FALSE, echo=FALSE}
+```{r eval=FALSE}
 # Create a sce object
 sce.deMicheli <- SingleCellExperiment(assays = list(counts = as.matrix(GSE143437_raw)),
                                       colData = GSE143437_meta)
@@ -133,7 +133,7 @@ remove(GSE143437_meta)
 ```
 
 ### 5.3 Dell'Orso et al. (2019) reference data
-```{r eval=FALSE, echo=FALSE}
+```{r eval=FALSE}
 # Create sce objects
 sce_GSE126834_hom1 <- SingleCellExperiment(assays = list(counts = GSE126834_hom1))
 sce_GSE126834_hom2 <- SingleCellExperiment(assays = list(counts = GSE126834_hom2))
@@ -172,6 +172,7 @@ remove(GSE126834_mb)
 
 
 ### Shortcut: Load sce files directly
+Note: the above data loading and sce object creation are not executed because the sce files of the 3 datasets are directly loaded from the files shown below.
 ```{r}
 sce <- readRDS("./../saved/sce")
 sce.deMicheli <- readRDS("./../saved/sce_deMicheli")
@@ -296,7 +297,8 @@ gridExtra::grid.arrange(
     ggtitle("Percent mitochondrial reads") + guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
   plotColData(sce, x="sample", y="percent_top_500",colour_by = "discard",point_size=0.3) + 
     ggtitle("Percent top 500 genes") + guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
-  ncol=1
+  ncol=1,
+  top = "Primary data: QC metrics"
 )
 
 # Filter outliers
@@ -315,7 +317,7 @@ logFC <- logged[,1] - logged[,2]
 abundance <- rowMeans(logged)
 
 # Plot gene logFC between discarded and kept cells (blue = mitochondrial genes)
-plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16)
+plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16, main = "Primary data: logFC between discarded and kept cells")
 points(abundance[rowData(sce)$mito==TRUE], logFC[rowData(sce)$mito==TRUE], col="dodgerblue", pch=16)
 
 changed <- logFC > 1 | logFC < -1
@@ -468,7 +470,8 @@ gridExtra::grid.arrange(
     guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
   plotColData(sce.deMicheli, x="sampleID", y="percent_top_500",colour_by = "discard",point_size=0.3) + 
     ggtitle("Percent top 500 genes") + guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
-  ncol = 1
+  ncol = 1,
+  top = "De Micheli et al. - QC metrics"
 )
 
 # Filter outliers
@@ -484,7 +487,7 @@ abundance <- rowMeans(logged)
 
 # Plot gene logFC between discarded and kept cells (blue = mitochondrial genes)
 
-plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16)
+plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16, main = "De Micheli et al.: logFC between discarded and kept cells")
 points(abundance[rowData(sce.deMicheli)$mito==TRUE], logFC[rowData(sce.deMicheli)$mito==TRUE], col="dodgerblue", pch=16)
 
 changed <- logFC > 1 | logFC < -1
@@ -597,7 +600,8 @@ gridExtra::grid.arrange(
   plotColData(sce.dellOrso, x="sample", y="percent_top_500",colour_by = "discard",point_size=0.3) + 
     ggtitle("Percent top 500 genes") +
     guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
-  ncol=1
+  ncol=1,
+  top = "Dell'Orso et al.: QC metrics"
 )
 
 # Filter outliers
@@ -612,7 +616,7 @@ logFC <- logged[,1] - logged[,2]
 abundance <- rowMeans(logged)
 
 # Plot gene logFC between discarded and kept cells (blue = mitochondrial genes)
-plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16)
+plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16, main = "Dell'Orso et al.: logFC between discarded and kept cells")
 points(abundance[rowData(sce.dellOrso)$mito==TRUE], logFC[rowData(sce.dellOrso)$mito==TRUE], col="dodgerblue", pch=16)
 
 changed <- logFC > 1 | logFC < -1
@@ -658,7 +662,7 @@ deconv.sf <- sizeFactors(sce.n)
 
 # Plot library size factor vs. deconvolution size factor
 plot(lib.sf, deconv.sf, xlab="Library size factor",
-     ylab="Deconvolution size factor", log='xy', pch=16)
+     ylab="Deconvolution size factor", log='xy', pch=16, main = "Primary data: library size factor vs. deconvolution size factor")
 abline(a=0, b=1, col="red")
 
 # Compute log-normalized expression values for each cell
@@ -687,7 +691,7 @@ summary(deconv.sf.deMicheli)
 
 # Plot library size factors vs. deconvolution size factor
 plot(lib.sf.deMicheli, deconv.sf.deMicheli, xlab="Library size factor",
-     ylab="Deconvolution size factor", log='xy', pch=16)
+     ylab="Deconvolution size factor", log='xy', pch=16, main = "De Micheli et al.: library size factor vs. deconvolution size factor")
 abline(a=0, b=1, col="red")
 
 # Compute log-normalized expression values for each cell
@@ -716,7 +720,7 @@ summary(deconv.sf.dellOrso)
 
 # Plot library size factor vs. deconvolution size factor
 plot(lib.sf.dellOrso, deconv.sf.dellOrso, xlab="Library size factor",
-     ylab="Deconvolution size factor", log='xy', pch=16)
+     ylab="Deconvolution size factor", log='xy', pch=16,  main = "Dell'Orso et al.: library size factor vs. deconvolution size factor")
 abline(a=0, b=1, col="red")
 
 # Compute log-normalized expression values for each cell
@@ -741,7 +745,7 @@ dec.data <- modelGeneVar(sce.n)
 # Visualizing the fit
 fit1 <- metadata(dec.data)
 plot(fit1$mean, fit1$var, xlab = "Mean of log-expression",
-     ylab = "Variance of log-expression")
+     ylab = "Variance of log-expression", main = "Primary data: variance vs. mean of log-expression")
 curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 
 # Define highly variable genes (HVGs)
@@ -760,7 +764,7 @@ dec.deMicheli <- modelGeneVar(sce.deMicheli.n)
 
 #Visualize the fit
 fit1 <- metadata(dec.deMicheli)
-plot(fit1$mean, fit1$var, xlab = "Mean of log-expression", ylab = "Variance of log-expression")
+plot(fit1$mean, fit1$var, xlab = "Mean of log-expression", ylab = "Variance of log-expression", main = "De Micheli et al.: variance vs. mean of log-expression")
 curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 
 # Define the highly variable genes (HVGs)
@@ -779,7 +783,7 @@ dec.dellOrso <- modelGeneVar(sce.dellOrso.n)
 
 #Visualize the fit
 fit1 <- metadata(dec.dellOrso)
-plot(fit1$mean, fit1$var, xlab = "Mean of log-expression", ylab = "Variance of log-expression")
+plot(fit1$mean, fit1$var, xlab = "Mean of log-expression", ylab = "Variance of log-expression", main = "Dell'Orso et al.: variance vs. mean of log-expression")
 curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 
 # Define the highly variable genes (HVGs)
@@ -847,7 +851,8 @@ p.d5 <- plotTSNE(uncorrected.deMicheli.d5, colour_by = "sampleID") + ggtitle("Da
 p.d5b <- plotTSNE(uncorrected.deMicheli.d5, colour_by = "cell_annotation") + ggtitle("Day 5")
 p.d7 <- plotTSNE(uncorrected.deMicheli.d7, colour_by = "sampleID") + ggtitle("Day 7") 
 p.d7b <- plotTSNE(uncorrected.deMicheli.d7, colour_by = "cell_annotation") + ggtitle("Day 7") 
-gridExtra::grid.arrange(p.d0, p.d0b, p.d5, p.d5b, p.d7, p.d7b)
+gridExtra::grid.arrange(p.d0, p.d0b, p.d5, p.d5b, p.d7, p.d7b,
+                        top = "De Micheli et al.: TSNE plots to diagnose batch effects")
 
 ```
  - As can be seen from the plot, the clusters seem to separate mostly by the cell types
@@ -868,7 +873,7 @@ tab
 
 set.seed(123)
 uncorrected.dellOrso <- runTSNE(uncorrected.dellOrso, dimred = "PCA")
-plotTSNE(uncorrected.dellOrso, colour_by = "sample")
+plotTSNE(uncorrected.dellOrso, colour_by = "sample") + ggtitle("Dell'Orso et al.: TSNE plot to diagnose batch effects")
 ```
   - The replicate clusters for inj_60h_MuSCs and homeostatic_MuSCs seem to cluster together, meaning that these replicate samples contain similar gene expression data and thus no batch correction is required.
 
@@ -1078,7 +1083,7 @@ chosen.elbow
 
 # Plot variance explained by PCs
 par(mfrow=c(1,1))
-plot(percent.var, xlab = "PC", ylab = "Variance explained (%)")
+plot(percent.var, xlab = "PC", ylab = "Variance explained (%)", main = "Primary data: Variance explained by each PC")
 abline(v = chosen.elbow, col = "red")
 
 # Remove PCs corresponding to technical noise
@@ -1109,7 +1114,7 @@ chosen.elbow.cc
 
 # Plot variance explained by PCs
 par(mfrow=c(1,1))
-plot(percent.var.cc, xlab = "PC", ylab = "Variance explained (%)")
+plot(percent.var.cc, xlab = "PC", ylab = "Variance explained (%)", main = "Primary data (Seurat cell cycle corrected): Variance explained by each PC")
 abline(v = chosen.elbow.cc, col = "red")
 
 # Remove PCs corresponding to technical noise
@@ -1138,7 +1143,7 @@ chosen.elbow.cc.2
 
 # Plot variance explained by PCs
 par(mfrow=c(1,1))
-plot(percent.var.cc.2, xlab = "PC", ylab = "Variance explained (%)")
+plot(percent.var.cc.2, xlab = "PC", ylab = "Variance explained (%)", main = "Primary data (reference-based cc correction): Variance explained by each PC")
 abline(v = chosen.elbow.cc.2, col = "red")
 
 # Remove PCs corresponding to technical noise
@@ -1169,7 +1174,7 @@ chosen.elbow.deMicheli
 
 # Plot variance explained by PCs
 par(mfrow=c(1,1))
-plot(percent.var.deMicheli, xlab = "PC", ylab = "Variance explained (%)")
+plot(percent.var.deMicheli, xlab = "PC", ylab = "Variance explained (%)", main = "De Micheli et al.: Variance explained by each PC")
 abline(v=chosen.elbow.deMicheli, col = "red")
 
 # Remove PCs corresponding to technical noise
@@ -1198,7 +1203,7 @@ chosen.elbow.dellOrso
 
 # Plot variance explained by PCs
 par(mfrow=c(1,1))
-plot(percent.var.dellOrso, xlab = "PC", ylab = "Variance explained (%)")
+plot(percent.var.dellOrso, xlab = "PC", ylab = "Variance explained (%)",  main = "Dell'Orso et al.: Variance explained by each PC")
 abline(v=chosen.elbow.dellOrso, col = "red")
 
 # Remove PCs corresponding to technical noise
@@ -1232,14 +1237,14 @@ reducedDim(denoised.sce, "force") <- igraph::layout_with_fr(snng)
 table(clust)
 
 # Plot clustering results
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force")
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "PCA")
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering: force-directed layout")
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering: PCA")
 
 denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP")
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP")
 
 denoised.sce <- runTSNE(denoised.sce, dimred = "PCA")
-plotTSNE(denoised.sce, colour_by = "sample")
+plotTSNE(denoised.sce, colour_by = "sample") + ggtitle("Primary data clustering: TSNE")
 ```
 
 ### 12.2 Primary data (Seurat cell cycle correction)
@@ -1255,14 +1260,14 @@ reducedDim(denoised.sce.cc, "force") <- igraph::layout_with_fr(snng.cc)
 table(clust.cc)
 
 # Plot results
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force")
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA")
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering (Seurat cc correction): force-directed layout")
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering (Seurat cc correction): PCA")
 
 denoised.sce.cc <- runUMAP(denoised.sce.cc, dimred = "PCA", n_dimred = dimensions.cc)
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP")
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP") + + ggtitle("Primary data clustering (Seurat cc correction): UMAP")
 
 denoised.sce.cc <- runTSNE(denoised.sce.cc, dimred = "PCA")
-plotTSNE(denoised.sce.cc, colour_by = "sample")
+plotTSNE(denoised.sce.cc, colour_by = "sample") + + ggtitle("Primary data clustering (Seurat cc correction): TSNE")
 ```
 
 
@@ -1279,14 +1284,14 @@ reducedDim(denoised.sce.cc.2, "force") <- igraph::layout_with_fr(snng.cc.2)
 table(clust.cc.2)
 
 # Plot results
-plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "force")
-plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "PCA")
+plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering (refernce-based cc correction): force-directed layout")
+plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "PCA")+ ggtitle("Primary data clustering (refernce-based cc correction): PCA")
 
 denoised.sce.cc.2 <- runUMAP(denoised.sce.cc.2, dimred = "PCA", n_dimred = dimensions.cc.2)
-plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "UMAP")
+plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering (refernce-based cc correction): UMAP")
 
 denoised.sce.cc.2 <- runTSNE(denoised.sce.cc.2, dimred = "PCA")
-plotTSNE(denoised.sce.cc.2, colour_by = "sample")
+plotTSNE(denoised.sce.cc.2, colour_by = "sample") + ggtitle("Primary data clustering (refernce-based cc correction): TSNE")
 ```
 
 ### 12.4 De Micheli et al. (2020) reference data
@@ -1302,14 +1307,14 @@ reducedDim(denoised.sce.deMicheli, "force") <- igraph::layout_with_fr(snng.deMic
 table(clust.deMicheli)
 
 # Plot results
-plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "force")
-plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "PCA")
+plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "force") + ggtitle("De Micheli et al.: force-directed layout")
+plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "PCA") + ggtitle("De Micheli et al.: PCA")
 
 denoised.sce.deMicheli <- runUMAP(denoised.sce.deMicheli, dimred = "PCA", n_dimred = dimensions.deMicheli)
-plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "UMAP")
+plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "UMAP") + ggtitle("De Micheli et al.: UMAP")
 
 denoised.sce.deMicheli <- runTSNE(denoised.sce.deMicheli, dimred = "PCA")
-plotTSNE(denoised.sce.deMicheli, colour_by = "injury")
+plotTSNE(denoised.sce.deMicheli, colour_by = "injury") +ggtitle("De Micheli et al.: TSNE")
 ```
 
 
@@ -1326,14 +1331,14 @@ reducedDim(denoised.sce.dellOrso, "force") <- igraph::layout_with_fr(snng.dellOr
 table(clust.dellOrso)
 
 # Plot results
-plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "force")
-plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "PCA")
+plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "force") + ggtitle("Dell'Orso et al.: force-directed layout")
+plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "PCA") + ggtitle("Dell'Orso et al.: PCA")
 
 denoised.sce.dellOrso <- runUMAP(denoised.sce.dellOrso, dimred = "PCA", n_dimred = dimensions.dellOrso)
-plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "UMAP")
+plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "UMAP") + ggtitle("Dell'Orso et al.: UMAP")
 
 denoised.sce.dellOrso <- runTSNE(denoised.sce.dellOrso, dimred = "PCA")
-plotTSNE(denoised.sce.dellOrso, colour_by = "sample")
+plotTSNE(denoised.sce.dellOrso, colour_by = "sample") + ggtitle("Dell'Orso et al.: TSNE")
 ```
 
 
