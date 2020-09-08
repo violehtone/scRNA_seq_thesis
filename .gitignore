@@ -2,3 +2,6 @@ ANALYSIS
 data
 results
 saved
+script/data_preprocessing_files/
+script/downstream_analysis_files/
+
