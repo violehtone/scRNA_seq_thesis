@@ -1242,9 +1242,12 @@ plotReducedDim(denoised.sce, colour_by = "sample", dimred = "PCA") + ggtitle("Pr
 
 denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
 plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP")
+plotReducedDim(denoised.sce, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters")
 
 denoised.sce <- runTSNE(denoised.sce, dimred = "PCA")
 plotTSNE(denoised.sce, colour_by = "sample") + ggtitle("Primary data clustering: TSNE")
+
+#saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
 ```
 
 ### 12.2 Primary data (Seurat cell cycle correction)
@@ -1264,10 +1267,13 @@ plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force") + ggtitl
 plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering (Seurat cc correction): PCA")
 
 denoised.sce.cc <- runUMAP(denoised.sce.cc, dimred = "PCA", n_dimred = dimensions.cc)
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP") + + ggtitle("Primary data clustering (Seurat cc correction): UMAP")
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering (Seurat cc correction): UMAP")
+plotReducedDim(denoised.sce.cc, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering (Seurat cc correction): UMAP with clusters")
 
 denoised.sce.cc <- runTSNE(denoised.sce.cc, dimred = "PCA")
-plotTSNE(denoised.sce.cc, colour_by = "sample") + + ggtitle("Primary data clustering (Seurat cc correction): TSNE")
+plotTSNE(denoised.sce.cc, colour_by = "sample") + ggtitle("Primary data clustering (Seurat cc correction): TSNE")
+
+#saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_clust")
 ```
 
 
@@ -1289,16 +1295,26 @@ plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "PCA")+ ggtitle
 
 denoised.sce.cc.2 <- runUMAP(denoised.sce.cc.2, dimred = "PCA", n_dimred = dimensions.cc.2)
 plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering (refernce-based cc correction): UMAP")
+plotReducedDim(denoised.sce.cc.2, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering (refernce-based cc correction): UMAP with clusters")
 
 denoised.sce.cc.2 <- runTSNE(denoised.sce.cc.2, dimred = "PCA")
 plotTSNE(denoised.sce.cc.2, colour_by = "sample") + ggtitle("Primary data clustering (refernce-based cc correction): TSNE")
+
+#saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_2_clust")
 ```
+###
+```{r primary-data-cluster-comparison}
+#todo
+
+```
+
+
 
 ### 12.4 De Micheli et al. (2020) reference data
 ```{r deMicheli-clustering}
 # Perform clustering
 dimensions.deMicheli <- ncol(reducedDim(denoised.sce.deMicheli))
-snng.deMicheli <- buildSNNGraph(denoised.sce.deMicheli, use.dimred = 'PCA')
+snng.deMicheli <- buildSNNGraph(denoised.sce.deMicheli, d = dimensions.deMicheli)
 clust.deMicheli <- igraph::cluster_louvain(snng.deMicheli)$membership
 denoised.sce.deMicheli$cluster <- factor(clust.deMicheli)
 
@@ -1314,7 +1330,9 @@ denoised.sce.deMicheli <- runUMAP(denoised.sce.deMicheli, dimred = "PCA", n_dimr
 plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "UMAP") + ggtitle("De Micheli et al.: UMAP")
 
 denoised.sce.deMicheli <- runTSNE(denoised.sce.deMicheli, dimred = "PCA")
-plotTSNE(denoised.sce.deMicheli, colour_by = "injury") +ggtitle("De Micheli et al.: TSNE")
+plotTSNE(denoised.sce.deMicheli, colour_by = "injury") + ggtitle("De Micheli et al.: TSNE")
+
+#saveRDS(denoised.sce.deMicheli, file = "./../saved/denoised_sce_deMicheli_clust")
 ```
 
 
@@ -1339,14 +1357,7 @@ plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "UMAP") + g
 
 denoised.sce.dellOrso <- runTSNE(denoised.sce.dellOrso, dimred = "PCA")
 plotTSNE(denoised.sce.dellOrso, colour_by = "sample") + ggtitle("Dell'Orso et al.: TSNE")
+
+#saveRDS(denoised.sce.dellOrso, file = "./../saved/denoised_sce_dellOrso_clust")
 ```
-
-
-# Trajectory inference
-SCORPIUS (https://github.com/rcannood/SCORPIUS) will be used for performing the trajectory inference as it is designed for inferring linear developmental trajectories from scRNA-seq data
-```{r}
-
-```
-
-
 
