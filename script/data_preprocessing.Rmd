@@ -1158,7 +1158,7 @@ denoised.sce.cc.2 <- denoisePCA(sce.cc.2,
 ncol(reducedDim(denoised.sce.cc.2))
 
 # Save the sce object
-#saveRDS(denoised.sce.cc.2, file = "./../saved/denoised_sce_cc_2")
+saveRDS(denoised.sce.cc.2, file = "./../saved/denoised_sce_cc_2")
 ```
 
 
@@ -1277,6 +1277,95 @@ plotTSNE(denoised.sce.cc, colour_by = "sample") + ggtitle("Primary data clusteri
 #saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_clust")
 ```
 
+```{r primary-cc-data-cluster-comparison}
+# Compare clusters vs. samples
+gridExtra::grid.arrange(
+  plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP", text_by = "cluster", text_size = 3) + ggtitle("Primary data (cc) UMAP plot: samples"),
+  plotReducedDim(denoised.sce.cc, colour_by = "cluster", dimred = "UMAP", text_by = "sample", text_size = 3) + ggtitle("Primary data (cc) UMAP plot: clusters"),
+  ncol = 1,
+  nrow = 2
+)
+
+# Inspect clusters in each sample
+table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
+
+# Find marker genes between clusters
+markers <- findMarkers(denoised.sce.cc, groups = denoised.sce.cc$cluster, assay.type = "counts", pval.type="any", lfc = 1)
+
+# Plot the marker genes in a heatmap
+for(i in 1:length(markers)) {
+  chosen <- markers[[i]]
+  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cluster: ", i))
+}
+
+# Subclustering
+subclust <- quickSubCluster(denoised.sce.cc, groups = denoised.sce.cc$sample, assay.type = "counts", normalize = FALSE)
+
+plotReducedDim(subclust[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), Cap50 sample - UMAP plot: subclusters")
+plotReducedDim(subclust[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), Cap50 sample - UMAP plot: subclusters")
+plotReducedDim(subclust[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), R4H sample - UMAP plot: subclusters")
+plotReducedDim(subclust[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), R8H sample - UMAP plot: subclusters")
+plotReducedDim(subclust[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), R16H sample - UMAP plot: subclusters")
+
+# Find markers within subclusters
+markers.control <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
+markers.cap50 <- findMarkers(subclust[["cap50"]], groups = subclust[["cap50"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
+markers.cap50_r4h <- findMarkers(subclust[["cap50_r4h"]], groups = subclust[["cap50_r4h"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
+markers.cap50_r8h <- findMarkers(subclust[["cap50_r8h"]], groups = subclust[["cap50_r8h"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
+markers.cap50_r16h <- findMarkers(subclust[["cap50_r16h"]], groups = subclust[["cap50_r16h"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
+
+# Plot marker genes for samples
+for(i in 1:length(markers.cap50)) {
+  chosen <- markers.cap50[[i]]
+  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50 Subcluster:", i))
+}
+
+for(i in 1:length(markers.cap50_r4h)) {
+  chosen <- markers.cap50_r4h[[i]]
+  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50_R4H Subcluster:", i))
+}
+
+for(i in 1:length(markers.cap50_r8h)) {
+  chosen <- markers.cap50_r8h[[i]]
+  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50_R8H Subcluster:", i))
+}
+
+for(i in 1:length(markers.cap50_r16h)) {
+  chosen <- markers.cap50_r16h[[i]]
+  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50_R16H Subcluster:", i))
+}
+
+
+```
+
+
+```{r primary-cc-data-cluster-stability, eval= FALSE}
+# Evaluating cluster stability
+myClusterFUN <- function(x) {
+  d <- ncol(reducedDim(x))
+  g <- buildSNNGraph(x, d=d, assay.type = "counts")
+  igraph::cluster_louvain(g)$membership
+}
+
+originals <- myClusterFUN(denoised.sce.cc)
+
+# NOTE: Commented because bootstrapCluster() is computationally very heavy and so we use here pre-saved object
+#set.seed(123)
+#coassign <- bootstrapCluster(denoised.sce.cc, FUN = myClusterFUN, clusters = originals)
+coassign <- readRDS("./../saved/coassign")
+
+dim(coassign)
+
+# Heatmap of coassignment probabilities from bootstrapping of graph-based clustering in the cc-corrected primary dataset.
+# Each row and column represents an original cluster and each entry is colored according to the value of the coassignment probability between that pair of clusters.
+pheatmap(coassign, cluster_row=FALSE, cluster_col=FALSE, color=rev(viridis::magma(100)))
+```
+
 
 ### 12.3 Primary data (Reference-based cell cycle correction)
 ```{r primary-data-cc2-clustering}
@@ -1303,32 +1392,6 @@ plotTSNE(denoised.sce.cc.2, colour_by = "sample") + ggtitle("Primary data cluste
 
 #saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_2_clust")
 ```
-###
-```{r primary-data-cluster-comparison}
-# Compare clusters vs. samples
-gridExtra::grid.arrange(
-  plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP", text_by = "cluster", text_size = 3) + ggtitle("Primary data (cc) UMAP plot: samples"),
-  plotReducedDim(denoised.sce.cc, colour_by = "cluster", dimred = "UMAP", text_by = "sample", text_size = 3) + ggtitle("Primary data (cc) UMAP plot: clusters"),
-  ncol = 1,
-  nrow = 2
-)
-
-# Inspect clusters in each sample
-table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
-
-# Find marker genes between clusters
-markers <- findMarkers(denoised.sce.cc, groups = denoised.sce.cc$cluster, assay.type = "counts", pval.type="any", lfc = 1)
-
-# Plot the marker genes in a heatmap
-for(i in 1:length(markers)) {
-  chosen <- markers[[i]]
-  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cluster: ", i))
-}
-
-```
-
-
 
 ### 12.4 De Micheli et al. (2020) reference data
 ```{r deMicheli-clustering}
