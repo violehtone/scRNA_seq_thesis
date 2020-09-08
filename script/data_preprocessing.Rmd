@@ -971,7 +971,7 @@ sce.cc <- swapAltExp(x = sce.cc,
 # Plot cell cycle phases for each sample as pie charts
 cc_vs_labels <- as.data.frame.matrix(table(sce.cc$Phase, sce.cc$sample))
 
-par(mfrow=c(1,5))
+par(mfrow=c(2,3))
 pie(cc_vs_labels$control, labels = rownames(cc_vs_labels), main = "Control")
 pie(cc_vs_labels$cap50, labels = rownames(cc_vs_labels), main = "Cap50")
 pie(cc_vs_labels$cap50_r4h, labels = rownames(cc_vs_labels), main = "Cap50_r4h")
