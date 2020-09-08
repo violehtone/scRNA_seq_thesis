@@ -30,7 +30,6 @@ denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 ```
 
 
-
 ## 2. Trajectory inference
 ### 12.4 De Micheli et al. (2020) reference data
 ```{r}

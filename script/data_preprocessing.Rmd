@@ -42,6 +42,7 @@ library(scRNAseq)
 library(org.Mm.eg.db)
 library(SingleR)
 library(batchelor)
+library(pheatmap)
 ```
 
 ## 3. Utility functions
@@ -1304,7 +1305,26 @@ plotTSNE(denoised.sce.cc.2, colour_by = "sample") + ggtitle("Primary data cluste
 ```
 ###
 ```{r primary-data-cluster-comparison}
-#todo
+# Compare clusters vs. samples
+gridExtra::grid.arrange(
+  plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP", text_by = "cluster", text_size = 3) + ggtitle("Primary data (cc) UMAP plot: samples"),
+  plotReducedDim(denoised.sce.cc, colour_by = "cluster", dimred = "UMAP", text_by = "sample", text_size = 3) + ggtitle("Primary data (cc) UMAP plot: clusters"),
+  ncol = 1,
+  nrow = 2
+)
+
+# Inspect clusters in each sample
+table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
+
+# Find marker genes between clusters
+markers <- findMarkers(denoised.sce.cc, groups = denoised.sce.cc$cluster, assay.type = "counts", pval.type="any", lfc = 1)
+
+# Plot the marker genes in a heatmap
+for(i in 1:length(markers)) {
+  chosen <- markers[[i]]
+  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cluster: ", i))
+}
 
 ```
 
