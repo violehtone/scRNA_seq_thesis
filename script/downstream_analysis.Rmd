@@ -72,7 +72,7 @@ denoised.sce.dellOrso$cell_type[pmb] <- "Primary_MB"
 
 # Create expression and sample objects
 expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
-group_name.dellOrso <- as.factor(denoised.sce.dellOrso$sample)
+group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
 
 # Trajectory inference
 space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman")
