@@ -15,7 +15,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 SCORPIUS (https://github.com/rcannood/SCORPIUS) will be used for performing the trajectory inference as it is designed for inferring linear developmental trajectories from scRNA-seq data
 
 ## 1. Load packages
-```{r}
+```{r load-packages, message=FALSE}
 library(SCORPIUS)
 library(scater)
 library(scran)
@@ -24,15 +24,15 @@ library(dplyr)
 ```
 
 ### Load saved sce objects
-```{r}
-denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
-denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
+```{r load-objects}
+denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli_clust")
+denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso_clust")
 ```
 
 
 ## 2. Trajectory inference
-### 12.4 De Micheli et al. (2020) reference data
-```{r}
+### 2.1 De Micheli et al. (2020) reference data
+```{r deMicheli-traj-inference}
 # Create expression and sample objects
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
 group_name.deMicheli <- as.factor(denoised.sce.deMicheli$injury)
@@ -41,11 +41,61 @@ group_name.deMicheli <- as.factor(denoised.sce.deMicheli$injury)
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman")
 traj.deMicheli <- infer_trajectory(space.deMicheli)
 
+# plot by sample
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = group_name.deMicheli,
                      path = traj.deMicheli$path,
                      contour = TRUE)
 
+# plot by cluster
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = as.factor(denoised.sce.deMicheli$cluster),
+                     path = traj.deMicheli$path,
+                     contour = TRUE)
+```
+
+
+### 2.2 Dell'Orso et al. (2019) reference data
+```{r dellOrso-traj-inference}
+# Merge replicate samples
+hom1 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep1"
+hom2 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep2"
+inj1 <- denoised.sce.dellOrso$sample == "inj_60h_MuSCs_rep1"
+inj2 <- denoised.sce.dellOrso$sample == "inj_60h_MuSCs_rep2"
+pmb <- denoised.sce.dellOrso$sample == "Primary_MB"
+  
+denoised.sce.dellOrso$cell_type[hom1] <- "homeostatic_MuSCs" 
+denoised.sce.dellOrso$cell_type[hom2] <- "homeostatic_MuSCs" 
+denoised.sce.dellOrso$cell_type[inj1] <- "inj_60h_MuSCs" 
+denoised.sce.dellOrso$cell_type[inj2] <- "inj_60h_MuSCs" 
+denoised.sce.dellOrso$cell_type[pmb] <- "Primary_MB"
+
+# Create expression and sample objects
+expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
+group_name.dellOrso <- as.factor(denoised.sce.dellOrso$sample)
+
+# Trajectory inference
+space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman")
+traj.dellOrso <- infer_trajectory(space.dellOrso)
+
+# plot by sample
+draw_trajectory_plot(space = space.dellOrso, 
+                     progression_group = group_name.dellOrso,
+                     path = traj.dellOrso$path,
+                     contour = TRUE)
+
+# plot by cluster
+draw_trajectory_plot(space = space.dellOrso, 
+                     progression_group = as.factor(denoised.sce.dellOrso$cluster),
+                     path = traj.dellOrso$path,
+                     contour = TRUE)
+```
+
+
+## 3. Identifying candidate marker genes
+
+### 3.1 De Micheli et al. (2020) reference data
+```{r marker-genes-deMicheli, eval=FALSE}
 # Identify candidate marker genes
 gimp.deMicheli <- gene_importances(x = expression.deMicheli,
                                    time = traj.deMicheli$time,
@@ -72,34 +122,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli,
 ```
 
 
-### 12.5 Dell'Orso et al. (2019) reference data
-```{r}
-# Merge replicate samples
-hom1 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep1"
-hom2 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep2"
-inj1 <- denoised.sce.dellOrso$sample == "inj_60h_MuSCs_rep1"
-inj2 <- denoised.sce.dellOrso$sample == "inj_60h_MuSCs_rep2"
-pmb <- denoised.sce.dellOrso$sample == "Primary_MB"
-  
-denoised.sce.dellOrso$cell_type[hom1] <- "homeostatic_MuSCs" 
-denoised.sce.dellOrso$cell_type[hom2] <- "homeostatic_MuSCs" 
-denoised.sce.dellOrso$cell_type[inj1] <- "inj_60h_MuSCs" 
-denoised.sce.dellOrso$cell_type[inj2] <- "inj_60h_MuSCs" 
-denoised.sce.dellOrso$cell_type[pmb] <- "Primary_MB"
-
-# Create expression and sample objects
-expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
-group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
-
-# Trajectory inference
-space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman")
-traj.dellOrso <- infer_trajectory(space.dellOrso)
-
-draw_trajectory_plot(space = space.dellOrso, 
-                     progression_group = group_name.dellOrso,
-                     path = traj.dellOrso$path,
-                     contour = TRUE)
-
+### 3.2 Dell'Orso et al. (2019) reference data
+```{r marker-genes-dellOrso, eval=FALSE}
 # Identify candidate marker genes
 gimp.dellOrso <- gene_importances(x = expression.dellOrso,
                                    time = traj.dellOrso$time,
