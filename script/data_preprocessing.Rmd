@@ -1276,7 +1276,7 @@ ratio.5 <- clusterModularity(snng.5, clust.5, as.ratio = TRUE)
 
 # k=10
 denoised.sce.10 <- denoised.sce
-snng.10 <- buildSNNGraph(denoised.sce.10, d = dimensions)
+snng.10 <- buildSNNGraph(denoised.sce.10, d = dimensions, k = 10)
 clust.10 <- igraph::cluster_walktrap(snng.10)$membership
 table(clust.10)
 denoised.sce.10$cluster <- factor(clust.10)
@@ -1360,7 +1360,7 @@ dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
 
 # k=5
 denoised.sce.cc.5 <- denoised.sce.cc
-snng.cc.5 <- buildSNNGraph(denoised.sce.cc, d = dimensions.cc, k=5)
+snng.cc.5 <- buildSNNGraph(denoised.sce.cc, d = dimensions.cc, k=5, assay.type = "counts")
 clust.cc.5 <- igraph::cluster_walktrap(snng.cc.5)$membership
 table(clust.cc.5)
 denoised.sce.cc.5$cluster <- factor(clust.cc.5)
@@ -1375,7 +1375,7 @@ ratio.cc.5 <- clusterModularity(snng.cc.5, clust.cc.5, as.ratio = TRUE)
 
 # k=10
 denoised.sce.cc.10 <- denoised.sce.cc
-snng.cc.10 <- buildSNNGraph(denoised.sce.cc.10, d = dimensions.cc)
+snng.cc.10 <- buildSNNGraph(denoised.sce.cc.10, d = dimensions.cc, assay.type = "counts", k = 10)
 clust.cc.10 <- igraph::cluster_walktrap(snng.cc.10)$membership
 table(clust.cc.10)
 denoised.sce.cc.10$cluster <- factor(clust.cc.10)
@@ -1390,7 +1390,7 @@ ratio.cc.10 <- clusterModularity(snng.cc.10, clust.cc.10, as.ratio = TRUE)
 
 #k=50
 denoised.sce.cc.50 <- denoised.sce.cc
-snng.cc.50 <- buildSNNGraph(denoised.sce.cc.50, d = dimensions.cc)
+snng.cc.50 <- buildSNNGraph(denoised.sce.cc.50, d = dimensions.cc, assay.type = "counts", k = 50)
 clust.cc.50 <- igraph::cluster_walktrap(snng.cc.50)$membership
 table(clust.cc.50)
 denoised.sce.cc.50$cluster <- factor(clust.cc.50)
@@ -1453,7 +1453,6 @@ denoised.sce.cc <- denoised.sce.cc.5
 
 
 #### 12.2.1 Primary data (Seurat cell cycle correction): Subclustering and marker genes
-
 
 ```{r primary-cc-data-cluster-comparison}
 # Inspect clusters in each sample
