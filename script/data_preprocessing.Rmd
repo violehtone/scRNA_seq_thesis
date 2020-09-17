@@ -14,6 +14,9 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Data preprocessing
 
+## Note
+**In case you are running this script for the first time, please remove the eval=FALSE from the code chunks below. Otherwise, if you already have the sce objects saved locally, please continue from the chunk "shortcut-load-sce-files" to speed up the process.**
+
 ## 1. Introduction
 This script is used for performing the data pre-processing of 3 scRNA-seq data sets.
 One dataset is primary data and the other two are used as reference datasets.
@@ -44,6 +47,7 @@ library(SingleR)
 library(batchelor)
 library(pheatmap)
 library(igraph)
+library(fossil)
 ```
 
 ## 3. Utility functions
@@ -190,8 +194,9 @@ remove(GSE126834_mb)
 ```
 
 
-### Shortcut: Load sce files directly
-Note: the above data loading and sce object creation are not executed because the sce files of the 3 datasets are directly loaded from the files shown below.
+## Shortcut: Load sce files directly
+**Note: the code chunks above for data loading and sce object creation are not executed (eval=FALSE) because the computation time is long so to speed-up things, we just load the sce files of the 3 datasets directly from the pre-saved files stored locally. In case you are running this script for the first time (and don't have the sce files ready), please ignore this code chunk and run all the chunks above.**
+
 ```{r shortcut-load-sce-files}
 sce <- readRDS("./../saved/sce")
 sce.deMicheli <- readRDS("./../saved/sce_deMicheli")
@@ -884,8 +889,11 @@ gridExtra::grid.arrange(p.d0, p.d0b, p.d5, p.d5b, p.d7, p.d7b,
                         top = "De Micheli et al.: TSNE plots to diagnose batch effects")
 
 ```
- - As can be seen from the plot, the clusters seem to separate mostly by the cell types
- - In the Day 7 sample, however, the samples seem to create separate clusters which cannot be explained by the differences in cell types.
+ 
+**Conclusions:**
+
+ - As can be seen from the Figure above, the clusters seem to separate mostly by the cell types
+ - In the Day 7 sample, however, the samples seem to create separate clusters which cannot be explained by the differences in cell types. This was mentioned in the article as well but they decided to leave it uncorrected.
 
 
 ### 9.1 Dell'Orso et al. (2019) reference data
@@ -904,6 +912,8 @@ set.seed(123)
 uncorrected.dellOrso <- runTSNE(uncorrected.dellOrso, dimred = "PCA")
 plotTSNE(uncorrected.dellOrso, colour_by = "sample") + ggtitle("Dell'Orso et al.: TSNE plot to diagnose batch effects")
 ```
+  
+**Conclusions:**
   - The replicate clusters for inj_60h_MuSCs and homeostatic_MuSCs seem to cluster together, meaning that these replicate samples contain similar gene expression data and thus no batch correction is required.
 
 
@@ -968,6 +978,9 @@ data@assays$RNA@data <- logcounts(sce.n)
 # Assign cell cycle scores
 data <- CellCycleScoring(data, s.features = s.genes.mouse, g2m.features = g2m.genes.mouse, set.ident = TRUE)
 
+# Visualize the distribution of cell cycle markers across
+RidgePlot(data, features = c("Pcna", "Top2a", "Mcm6", "Mki67"), ncol = 2)
+
 # Calculate the difference between the G2M and S phase scores
 data$CC.Difference <- data$S.Score - data$G2M.Score
 
@@ -979,6 +992,13 @@ data@assays$RNA@var.features <- hvgs.data
 
 # Regress out CC difference using the HVGs as features
 data <- ScaleData(data, vars.to.regress = "CC.Difference", features = VariableFeatures(data), assay = "RNA")
+
+# Run PCA
+data <- RunPCA(data, features = c(s.genes.mouse, g2m.genes.mouse))
+DimPlot(data)
+
+data <- RunPCA(data, features = VariableFeatures(data), nfeatures.print = 10)
+DimPlot(data)
 
 # Transform back to sce object
 sce.cc <- as.SingleCellExperiment(data, assay = "RNA")
@@ -1005,6 +1025,39 @@ pie(cc_vs_labels$cap50, labels = rownames(cc_vs_labels), main = "Cap50")
 pie(cc_vs_labels$cap50_r4h, labels = rownames(cc_vs_labels), main = "Cap50_r4h")
 pie(cc_vs_labels$cap50_r8h, labels = rownames(cc_vs_labels), main = "Cap50_r8h")
 pie(cc_vs_labels$cap50_r16h, labels = rownames(cc_vs_labels), main = "Cap50_r16h")
+
+# Merge G2M and S-phase into "dividing"
+sce.cc$Phase2 <- ifelse(sce.cc$Phase == "G1", "non-dividing", "dividing")
+
+ggplot(data = as.data.frame(colData(sce.cc)), mapping = aes(x = factor(sample, levels = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")), fill = as.factor(Phase2))) +
+  geom_bar(position = "dodge") +
+  labs(x = "Sample", y = "Number of cells", fill = "Cell cycle phase")
+
+# Fisher's exact test to inspect differences in cell cycle stages between groups
+cont.tab <- table(sce.cc$Phase2, sce.cc$sample)
+cont.tab <- cont.tab[, c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")]
+
+results = data.frame(t(combn(colnames(cont.tab),2)), stringsAsFactors = F)
+results$p.value <- 0
+
+for(i in 1:dim(results)[1]) {
+  X1 <- results[i, 1]
+  X2 <- results[i, 2]
+  cont.tab.f <- cont.tab[, c(X1, X2)]
+  
+  # Calculate p-value for each pair 10 times
+  res <- 0
+  for(j in 1:100) {
+    fish <- fisher.test(cont.tab.f)$p.value
+    res <- sum(res, fish)
+  }
+  results[i, ]$p.value <- res/100
+}
+
+results$signifant <- ifelse(results$p.value < 0.05, TRUE, FALSE)
+
+results
+
 ```
 
 
@@ -1254,27 +1307,12 @@ ncol(reducedDim(denoised.sce.dellOrso))
   - Graph-based clustering (i.e. SNN, Shared nearest neighbor) is a flexible and scalable technique for clustering large scRNA-seq datasets
   - The major advantage of graph-based clustering lies in its scalability. It only requires a k-nearest neighbor search that can be done in log-linear time on average
 
+
 ### 12.1 Primary data (no cell cycle correction)
 ```{r primary-data-clustering}
-# Perform clustering with 3 different values for k (5, 10, 50)
+# Perform clustering with k=10
 dimensions <- ncol(reducedDim(denoised.sce))
 
-# k=5
-denoised.sce.5 <- denoised.sce
-snng.5 <- buildSNNGraph(denoised.sce, d = dimensions, k=5)
-clust.5 <- igraph::cluster_walktrap(snng.5)$membership
-table(clust.5)
-denoised.sce.5$cluster <- factor(clust.5)
-
-set.seed(123)
-reducedDim(denoised.sce.5, "force") <- igraph::layout_with_fr(snng.5)
-denoised.sce.5 <- runUMAP(denoised.sce.5, dimred = "PCA", n_dimred = dimensions)
-denoised.sce.5 <- runTSNE(denoised.sce.5, dimred = "PCA")
-
-mod.5 <- modularity(snng.5, clust.5)
-ratio.5 <- clusterModularity(snng.5, clust.5, as.ratio = TRUE)
-
-# k=10
 denoised.sce.10 <- denoised.sce
 snng.10 <- buildSNNGraph(denoised.sce.10, d = dimensions, k = 10)
 clust.10 <- igraph::cluster_walktrap(snng.10)$membership
@@ -1286,67 +1324,22 @@ reducedDim(denoised.sce.10, "force") <- igraph::layout_with_fr(snng.10)
 denoised.sce.10 <- runUMAP(denoised.sce.10, dimred = "PCA", n_dimred = dimensions)
 denoised.sce.10 <- runTSNE(denoised.sce.10, dimred = "PCA")
 
+# Calculate modularity and plot cluster modularities
 mod.10 <- modularity(snng.10, clust.10)
 ratio.10 <- clusterModularity(snng.10, clust.10, as.ratio = TRUE)
 
-#k=50
-denoised.sce.50 <- denoised.sce
-snng.50 <- buildSNNGraph(denoised.sce.50, d = dimensions, k=50)
-clust.50 <- igraph::cluster_walktrap(snng.50)$membership
-table(clust.50)
-denoised.sce.50$cluster <- factor(clust.50)
-
-set.seed(123)
-reducedDim(denoised.sce.50, "force") <- igraph::layout_with_fr(snng.50)
-denoised.sce.50 <- runUMAP(denoised.sce.10, dimred = "PCA", n_dimred = dimensions)
-denoised.sce.50 <- runTSNE(denoised.sce.10, dimred = "PCA")
-
-mod.50 <- modularity(snng.50, clust.50)
-ratio.50 <- clusterModularity(snng.50, clust.50, as.ratio = TRUE)
-
-# Compare clustering results
-tab.5.10 <- table(paste("k=5", clust.5), paste("k=10", clust.10))
-ivw.5.10 <- pheatmap(log10(tab.5.10 + 10), main = "k=5 vs. k=10", color=viridis::viridis(100), silent = TRUE)
-
-tab.50.10 <- table(paste("k=50", clust.50), paste("k=10", clust.10))
-ivw.50.10 <- pheatmap(log10(tab.50.10 + 10), main = "k=50 vs. k=10", color=viridis::viridis(100), silent = TRUE)
-
-tab.50.5 <- table(paste("k=50", clust.50), paste("k=5", clust.5))
-ivw.50.5 <- pheatmap(log10(tab.50.5 + 10), main = "k=50 vs. k=5", color=viridis::viridis(100), silent = TRUE)
-
-gridExtra::grid.arrange(ivw.5.10[[4]], ivw.50.10[[4]], ivw.50.5[[4]], top = "Primary data: Comparison of clustering strategies with different k")
-
-# Plot Force-, PCA-, tSNE-, and UMAP plots
-p.force.5 <-   plotReducedDim(denoised.sce.5, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering: force-directed layout (k=5)")
-p.pca.5 <- plotReducedDim(denoised.sce.5, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering: PCA (k=5)")
-p.umap.5 <- plotReducedDim(denoised.sce.5, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters (k=5)")
-p.tsne.5 <- plotTSNE(denoised.sce.5, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=5)")
+print(paste("Modularity: ", mod.10))
+pheatmap(log2(ratio.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
 
 p.force.10 <- plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering: force-directed layout (k=10)")
 p.pca.10 <- plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering: PCA (k=10)")
 p.umap.10 <- plotReducedDim(denoised.sce.10, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters (k=10)")
 p.tsne.10 <- plotTSNE(denoised.sce.10, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=10)")
 
-p.force.50 <-   plotReducedDim(denoised.sce.50, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering: force-directed layout (k=50)")
-p.pca.50 <- plotReducedDim(denoised.sce.50, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering: PCA (k=50)")
-p.umap.50 <- plotReducedDim(denoised.sce.50, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters (k=50)")
-p.tsne.50 <- plotTSNE(denoised.sce.50, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=50)")
+gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap10, p.tsne.10, nrow = 2, ncol = 2)
 
-gridExtra::grid.arrange(p.force.5, p.force.10, p.force.50, top = "Primary data: force-directed layout plot for k-values 5,10,50")
-gridExtra::grid.arrange(p.pca.5, p.pca.10, p.pca.50, top = "Primary data: PCA plot for k-values 5,10,50")
-gridExtra::grid.arrange(p.umap.5, p.umap.10, p.umap.50, top = "Primary data: UMAP plot for k-values 5,10,50")
-gridExtra::grid.arrange(p.tsne.5, p.tsne.10, p.tsne.50, top = "Primary data: tSNE plot for k-values 5,10,50")
-
-# Plot heatmap of modularities for each k
-mod.df <- DataFrame("k=5" = mod.5, "k=10" = mod.10, "k=50" = mod.50)
-mod.df
-
-pheatmap(log2(ratio.5 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 5")
-pheatmap(log2(ratio.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
-pheatmap(log2(ratio.50 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 50")
-
-# Set k=5 to be used as k-value
-denoised.sce <- denoised.sce.5
+# Set k=10 to be used as k-value
+denoised.sce <- denoised.sce.10
 
 #saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
 ```
@@ -1355,25 +1348,9 @@ denoised.sce <- denoised.sce.5
 
 ### 12.2 Primary data (Seurat cell cycle correction)
 ```{r primary-data-cc-clustering}
-# Perform clustering with 3 different values for k (5, 10, 50)
+# Perform clustering with k=10
 dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
 
-# k=5
-denoised.sce.cc.5 <- denoised.sce.cc
-snng.cc.5 <- buildSNNGraph(denoised.sce.cc, d = dimensions.cc, k=5, assay.type = "counts")
-clust.cc.5 <- igraph::cluster_walktrap(snng.cc.5)$membership
-table(clust.cc.5)
-denoised.sce.cc.5$cluster <- factor(clust.cc.5)
-
-set.seed(123)
-reducedDim(denoised.sce.cc.5, "force") <- igraph::layout_with_fr(snng.cc.5)
-denoised.sce.cc.5 <- runUMAP(denoised.sce.cc.5, dimred = "PCA", n_dimred = dimensions.cc)
-denoised.sce.cc.5 <- runTSNE(denoised.sce.cc.5, dimred = "PCA")
-
-mod.cc.5 <- modularity(snng.cc.5, clust.cc.5)
-ratio.cc.5 <- clusterModularity(snng.cc.5, clust.cc.5, as.ratio = TRUE)
-
-# k=10
 denoised.sce.cc.10 <- denoised.sce.cc
 snng.cc.10 <- buildSNNGraph(denoised.sce.cc.10, d = dimensions.cc, assay.type = "counts", k = 10)
 clust.cc.10 <- igraph::cluster_walktrap(snng.cc.10)$membership
@@ -1385,130 +1362,95 @@ reducedDim(denoised.sce.cc.10, "force") <- igraph::layout_with_fr(snng.cc.10)
 denoised.sce.cc.10 <- runUMAP(denoised.sce.cc.10, dimred = "PCA", n_dimred = dimensions.cc)
 denoised.sce.cc.10 <- runTSNE(denoised.sce.cc.10, dimred = "PCA")
 
+# Calculate modularity and plot cluster modularities
 mod.cc.10 <- modularity(snng.cc.10, clust.cc.10)
 ratio.cc.10 <- clusterModularity(snng.cc.10, clust.cc.10, as.ratio = TRUE)
 
-#k=50
-denoised.sce.cc.50 <- denoised.sce.cc
-snng.cc.50 <- buildSNNGraph(denoised.sce.cc.50, d = dimensions.cc, assay.type = "counts", k = 50)
-clust.cc.50 <- igraph::cluster_walktrap(snng.cc.50)$membership
-table(clust.cc.50)
-denoised.sce.cc.50$cluster <- factor(clust.cc.50)
-
-set.seed(123)
-reducedDim(denoised.sce.cc.50, "force") <- igraph::layout_with_fr(snng.cc.50)
-denoised.sce.cc.50 <- runUMAP(denoised.sce.cc.50, dimred = "PCA", n_dimred = dimensions.cc)
-denoised.sce.cc.50 <- runTSNE(denoised.sce.cc.50, dimred = "PCA")
-
-mod.cc.50 <- modularity(snng.cc.50, clust.cc.50)
-ratio.cc.50 <- clusterModularity(snng.cc.50, clust.cc.50, as.ratio = TRUE)
-
-# Compare clustering results
-tab.5.10 <- table(paste("k=5", clust.cc.5), paste("k=10", clust.cc.10))
-ivw.5.10 <- pheatmap(log10(tab.5.10 + 10), main = "k=5 vs. k=10", color=viridis::viridis(100), silent = TRUE)
-
-tab.50.10 <- table(paste("k=50", clust.cc.50), paste("k=10", clust.cc.10))
-ivw.50.10 <- pheatmap(log10(tab.50.10 + 10), main = "k=50 vs. k=10", color=viridis::viridis(100), silent = TRUE)
-
-tab.50.5 <- table(paste("k=50", clust.cc.50), paste("k=5", clust.cc.5))
-ivw.50.5 <- pheatmap(log10(tab.50.5 + 10), main = "k=50 vs. k=5", color=viridis::viridis(100), silent = TRUE)
-
-gridExtra::grid.arrange(ivw.5.10[[4]], ivw.50.10[[4]], ivw.50.5[[4]], top = "Primary data (cc corrected): Comparison of clustering strategies with different k")
+print(paste("Modularity: ", mod.cc.10))
+pheatmap(log2(ratio.cc.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
 
 # Plot Force-, PCA-, tSNE-, and UMAP plots
-p.force.5 <- plotReducedDim(denoised.sce.cc.5, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=5)")
-p.pca.5 <- plotReducedDim(denoised.sce.cc.5, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=5)")
-p.umap.5 <- plotReducedDim(denoised.sce.cc.5, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=5)")
-p.tsne.5 <- plotTSNE(denoised.sce.cc.5, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=5)")
-
 p.force.10 <-   plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=10)")
 p.pca.10 <- plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=10)")
 p.umap.10 <- plotReducedDim(denoised.sce.cc.10, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=10)")
 p.tsne.10 <- plotTSNE(denoised.sce.cc.10, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=10)")
 
-p.force.50 <-   plotReducedDim(denoised.sce.cc.50, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=50)")
-p.pca.50 <- plotReducedDim(denoised.sce.cc.50, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=50)")
-p.umap.50 <- plotReducedDim(denoised.sce.cc.50, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=50)")
-p.tsne.50 <- plotTSNE(denoised.sce.cc.50, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=50)")
+gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap10, p.tsne.10, nrow = 2, ncol = 2)
 
-gridExtra::grid.arrange(p.force.5, p.force.10, p.force.50, top = "Primary data (cc corrected): force-directed layout plot for k-values 5,10,50")
-gridExtra::grid.arrange(p.pca.5, p.pca.10, p.pca.50, top = "Primary data (cc corrected): PCA plot for k-values 5,10,50")
-gridExtra::grid.arrange(p.umap.5, p.umap.10, p.umap.50, top = "Primary data (cc corrected): UMAP plot for k-values 5,10,50")
-gridExtra::grid.arrange(p.tsne.5, p.tsne.10, p.tsne.50, top = "Primary data (cc corrected): tSNE plot for k-values 5,10,50")
-
-# Plot heatmap of modularities for each k
-mod.df <- DataFrame("k=5" = mod.cc.5, "k=10" = mod.cc.10, "k=50" = mod.cc.50)
-mod.df
-
-pheatmap(log2(ratio.cc.5 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 5")
-pheatmap(log2(ratio.cc.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
-pheatmap(log2(ratio.cc.50 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 50")
-
-# Set k=5 to be used as k-value
-denoised.sce.cc <- denoised.sce.cc.5
+# Set k=10 to be used as k-value
+denoised.sce.cc <- denoised.sce.cc.10
 
 #saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_clust")
+```
+
+### 12.3 Primary data: Subclustering and marker gene detection
+#### 12.3.1 Subclustering
+
+```{r}
+# Inspect clusters in each sample
+table(denoised.sce$sample, denoised.sce$cluster)
+table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
+
+# Perform subclustering
+subclust <- quickSubCluster(denoised.sce, groups = denoised.sce$sample, assay.type = "logcounts", normalize = FALSE)
+subclust.cc <- quickSubCluster(denoised.sce.cc, groups = denoised.sce.cc$sample, assay.type = "counts", normalize = FALSE)
+
+# Plot sublusters
+p.sub.control <- plotReducedDim(subclust[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, Control sample - UMAP plot: subclusters")
+p.sub.control.cc <- plotReducedDim(subclust.cc[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), Control sample - UMAP plot: subclusters")
+
+p.sub.cap50 <- plotReducedDim(subclust[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, Cap50 sample - UMAP plot: subclusters")
+p.sub.cap50.cc <- plotReducedDim(subclust.cc[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), Cap50 sample - UMAP plot: subclusters")
+
+p.sub.cap50r4h <- plotReducedDim(subclust[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R4H sample - UMAP plot: subclusters")
+p.sub.cap50r4h.cc <- plotReducedDim(subclust.cc[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R4H sample - UMAP plot: subclusters")
+
+p.sub.cap50r8h <- plotReducedDim(subclust[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R8H sample - UMAP plot: subclusters")
+p.sub.cap50r8h.cc <- plotReducedDim(subclust.cc[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R8H sample - UMAP plot: subclusters")
+
+p.sub.cap50r16h <- plotReducedDim(subclust[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R16H sample - UMAP plot: subclusters")
+p.sub.cap50r16h.cc <- plotReducedDim(subclust.cc[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R16H sample - UMAP plot: subclusters")
+
+gridExtra::grid.arrange(p.sub.control, p.sub.control.cc, 
+                        p.sub.cap50, p.sub.cap50.cc,
+                        p.sub.cap50r4h, p.sub.cap50r4h.cc,
+                        p.sub.cap50r8h, p.sub.cap50r8h.cc,
+                        p.sub.cap50r16h, p.sub.cap50r16h.cc,
+                        ncol = 2)
+```
+
+#### 12.3.2 Marker gene detection
+```{r marker-gene-detection, eval=FALSE, echo=FALSE}
+# Find marker genes for Control sample
+markers.control <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "logcounts", pval.type = "any", lfc = 1)
+markers.control.cc <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
+
+Plot marker genes
+for(i in 1:length(markers.control)) {
+  print(i)
+  chosen <- markers.control[[i]][c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2"), ]
+  logFCs <- getMarkerEffects(chosen)
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Control Subcluster:", i))
+}
+
+for(i in 1:length(markers.control.cc)) {
+  print(i)
+  chosen <- markers.control.cc[[i]][c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2"), ]
+  logFCs <- getMarkerEffects(chosen)
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Control Subcluster:", i))
+}
 
 ```
 
+#### 12.3.3 Clustering comparison between non-corrected and cc-corrected primary data
+```{r}
+# Plot a heatmap of the differences in clustering between original data and cc-corrected data
+tab <- table(clust.10, clust.cc.10)
+pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=10)", color=viridis::viridis(100), silent=TRUE)
 
-#### 12.2.1 Primary data (Seurat cell cycle correction): Subclustering and marker genes
-
-```{r primary-cc-data-cluster-comparison}
-# Inspect clusters in each sample
-table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
-
-# Find marker genes between clusters
-markers <- findMarkers(denoised.sce.cc, groups = denoised.sce.cc$cluster, assay.type = "counts", pval.type="any", lfc = 1)
-
-# Plot the marker genes in a heatmap
-for(i in 1:length(markers)) {
-  chosen <- markers[[i]]
-  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cluster: ", i))
-}
-
-# Subclustering
-subclust <- quickSubCluster(denoised.sce.cc, groups = denoised.sce.cc$sample, assay.type = "counts", normalize = FALSE)
-
-plotReducedDim(subclust[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), Cap50 sample - UMAP plot: subclusters")
-plotReducedDim(subclust[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), Cap50 sample - UMAP plot: subclusters")
-plotReducedDim(subclust[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), R4H sample - UMAP plot: subclusters")
-plotReducedDim(subclust[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), R8H sample - UMAP plot: subclusters")
-plotReducedDim(subclust[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc), R16H sample - UMAP plot: subclusters")
-
-# Find markers within subclusters
-markers.control <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
-markers.cap50 <- findMarkers(subclust[["cap50"]], groups = subclust[["cap50"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
-markers.cap50_r4h <- findMarkers(subclust[["cap50_r4h"]], groups = subclust[["cap50_r4h"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
-markers.cap50_r8h <- findMarkers(subclust[["cap50_r8h"]], groups = subclust[["cap50_r8h"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
-markers.cap50_r16h <- findMarkers(subclust[["cap50_r16h"]], groups = subclust[["cap50_r16h"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
-
-# Plot marker genes for samples
-for(i in 1:length(markers.cap50)) {
-  chosen <- markers.cap50[[i]]
-  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50 Subcluster:", i))
-}
-
-for(i in 1:length(markers.cap50_r4h)) {
-  chosen <- markers.cap50_r4h[[i]]
-  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50_R4H Subcluster:", i))
-}
-
-for(i in 1:length(markers.cap50_r8h)) {
-  chosen <- markers.cap50_r8h[[i]]
-  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50_R8H Subcluster:", i))
-}
-
-for(i in 1:length(markers.cap50_r16h)) {
-  chosen <- markers.cap50_r16h[[i]]
-  logFCs <- getMarkerEffects(chosen[chosen$Top <= 5, ])
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Cap50_R16H Subcluster:", i))
-}
-
+# Calculate adjusted Rand index
+ari <- adj.rand.index(clust.10, clust.cc.10)
+print(paste("Adjusted Rand Index: ", ari))
 ```
 
 
@@ -1588,4 +1530,23 @@ plotTSNE(denoised.sce.dellOrso, colour_by = "sample") + ggtitle("Dell'Orso et al
 
 #saveRDS(denoised.sce.dellOrso, file = "./../saved/denoised_sce_dellOrso_clust")
 ```
+
+
+### Extra: Create Cerebro files (.crb)
+```{r cerebro-files, eval=FALSE}
+denoised.sce.clust <- readRDS("./../saved/denoised_sce_clust")
+denoised.sce.cc.clust <- readRDS("./../saved/denoised_sce_cc_clust")
+logcounts(denoised.sce.cc.clust) <- counts(denoised.sce.cc.clust)
+
+sce.seurat <- as.Seurat(denoised.sce.clust)
+sce.cc.seurat <- as.Seurat(denoised.sce.cc.clust)
+
+exportFromSeurat(sce.seurat, file = "./../saved/primary_data.crb", experiment_name = "Primary data (no correction)", organism = "mm",
+                 column_nUMI = "sum", column_nGene = "detected", column_cluster = "cluster", column_sample = "sample")
+
+exportFromSeurat(sce.cc.seurat, file = "./../saved/primary_data_cc_corrected.crb", experiment_name = "Primary data (cell cycle corrected)", organism = "mm",
+                 column_nUMI = "sum", column_nGene = "detected", column_cluster = "cluster", column_sample = "sample", column_cell_cycle_seurat = "Phase")
+
+```
+
 
