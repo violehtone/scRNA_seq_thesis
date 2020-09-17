@@ -1336,7 +1336,7 @@ p.pca.10 <- plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "PCA"
 p.umap.10 <- plotReducedDim(denoised.sce.10, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters (k=10)")
 p.tsne.10 <- plotTSNE(denoised.sce.10, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=10)")
 
-gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap10, p.tsne.10, nrow = 2, ncol = 2)
+gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap.10, p.tsne.10, nrow = 2, ncol = 2)
 
 # Set k=10 to be used as k-value
 denoised.sce <- denoised.sce.10
@@ -1375,7 +1375,7 @@ p.pca.10 <- plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "P
 p.umap.10 <- plotReducedDim(denoised.sce.cc.10, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=10)")
 p.tsne.10 <- plotTSNE(denoised.sce.cc.10, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=10)")
 
-gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap10, p.tsne.10, nrow = 2, ncol = 2)
+gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap.10, p.tsne.10, nrow = 2, ncol = 2)
 
 # Set k=10 to be used as k-value
 denoised.sce.cc <- denoised.sce.cc.10
