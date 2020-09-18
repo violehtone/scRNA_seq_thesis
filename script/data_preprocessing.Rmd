@@ -1469,12 +1469,34 @@ for(i in 1:length(markers.control.cc)) {
 ```{r}
 # Plot a heatmap of the differences in clustering between original data and cc-corrected data
 tab <- table(clust.10, clust.cc.10)
-pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=10)", color=viridis::viridis(100), silent=TRUE)
+pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=10)", color=viridis::viridis(100))
 
 # Calculate adjusted Rand index
 ari <- adj.rand.index(clust.10, clust.cc.10)
 print(paste("Adjusted Rand Index: ", ari))
+
+# Calculate ari with k=50
+dimensions <- ncol(reducedDim(denoised.sce))
+denoised.sce.50 <- denoised.sce
+snng.50 <- buildSNNGraph(denoised.sce.50, d = dimensions, k = 50)
+clust.50 <- igraph::cluster_walktrap(snng.50)$membership
+
+dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
+denoised.sce.cc.50 <- denoised.sce.cc
+snng.cc.50 <- buildSNNGraph(denoised.sce.cc.50, d = dimensions.cc, assay.type = "counts", k = 50)
+clust.cc.50 <- igraph::cluster_walktrap(snng.cc.50)$membership
+
+tab <- table(clust.50, clust.cc.50)
+pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=50)", color=viridis::viridis(100))
+ari50 <- adj.rand.index(clust.50, clust.cc.50)
+print(paste("Adjusted Rand Index: ", ari50))
+
 ```
+**Conclusions:**
+ - The adjusted rand index (ARI) increases when the k-parameter is increased (from ~0.38 to ~0.67)
+ - Nevertheless, the clustering seem to differ between the cell-cycle corrected and non-corrected data sets
+
+
 
 
 ### 12.3 Primary data (Reference-based cell cycle correction)
