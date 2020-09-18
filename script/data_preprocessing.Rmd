@@ -342,7 +342,7 @@ abundance <- rowMeans(logged)
 plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16, main = "Primary data: logFC between discarded and kept cells")
 points(abundance[rowData(sce)$mito==TRUE], logFC[rowData(sce)$mito==TRUE], col="dodgerblue", pch=16)
 
-changed <- logFC > 1 | logFC < -1
+changed <- logFC > 1
 
 # Up in discarded
 rownames(sce)[changed]
@@ -489,10 +489,10 @@ gridExtra::grid.arrange(
     guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
   plotColData(sce.deMicheli, x = "sampleID", y = "detected", colour_by = "discard", point_size = 0.3) +
     scale_y_log10() +
-    ggtitle("Total counts") +
+    ggtitle("Detected genes") +
     guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
   plotColData(sce.deMicheli, x = "sampleID", y = "subsets_Mito_percent", colour_by = "discard", point_size = 0.3) +
-    ggtitle("Total counts") +
+    ggtitle("Percent mitochondrial reads") +
     guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
   plotColData(sce.deMicheli, x="sampleID", y="percent_top_500",colour_by = "discard",point_size=0.3) + 
     ggtitle("Percent top 500 genes") + guides(colour = guide_legend(override.aes = list(size=15, alpha = 1))),
@@ -516,7 +516,7 @@ abundance <- rowMeans(logged)
 plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16, main = "De Micheli et al.: logFC between discarded and kept cells")
 points(abundance[rowData(sce.deMicheli)$mito==TRUE], logFC[rowData(sce.deMicheli)$mito==TRUE], col="dodgerblue", pch=16)
 
-changed <- logFC > 1 | logFC < -1
+changed <- logFC > 1
 
 # Up in discarded
 rownames(sce.deMicheli)[changed]
@@ -645,7 +645,7 @@ abundance <- rowMeans(logged)
 plot(abundance, logFC, xlab="Average count", ylab="Log-FC (lost/kept)", pch=16, main = "Dell'Orso et al.: logFC between discarded and kept cells")
 points(abundance[rowData(sce.dellOrso)$mito==TRUE], logFC[rowData(sce.dellOrso)$mito==TRUE], col="dodgerblue", pch=16)
 
-changed <- logFC > 1 | logFC < -1
+changed <- logFC > 1
 
 # Up in discarded
 rownames(sce.dellOrso)[changed]
@@ -990,6 +990,10 @@ data <- FindVariableFeatures(data, selection.method = "vst")
 # Set HVGs from the sce object into the Seurat object's variable features
 data@assays$RNA@var.features <- hvgs.data
 
+# Create a sce object before regressing out the cell cycle effect
+sce.not.cc <- as.SingleCellExperiment(data, assay = "RNA")
+saveRDS(sce.not.cc, file = "./../saved/sce_not_cc")
+
 # Regress out CC difference using the HVGs as features
 data <- ScaleData(data, vars.to.regress = "CC.Difference", features = VariableFeatures(data), assay = "RNA")
 
@@ -1058,6 +1062,24 @@ for(i in 1:dim(results)[1]) {
 results$signifant <- ifelse(results$p.value < 0.05, TRUE, FALSE)
 
 results
+
+# Plot UMAP plots before and after regressing out the cell cycle effect
+set.seed(123)
+uncorrected.data <- runPCA(sce.not.cc, subset_row = hvgs.data)
+uncorrected.data <- denoisePCA(uncorrected.data, technical = dec.data, subset.row = hvgs.data, assay.type = "logcounts")
+dimensions <- ncol(reducedDim(uncorrected.data))
+uncorrected.data <- runUMAP(uncorrected.data, dimred = "PCA", n_dimred = dimensions)
+
+set.seed(123)
+corrected.data <- runPCA(sce.cc, subset_row = hvgs.data, exprs_values = "counts")
+corrected.data <- denoisePCA(corrected.data, technical = dec.data, subset.row = hvgs.data, assay.type = "counts")
+dimensions.cc <- ncol(reducedDim(corrected.data))
+corrected.data <- runUMAP(corrected.data, dimred = "PCA", n_dimred = dimensions.cc)
+
+p1 <- plotReducedDim(uncorrected.data, colour_by = "Phase", dimred = "UMAP") + ggtitle("UMAP: non-corrected primary data")
+p2 <- plotReducedDim(corrected.data, colour_by = "Phase", dimred = "UMAP") + ggtitle("UMAP: cc-corrected primary data")
+
+gridExtra::grid.arrange(p1,p2)
 
 ```
 
