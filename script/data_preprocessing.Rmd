@@ -1029,6 +1029,7 @@ pie(cc_vs_labels$cap50_r16h, labels = rownames(cc_vs_labels), main = "Cap50_r16h
 # Merge G2M and S-phase into "dividing"
 sce.cc$Phase2 <- ifelse(sce.cc$Phase == "G1", "non-dividing", "dividing")
 
+par(mfrow=c(1,1))
 ggplot(data = as.data.frame(colData(sce.cc)), mapping = aes(x = factor(sample, levels = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")), fill = as.factor(Phase2))) +
   geom_bar(position = "dodge") +
   labs(x = "Sample", y = "Number of cells", fill = "Cell cycle phase")
@@ -1331,12 +1332,10 @@ ratio.10 <- clusterModularity(snng.10, clust.10, as.ratio = TRUE)
 print(paste("Modularity: ", mod.10))
 pheatmap(log2(ratio.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
 
-p.force.10 <- plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering: force-directed layout (k=10)")
-p.pca.10 <- plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering: PCA (k=10)")
-p.umap.10 <- plotReducedDim(denoised.sce.10, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters (k=10)")
-p.tsne.10 <- plotTSNE(denoised.sce.10, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=10)")
-
-gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap.10, p.tsne.10, nrow = 2, ncol = 2)
+plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering: force-directed layout (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering: PCA (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotTSNE(denoised.sce.10, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
 # Set k=10 to be used as k-value
 denoised.sce <- denoised.sce.10
@@ -1370,12 +1369,10 @@ print(paste("Modularity: ", mod.cc.10))
 pheatmap(log2(ratio.cc.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
 
 # Plot Force-, PCA-, tSNE-, and UMAP plots
-p.force.10 <-   plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=10)")
-p.pca.10 <- plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=10)")
-p.umap.10 <- plotReducedDim(denoised.sce.cc.10, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=10)")
-p.tsne.10 <- plotTSNE(denoised.sce.cc.10, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=10)")
-
-gridExtra::grid.arrange(p.force.10, p.pca.10, p.umap.10, p.tsne.10, nrow = 2, ncol = 2)
+plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotTSNE(denoised.sce.cc.10, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
 # Set k=10 to be used as k-value
 denoised.sce.cc <- denoised.sce.cc.10
@@ -1386,7 +1383,7 @@ denoised.sce.cc <- denoised.sce.cc.10
 ### 12.3 Primary data: Subclustering and marker gene detection
 #### 12.3.1 Subclustering
 
-```{r}
+```{r subclustering}
 # Inspect clusters in each sample
 table(denoised.sce$sample, denoised.sce$cluster)
 table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
@@ -1411,16 +1408,20 @@ p.sub.cap50r8h.cc <- plotReducedDim(subclust.cc[["cap50_r8h"]], colour_by = "sub
 p.sub.cap50r16h <- plotReducedDim(subclust[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R16H sample - UMAP plot: subclusters")
 p.sub.cap50r16h.cc <- plotReducedDim(subclust.cc[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R16H sample - UMAP plot: subclusters")
 
-gridExtra::grid.arrange(p.sub.control, p.sub.control.cc, 
-                        p.sub.cap50, p.sub.cap50.cc,
-                        p.sub.cap50r4h, p.sub.cap50r4h.cc,
-                        p.sub.cap50r8h, p.sub.cap50r8h.cc,
-                        p.sub.cap50r16h, p.sub.cap50r16h.cc,
-                        ncol = 2)
+
+
+gridExtra::grid.arrange(p.sub.control, p.sub.control.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50, p.sub.cap50.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50r4h, p.sub.cap50r4h.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50r8h, p.sub.cap50r8h.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50r16h, p.sub.cap50r16h.cc, ncol = 2)
+
+
 ```
 
 #### 12.3.2 Marker gene detection
-```{r marker-gene-detection, eval=FALSE, echo=FALSE}
+**This code chunk is not evaluated (as it would produce quite a few plots) but it can be run if one wants to see the marker genes for each sub-cluster** 
+```{r marker-gene-detection, eval=FALSE}
 # Find marker genes for Control sample
 markers.control <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "logcounts", pval.type = "any", lfc = 1)
 markers.control.cc <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
