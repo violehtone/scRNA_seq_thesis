@@ -48,6 +48,7 @@ library(batchelor)
 library(pheatmap)
 library(igraph)
 library(fossil)
+library(cluster)
 ```
 
 ## 3. Utility functions
@@ -57,21 +58,6 @@ firstColumnToRowNames <- function(data) {
   rownames(data) <- data[, 1]
   data <- data[, -1]
   return(data)
-}
-
-optimize_k <- function(sce, values, assay_name) {
-  #' Calculate modularities for different values of k
-  #' sce = SingleCellExperiment object, values = sequence of k values (i.e. seq(5,10)), assay_name = name of the assay to be used
-  dimensions <- ncol(reducedDim(sce))
-  results <- list()
-  
-  for (i in values) {
-    snng <- buildSNNGraph(sce, d = dimensions, assay.type = assay_name, k = i)
-    clust <- igraph::cluster_walktrap(snng)$membership
-    mod <- modularity(snng, clust)
-    results[[paste(i)]] <- mod
-  }
-  return(results)
 }
 
 ```
@@ -829,7 +815,6 @@ uncorrected.deMicheli <- runPCA(sce.deMicheli.n, subset_row = hvgs.deMicheli, BS
 snn.gr.deMicheli <- buildSNNGraph(uncorrected.deMicheli, use.dimred = "PCA")
 clusters.deMicheli <- igraph::cluster_walktrap(snn.gr.deMicheli)$membership
 tab <- table(Cluster = clusters.deMicheli, Batch = uncorrected.deMicheli$sampleID)
-tab
 
 set.seed(123)
 uncorrected.deMicheli <- runTSNE(uncorrected.deMicheli, dimred = "PCA")
@@ -845,7 +830,6 @@ uncorrected.deMicheli.d0 <- runPCA(sce.deMicheli.n[, sce.deMicheli.n$injury == "
 snn.gr.deMicheli.d0 <- buildSNNGraph(uncorrected.deMicheli.d0, use.dimred = "PCA")
 clusters.deMicheli.d0 <- igraph::cluster_walktrap(snn.gr.deMicheli.d0)$membership
 tab.d0 <- table(Cluster = clusters.deMicheli.d0, Batch = uncorrected.deMicheli.d0$sampleID)
-tab.d0
 
 set.seed(123)
 uncorrected.deMicheli.d0 <- runTSNE(uncorrected.deMicheli.d0, dimred = "PCA")
@@ -859,7 +843,6 @@ uncorrected.deMicheli.d5 <- runPCA(sce.deMicheli.n[, sce.deMicheli.n$injury == "
 snn.gr.deMicheli.d5 <- buildSNNGraph(uncorrected.deMicheli.d5, use.dimred = "PCA")
 clusters.deMicheli.d5 <- igraph::cluster_walktrap(snn.gr.deMicheli.d5)$membership
 tab.d5 <- table(Cluster = clusters.deMicheli.d5, Batch = uncorrected.deMicheli.d5$sampleID)
-tab.d5
 
 set.seed(123)
 uncorrected.deMicheli.d5 <- runTSNE(uncorrected.deMicheli.d5, dimred = "PCA")
@@ -873,7 +856,6 @@ uncorrected.deMicheli.d7 <- runPCA(sce.deMicheli.n[, sce.deMicheli.n$injury == "
 snn.gr.deMicheli.d7 <- buildSNNGraph(uncorrected.deMicheli.d7, use.dimred = "PCA")
 clusters.deMicheli.d7 <- igraph::cluster_walktrap(snn.gr.deMicheli.d7)$membership
 tab.d7 <- table(Cluster = clusters.deMicheli.d7, Batch = uncorrected.deMicheli.d7$sampleID)
-tab.d7
 
 set.seed(123)
 uncorrected.deMicheli.d7 <- runTSNE(uncorrected.deMicheli.d7, dimred = "PCA")
@@ -892,8 +874,9 @@ gridExtra::grid.arrange(p.d0, p.d0b, p.d5, p.d5b, p.d7, p.d7b,
  
 **Conclusions:**
 
- - As can be seen from the Figure above, the clusters seem to separate mostly by the cell types
- - In the Day 7 sample, however, the samples seem to create separate clusters which cannot be explained by the differences in cell types. This was mentioned in the article as well but they decided to leave it uncorrected.
+ - As can be seen, the replicate samples seem not to create separate clusters, except for Day 7 samples
+ - The clusters seem to separate mostly by the cell types
+ - In the Day 7 sample, the samples seem to create separate clusters. This was mentioned in the article as well but they decided to leave it uncorrected.
 
 
 ### 9.1 Dell'Orso et al. (2019) reference data
@@ -1167,6 +1150,45 @@ sce.cc.2$sample <- sce.n$sample
 ```
 
 
+### 10.4 Annotation of cell cycle phases to reference datasets
+```{r ref-cellcycle-annotation}
+# Convert sce objects into Seurat objects
+deMicheli.seurat <- as.Seurat(sce.deMicheli.n, counts = "counts", data = "logcounts")
+dellOrso.seurat <- as.Seurat(sce.dellOrso.n, counts = "counts", data = "logcounts")
+
+# Perform Seurat normalization and update normalized values from sce objects
+deMicheli.seurat <- NormalizeData(deMicheli.seurat)
+deMicheli.seurat@assays$RNA@data <- logcounts(sce.deMicheli.n)
+
+dellOrso.seurat <- NormalizeData(dellOrso.seurat)
+dellOrso.seurat@assays$RNA@data <- logcounts(sce.dellOrso.n)
+
+# Assign cell cycle scores
+deMicheli.seurat <-CellCycleScoring(deMicheli.seurat, s.features = s.genes.mouse, g2m.features = g2m.genes.mouse, set.ident = TRUE)
+dellOrso.seurat <-CellCycleScoring(dellOrso.seurat, s.features = s.genes.mouse, g2m.features = g2m.genes.mouse, set.ident = TRUE)
+
+# Convert back to sce objects
+sce.deMicheli.cc <- as.SingleCellExperiment(deMicheli.seurat, assay = "RNA")
+sce.dellOrso.cc <- as.SingleCellExperiment(dellOrso.seurat, assay = "RNA")
+
+# Plot cc phases for the datasets
+phases.deMicheli <- as.data.frame.matrix(table(sce.deMicheli.cc$Phase, sce.deMicheli.cc$injury))
+phases.dellOrso <- as.data.frame.matrix(table(sce.dellOrso.cc$Phase, sce.dellOrso.cc$sample))
+
+par(mfrow=c(3,3))
+pie(phases.deMicheli$`Day 0`, labels = rownames(phases.deMicheli), main = "Day 0")
+pie(phases.deMicheli$`Day 5`, labels = rownames(phases.deMicheli), main = "Day 5")
+pie(phases.deMicheli$`Day 7`, labels = rownames(phases.deMicheli), main = "Day 7")
+
+par(mfrow=c(2,3))
+pie(phases.dellOrso$homeostatic_MuSCs_rep1, labels = rownames(phases.dellOrso), main = "homeostatic_MuSCs_rep1")
+pie(phases.dellOrso$homeostatic_MuSCs_rep2, labels = rownames(phases.dellOrso), main = "homeostatic_MuSCs_rep2")
+pie(phases.dellOrso$inj_60h_MuSCs_rep1, labels = rownames(phases.dellOrso), main = "inj_60h_MuSCs_rep1")
+pie(phases.dellOrso$inj_60h_MuSCs_rep2, labels = rownames(phases.dellOrso), main = "inj_60h_MuSCs_rep2")
+pie(phases.dellOrso$Primary_MB, labels = rownames(phases.dellOrso), main = "Primary_MB")
+```
+
+
 
 ## 11. Dimensionality reduction
   - PCA is performed on the log-normalized expression values by using runPCA() function
@@ -1269,11 +1291,11 @@ ncol(reducedDim(denoised.sce.cc.2))
 ### 11.4 De Micheli et al. (2020) reference data
 ```{r deMicheli-dimension-reduction}
 # Perform dimension reduction
-sce.deMicheli.n <- runPCA(sce.deMicheli.n, subset_row = hvgs.deMicheli)
-plotReducedDim(sce.deMicheli.n, dimred = "PCA", colour_by = "injury")
+sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, subset_row = hvgs.deMicheli)
+plotReducedDim(sce.deMicheli.cc, dimred = "PCA", colour_by = "injury")
 
 # Compute the variance explained by each PC
-percent.var.deMicheli <- attr(reducedDim(sce.deMicheli.n), "percentVar")
+percent.var.deMicheli <- attr(reducedDim(sce.deMicheli.cc), "percentVar")
 chosen.elbow.deMicheli <- PCAtools::findElbowPoint(percent.var.deMicheli)
 chosen.elbow.deMicheli
 
@@ -1284,7 +1306,7 @@ abline(v=chosen.elbow.deMicheli, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
-denoised.sce.deMicheli <- denoisePCA(sce.deMicheli.n,
+denoised.sce.deMicheli <- denoisePCA(sce.deMicheli.cc,
                                      technical = dec.deMicheli,
                                      subset.row = hvgs.deMicheli)
 
@@ -1298,11 +1320,11 @@ ncol(reducedDim(denoised.sce.deMicheli))
 ### 11.5 Dell'Orso et al. (2019) reference data
 ```{r dellOrso-dimension-reduction}
 # Perform dimension reduction
-sce.dellOrso.n <- runPCA(sce.dellOrso.n, subset_row = hvgs.dellOrso)
-plotReducedDim(sce.dellOrso.n, dimred = "PCA", colour_by = "sample")
+sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, subset_row = hvgs.dellOrso)
+plotReducedDim(sce.dellOrso.cc, dimred = "PCA", colour_by = "sample")
 
 # Compute the variance explained by each PC
-percent.var.dellOrso <- attr(reducedDim(sce.dellOrso.n), "percentVar")
+percent.var.dellOrso <- attr(reducedDim(sce.dellOrso.cc), "percentVar")
 chosen.elbow.dellOrso <- PCAtools::findElbowPoint(percent.var.dellOrso)
 chosen.elbow.dellOrso
 
@@ -1313,7 +1335,7 @@ abline(v=chosen.elbow.dellOrso, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
-denoised.sce.dellOrso <- denoisePCA(sce.dellOrso.n,
+denoised.sce.dellOrso <- denoisePCA(sce.dellOrso.cc,
                                     technical = dec.dellOrso,
                                     subset.row = hvgs.dellOrso)
 
@@ -1333,71 +1355,91 @@ ncol(reducedDim(denoised.sce.dellOrso))
 
 ### 12.1 Primary data (no cell cycle correction)
 ```{r primary-data-clustering}
-# Perform clustering with k=10
+# Perform clustering with k=180
 dimensions <- ncol(reducedDim(denoised.sce))
 
-denoised.sce.10 <- denoised.sce
-snng.10 <- buildSNNGraph(denoised.sce.10, d = dimensions, k = 10)
-clust.10 <- igraph::cluster_walktrap(snng.10)$membership
-table(clust.10)
-denoised.sce.10$cluster <- factor(clust.10)
+snng <- buildSNNGraph(denoised.sce, d = dimensions, k = 180)
+clust <- igraph::cluster_walktrap(snng)$membership
+table(clust)
+denoised.sce$cluster <- factor(clust)
 
 set.seed(123)
-reducedDim(denoised.sce.10, "force") <- igraph::layout_with_fr(snng.10)
-denoised.sce.10 <- runUMAP(denoised.sce.10, dimred = "PCA", n_dimred = dimensions)
-denoised.sce.10 <- runTSNE(denoised.sce.10, dimred = "PCA")
+reducedDim(denoised.sce, "force") <- igraph::layout_with_fr(snng)
+denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
+denoised.sce <- runTSNE(denoised.sce, dimred = "PCA")
 
-# Calculate modularity and plot cluster modularities
-mod.10 <- modularity(snng.10, clust.10)
-ratio.10 <- clusterModularity(snng.10, clust.10, as.ratio = TRUE)
+# Calculate modularity of the graph
+mod <- modularity(snng, clust)
+ratio <- clusterModularity(snng, clust, as.ratio = TRUE)
+print("Modularity of the graph: ", mod)
+pheatmap(log2(ratio + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data, k = 180")
 
-print(paste("Modularity: ", mod.10))
-pheatmap(log2(ratio.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
+# Perform silhouette analysis
+dist.data <- dist(reducedDim(denoised.sce, "PCA"))
+sil <- silhouette(clust, dist = dist.data)
+plot(sil)
 
-plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering: force-directed layout (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
-plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data clustering: PCA (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
-plotReducedDim(denoised.sce.10, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering: UMAP with clusters (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
-plotTSNE(denoised.sce.10, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+# Silhouette with subset of cells
+denoised.sce.f <- denoised.sce[, seq(1, 21808, by = 80)]
+clust.f <- clust[seq(1, 21808, by = 80)]
+dist.data.f <- dist(reducedDim(denoised.sce.f, "PCA"))
+sil.f <- silhouette(clust.f, dist = dist.data.f)
+plot(sil.f)
 
-# Set k=10 to be used as k-value
-denoised.sce <- denoised.sce.10
+
+# Plot reduced dims
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force") + ggtitle("Primary data: force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data: PCA (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotTSNE(denoised.sce, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
 #saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
 ```
 
-
-
 ### 12.2 Primary data (Seurat cell cycle correction)
 ```{r primary-data-cc-clustering}
-# Perform clustering with k=10
+# Perform clustering with k=180
 dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
 
-denoised.sce.cc.10 <- denoised.sce.cc
-snng.cc.10 <- buildSNNGraph(denoised.sce.cc.10, d = dimensions.cc, assay.type = "counts", k = 10)
-clust.cc.10 <- igraph::cluster_walktrap(snng.cc.10)$membership
-table(clust.cc.10)
-denoised.sce.cc.10$cluster <- factor(clust.cc.10)
+snng.cc <- buildSNNGraph(denoised.sce.cc, d = dimensions.cc, assay.type = "counts", k = 180)
+clust.cc <- igraph::cluster_walktrap(snng.cc)$membership
+table(clust.cc)
+denoised.sce.cc$cluster <- factor(clust.cc)
 
 set.seed(123)
-reducedDim(denoised.sce.cc.10, "force") <- igraph::layout_with_fr(snng.cc.10)
-denoised.sce.cc.10 <- runUMAP(denoised.sce.cc.10, dimred = "PCA", n_dimred = dimensions.cc)
-denoised.sce.cc.10 <- runTSNE(denoised.sce.cc.10, dimred = "PCA")
+reducedDim(denoised.sce.cc, "force") <- igraph::layout_with_fr(snng.cc)
+denoised.sce.cc <- runUMAP(denoised.sce.cc, dimred = "PCA", n_dimred = dimensions.cc)
+denoised.sce.cc <- runTSNE(denoised.sce.cc, dimred = "PCA")
 
-# Calculate modularity and plot cluster modularities
-mod.cc.10 <- modularity(snng.cc.10, clust.cc.10)
-ratio.cc.10 <- clusterModularity(snng.cc.10, clust.cc.10, as.ratio = TRUE)
+# Calculate modularity of the graph
+mod.cc <- modularity(snng.cc, clust.cc)
+ratio.cc <- clusterModularity(snng.cc, clust.cc, as.ratio = TRUE)
+print("Modularity of the graph: ", mod.cc)
+pheatmap(log2(ratio.cc + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data cell cycle corrected, k = 180")
 
-print(paste("Modularity: ", mod.cc.10))
-pheatmap(log2(ratio.cc.10 + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "k = 10")
+# Perform silhouette analysis
+dist.data.cc <- dist(reducedDim(denoised.sce.cc, "PCA"))
+sil.cc <- silhouette(clust.cc, dist = dist.data.cc)
+plot(sil.cc)
 
-# Plot Force-, PCA-, tSNE-, and UMAP plots
-plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
-plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
-plotReducedDim(denoised.sce.cc.10, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
-plotTSNE(denoised.sce.cc.10, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+# Silhouette with subset of cells
+denoised.sce.cc.f <- denoised.sce.cc[, seq(1, 21808, by = 80)]
+clust.cc.f <- clust.cc[seq(1, 21808, by = 80)]
+dist.data.cc.f <- dist(reducedDim(denoised.sce.cc.f, "PCA"))
+sil.cc.f <- silhouette(clust.cc.f, dist = dist.data.cc.f)
+plot(sil.cc.f)
 
-# Set k=10 to be used as k-value
-denoised.sce.cc <- denoised.sce.cc.10
+# Plot reduced dims
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotTSNE(denoised.sce.cc, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
 #saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_clust")
 ```
@@ -1430,14 +1472,11 @@ p.sub.cap50r8h.cc <- plotReducedDim(subclust.cc[["cap50_r8h"]], colour_by = "sub
 p.sub.cap50r16h <- plotReducedDim(subclust[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R16H sample - UMAP plot: subclusters")
 p.sub.cap50r16h.cc <- plotReducedDim(subclust.cc[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R16H sample - UMAP plot: subclusters")
 
-
-
 gridExtra::grid.arrange(p.sub.control, p.sub.control.cc, ncol = 2)
 gridExtra::grid.arrange(p.sub.cap50, p.sub.cap50.cc, ncol = 2)
 gridExtra::grid.arrange(p.sub.cap50r4h, p.sub.cap50r4h.cc, ncol = 2)
 gridExtra::grid.arrange(p.sub.cap50r8h, p.sub.cap50r8h.cc, ncol = 2)
 gridExtra::grid.arrange(p.sub.cap50r16h, p.sub.cap50r16h.cc, ncol = 2)
-
 
 ```
 
@@ -1466,41 +1505,20 @@ for(i in 1:length(markers.control.cc)) {
 ```
 
 #### 12.3.3 Clustering comparison between non-corrected and cc-corrected primary data
-```{r}
+```{r rand-index}
 # Plot a heatmap of the differences in clustering between original data and cc-corrected data
-tab <- table(clust.10, clust.cc.10)
-pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=10)", color=viridis::viridis(100))
+tab <- table(clust, clust.cc)
+pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=viridis::viridis(100))
 
 # Calculate adjusted Rand index
-ari <- adj.rand.index(clust.10, clust.cc.10)
+ari <- adj.rand.index(clust, clust.cc)
 print(paste("Adjusted Rand Index: ", ari))
-
-# Calculate ari with k=50
-dimensions <- ncol(reducedDim(denoised.sce))
-denoised.sce.50 <- denoised.sce
-snng.50 <- buildSNNGraph(denoised.sce.50, d = dimensions, k = 50)
-clust.50 <- igraph::cluster_walktrap(snng.50)$membership
-
-dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
-denoised.sce.cc.50 <- denoised.sce.cc
-snng.cc.50 <- buildSNNGraph(denoised.sce.cc.50, d = dimensions.cc, assay.type = "counts", k = 50)
-clust.cc.50 <- igraph::cluster_walktrap(snng.cc.50)$membership
-
-tab <- table(clust.50, clust.cc.50)
-pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=50)", color=viridis::viridis(100))
-ari50 <- adj.rand.index(clust.50, clust.cc.50)
-print(paste("Adjusted Rand Index: ", ari50))
-
 ```
-**Conclusions:**
- - The adjusted rand index (ARI) increases when the k-parameter is increased (from ~0.38 to ~0.67)
- - Nevertheless, the clustering seem to differ between the cell-cycle corrected and non-corrected data sets
-
-
 
 
 ### 12.3 Primary data (Reference-based cell cycle correction)
-```{r primary-data-cc2-clustering}
+**This code chunk should maybe be deleted as it is not used anymore(?)**
+```{r primary-data-cc2-clustering, eval=FALSE}
 # Perform clustering
 dimensions.cc.2 <- ncol(reducedDim(denoised.sce.cc.2))
 snng.cc.2 <- buildSNNGraph(denoised.sce.cc.2, d = dimensions.cc.2, assay.type = "corrected")
@@ -1526,10 +1544,11 @@ plotTSNE(denoised.sce.cc.2, colour_by = "sample") + ggtitle("Primary data cluste
 ```
 
 ### 12.4 De Micheli et al. (2020) reference data
-```{r deMicheli-clustering}
+**This code chunk should maybe be deleted as it is not used anymore(?)**
+```{r deMicheli-clustering, eval=FALSE}
 # Perform clustering
 dimensions.deMicheli <- ncol(reducedDim(denoised.sce.deMicheli))
-snng.deMicheli <- buildSNNGraph(denoised.sce.deMicheli, d = dimensions.deMicheli)
+snng.deMicheli <- buildSNNGraph(denoised.sce.deMicheli, d = dimensions.deMicheli, k = 50)
 clust.deMicheli <- igraph::cluster_walktrap(snng.deMicheli)$membership
 denoised.sce.deMicheli$cluster <- factor(clust.deMicheli)
 
@@ -1552,10 +1571,11 @@ plotTSNE(denoised.sce.deMicheli, colour_by = "injury") + ggtitle("De Micheli et 
 
 
 ### 12.5 Dell'Orso et al. (2019) reference data
-```{r dellOrso-clustering}
+**This code chunk should maybe be deleted as it is not used anymore(?)**
+```{r dellOrso-clustering, eval=FALSE}
 # Perform clustering
 dimensions.dellOrso <- ncol(reducedDim(denoised.sce.dellOrso))
-snng.dellOrso <- buildSNNGraph(denoised.sce.dellOrso, d = dimensions.dellOrso)
+snng.dellOrso <- buildSNNGraph(denoised.sce.dellOrso, d = dimensions.dellOrso, k = 50)
 clust.dellOrso <- igraph::cluster_walktrap(snng.dellOrso)$membership
 denoised.sce.dellOrso$cluster <- factor(clust.dellOrso)
 
