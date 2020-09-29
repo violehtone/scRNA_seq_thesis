@@ -14,6 +14,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 # Trajectory inference
 SCORPIUS (https://github.com/rcannood/SCORPIUS) will be used for performing the trajectory inference as it is designed for inferring linear developmental trajectories from scRNA-seq data
 
+
 ## 1. Load packages and data
 ### Load packages
 ```{r load-packages, message=FALSE}
@@ -24,46 +25,36 @@ library(SingleCellExperiment)
 library(dplyr)
 ```
 
+
 ### Load saved sce objects
 ```{r load-objects}
+# Load pre-processed sce objects
 denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
 denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 ```
 
+
 ## 2. Trajectory inference
 ### 2.1 De Micheli et al. (2020) reference data
-```{r deMicheli-traj-inference}
-#---------------------------------------------------------------------------------------------------------------------------------
-# Separate workflows for top10%, top5%, top2.5%, top1%, top0.5%, top0.1%, complement of top0.5% of genes and for marker genes only
-#---------------------------------------------------------------------------------------------------------------------------------
-dec.deMicheli <- readRDS("./../saved/dec_deMicheli")
+```{r deMicheli-traj-inference-final}
+# Define groups
+d0_muscle <- denoised.sce.deMicheli$injury == "Day 0" & denoised.sce.deMicheli$cell_annotation == "Mature skeletal muscle"
+d0_musc <- denoised.sce.deMicheli$injury == "Day 0" & denoised.sce.deMicheli$cell_annotation == "MuSCs and progenitors"
+d5_muscle <- denoised.sce.deMicheli$injury == "Day 5" & denoised.sce.deMicheli$cell_annotation == "Mature skeletal muscle"
+d5_musc <- denoised.sce.deMicheli$injury == "Day 5" & denoised.sce.deMicheli$cell_annotation == "MuSCs and progenitors"
+d7_muscle <- denoised.sce.deMicheli$injury == "Day 7" & denoised.sce.deMicheli$cell_annotation == "Mature skeletal muscle"
+d7_musc <- denoised.sce.deMicheli$injury == "Day 7" & denoised.sce.deMicheli$cell_annotation == "MuSCs and progenitors"
 
-# Define HVGs
-hvgs10.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.1)
-hvgs5.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.05)
-hvgs2.5.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.025)
-hvgs1.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.01)
-hvgs0.5.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.005)
-hvgs0.1.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.001)
+denoised.sce.deMicheli$group[d0_musc] <- "d0_MuSCs_and_progenitors"
+denoised.sce.deMicheli$group[d5_musc] <- "d5_MuSCs_and_progenitors"
+denoised.sce.deMicheli$group[d7_musc] <- "d7_MuSCs_and_progenitors"
+denoised.sce.deMicheli$group[d0_muscle] <- "d0_mature_skeletal_muscle"
+denoised.sce.deMicheli$group[d5_muscle] <- "d5_mature_skeletal_muscle"
+denoised.sce.deMicheli$group[d7_muscle] <- "d7_mature_skeletal_muscle"
 
-# Define sce objects to use
-denoised.sce.deMicheli.10 <- denoised.sce.deMicheli[rownames(denoised.sce.deMicheli) %in% hvgs10.deMicheli, ]
-denoised.sce.deMicheli.5 <- denoised.sce.deMicheli[rownames(denoised.sce.deMicheli) %in% hvgs5.deMicheli, ]
-denoised.sce.deMicheli.2.5 <- denoised.sce.deMicheli[rownames(denoised.sce.deMicheli) %in% hvgs2.5.deMicheli, ]
-denoised.sce.deMicheli.1 <- denoised.sce.deMicheli[rownames(denoised.sce.deMicheli) %in% hvgs1.deMicheli, ]
-denoised.sce.deMicheli.0.5 <- denoised.sce.deMicheli[rownames(denoised.sce.deMicheli) %in% hvgs0.5.deMicheli, ]
-denoised.sce.deMicheli.0.1 <- denoised.sce.deMicheli[rownames(denoised.sce.deMicheli) %in% hvgs0.1.deMicheli, ]
-denoised.sce.deMicheli.0.5.comp <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% hvgs0.5.deMicheli, ]
-
-marker.genes <- c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2", "Tnnc1", "Tnnc2")
-denoised.sce.deMicheli.markers <- denoised.sce.deMicheli[rownames(denoised.sce.deMicheli) %in% marker.genes, ]
-
-#-------------#
-#  all genes  #
-#-------------#
 # Create expression and sample objects
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
-group_name.deMicheli <- as.factor(denoised.sce.deMicheli$injury)
+group_name.deMicheli <- as.factor(denoised.sce.deMicheli$group)
 
 # Trajectory building
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
@@ -72,188 +63,14 @@ traj.deMicheli <- infer_trajectory(space.deMicheli)
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = group_name.deMicheli,
                      path = traj.deMicheli$path,
-                     contour = TRUE) + ggtitle("All genes, ndim=2")
-
-#----------------#
-#  Marker genes  #
-#----------------#
-# Create expression and sample objects
-expression.deMicheli.markers <- as.matrix(t(logcounts(denoised.sce.deMicheli.markers)))
-group_name.deMicheli.markers <- as.factor(denoised.sce.deMicheli.markers$injury)
-
-# Trajectory building
-space.deMicheli.markers <- reduce_dimensionality(expression.deMicheli.markers, dist = "spearman", ndim = 2)
-traj.deMicheli.markers <- infer_trajectory(space.deMicheli.markers)
-
-# Plot by sample groups
-draw_trajectory_plot(space = space.deMicheli.markers, 
-                     progression_group = group_name.deMicheli.markers,
-                     path = traj.deMicheli.markers$path,
-                     contour = TRUE) + ggtitle("Marker genes, ndim = 2")
-
-
-#----------------#
-#  Top 10% HVGs  #
-#----------------#
-# Create expression and sample objects
-expression.deMicheli.10 <- as.matrix(t(logcounts(denoised.sce.deMicheli.10)))
-group_name.deMicheli.10 <- as.factor(denoised.sce.deMicheli.10$injury)
-
-# Trajectory building
-space.deMicheli.10 <- reduce_dimensionality(expression.deMicheli.10, dist = "spearman", ndim = 2)
-traj.deMicheli.10 <- infer_trajectory(space.deMicheli.10)
-
-# Plot by sample groups
-p10 <- draw_trajectory_plot(space = space.deMicheli.10, 
-                     progression_group = group_name.deMicheli.10,
-                     path = traj.deMicheli.10$path,
-                     contour = TRUE) + ggtitle("top 10% HVGs, ndim = 2")
-
-#---------------#
-#  Top 5% HVGs  #
-#---------------#
-# Create expression and sample objects
-expression.deMicheli.5 <- as.matrix(t(logcounts(denoised.sce.deMicheli.5)))
-group_name.deMicheli.5 <- as.factor(denoised.sce.deMicheli.5$injury)
-
-# Trajectory building
-space.deMicheli.5 <- reduce_dimensionality(expression.deMicheli.5, dist = "spearman", ndim = 2)
-traj.deMicheli.5 <- infer_trajectory(space.deMicheli.5)
-
-# Plot by sample groups
-p5 <- draw_trajectory_plot(space = space.deMicheli.5, 
-                     progression_group = group_name.deMicheli.5,
-                     path = traj.deMicheli.5$path,
-                     contour = TRUE) + ggtitle("top 5% HVGs, ndim = 2")
-
-
-#-----------------#
-#  Top 2.5% HVGs  #
-#-----------------#
-# Create expression and sample objects
-expression.deMicheli.2.5 <- as.matrix(t(logcounts(denoised.sce.deMicheli.2.5)))
-group_name.deMicheli.2.5 <- as.factor(denoised.sce.deMicheli.2.5$injury)
-
-# Trajectory building
-space.deMicheli.2.5 <- reduce_dimensionality(expression.deMicheli.2.5, dist = "spearman", ndim = 2)
-traj.deMicheli.2.5 <- infer_trajectory(space.deMicheli.2.5)
-
-# Plot by sample groups
-p2.5 <- draw_trajectory_plot(space = space.deMicheli.2.5, 
-                     progression_group = group_name.deMicheli.2.5,
-                     path = traj.deMicheli.2.5$path,
-                     contour = TRUE) + ggtitle("top 2.5% HVGs, ndim = 2")
-
-#---------------#
-#  Top 1% HVGs  #
-#---------------#
-# Create expression and sample objects
-expression.deMicheli.1 <- as.matrix(t(logcounts(denoised.sce.deMicheli.1)))
-group_name.deMicheli.1 <- as.factor(denoised.sce.deMicheli.1$injury)
-
-# Trajectory building
-space.deMicheli.1 <- reduce_dimensionality(expression.deMicheli.1, dist = "spearman", ndim = 2)
-traj.deMicheli.1 <- infer_trajectory(space.deMicheli.1)
-
-# Plot by sample groups
-p1 <- draw_trajectory_plot(space = space.deMicheli.1, 
-                     progression_group = group_name.deMicheli.1,
-                     path = traj.deMicheli.1$path,
-                     contour = TRUE) + ggtitle("top 1% HVGs, ndim = 2")
-
-
-gridExtra::grid.arrange(p10, p5, p2.5, p1, ncol = 2)
-
-#-----------------#
-#  Top 0.5% HVGs  #
-#-----------------#
-# Create expression and sample objects
-expression.deMicheli.0.5 <- as.matrix(t(logcounts(denoised.sce.deMicheli.0.5)))
-group_name.deMicheli.0.5 <- as.factor(denoised.sce.deMicheli.0.5$injury)
-
-# Trajectory building
-space.deMicheli.0.5 <- reduce_dimensionality(expression.deMicheli.0.5, dist = "spearman", ndim = 2)
-traj.deMicheli.0.5 <- infer_trajectory(space.deMicheli.0.5)
-
-# Plot by sample groups
-p0.5 <- draw_trajectory_plot(space = space.deMicheli.0.5, 
-                     progression_group = group_name.deMicheli.0.5,
-                     path = traj.deMicheli.0.5$path,
-                     contour = TRUE) + ggtitle("top 0.5% HVGs, ndim = 2")
-
-#-----------------#
-#  Top 0.1% HVGs  #
-#-----------------#
-# Create expression and sample objects
-expression.deMicheli.0.1 <- as.matrix(t(logcounts(denoised.sce.deMicheli.0.1)))
-group_name.deMicheli.0.1 <- as.factor(denoised.sce.deMicheli.0.1$injury)
-
-# Trajectory building
-space.deMicheli.0.1 <- reduce_dimensionality(expression.deMicheli.0.1, dist = "spearman", ndim = 2)
-traj.deMicheli.0.1 <- infer_trajectory(space.deMicheli.0.1)
-
-# Plot by sample groups
-p0.1 <- draw_trajectory_plot(space = space.deMicheli.0.1, 
-                     progression_group = group_name.deMicheli.0.1,
-                     path = traj.deMicheli.0.1$path,
-                     contour = TRUE) + ggtitle("top 0.1% HVGs, ndim = 2")
-
-
-gridExtra::grid.arrange(p0.5, p0.1)
-
-#---------------------------#
-#  Complement of 0.5% HVGs  #
-#---------------------------#
-# Create expression and sample objects
-expression.deMicheli.comp.0.5 <- as.matrix(t(logcounts(denoised.sce.deMicheli.0.5.comp)))
-group_name.deMicheli.comp.0.5 <- as.factor(denoised.sce.deMicheli.0.5.comp$injury)
-
-# Trajectory building
-space.deMicheli.comp.0.5 <- reduce_dimensionality(expression.deMicheli.comp.0.5, dist = "spearman", ndim = 2)
-traj.deMicheli.comp.0.5 <- infer_trajectory(space.deMicheli.comp.0.5)
-
-# Plot by sample groups
-p.comp.0.5 <- draw_trajectory_plot(space = space.deMicheli.comp.0.5, 
-                     progression_group = group_name.deMicheli.comp.0.5,
-                     path = traj.deMicheli.comp.0.5$path,
-                     contour = TRUE) + ggtitle("Complement of top 0.5% HVGs, ndim = 2")
-
-#-----------------------------------------#
-#  MuSCs and progenitors only (2.5% HVGs) #
-#-----------------------------------------#
-# Create expression and sample objects
-muscs <- denoised.sce.deMicheli.2.5[, denoised.sce.deMicheli.2.5$cell_annotation == "MuSCs and progenitors"]
-expression.muscs <- as.matrix(t(logcounts(muscs)))
-group_name.muscs <- as.factor(muscs$injury)
-
-# Trajectory building
-space.deMicheli.muscs <- reduce_dimensionality(expression.muscs, dist = "spearman", ndim = 2)
-traj.deMicheli.muscs <- infer_trajectory(space.deMicheli.muscs)
-
-# Plot by sample groups
-p.muscs <- draw_trajectory_plot(space = space.deMicheli.muscs, 
-                     progression_group = group_name.muscs,
-                     path = traj.deMicheli.muscs$path,
-                     contour = TRUE) + ggtitle("top 2.5% HVGs, only MuSCs and progenitors, ndim = 2")
+                     contour = TRUE) + ggtitle("De Micheli et al.: All genes (ndim = 2)")
 ```
 
 
+
 ### 2.2 Dell'Orso et al. (2019) reference data
-```{r dellOrso-traj-inference}
-#---------------------------------------------------------------------------------------------------------------------------------
-# Separate workflows for top10%, top5%, top2.5%, top1%, top0.5%, top0.1%, complement of top0.5% of genes and for marker genes only
-#---------------------------------------------------------------------------------------------------------------------------------
-dec.dellOrso <- readRDS("./../saved/dec_dellOrso")
-
-# Define HVGs
-hvgs10.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.1)
-hvgs5.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.05)
-hvgs2.5.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.025)
-hvgs1.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.01)
-hvgs0.5.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.005)
-hvgs0.1.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.001)
-
-# Merge replicate samples
+```{r}
+# Merge replicate samples to form groups per cell type
 hom1 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep1"
 hom2 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep2"
 inj1 <- denoised.sce.dellOrso$sample == "inj_60h_MuSCs_rep1"
@@ -266,21 +83,6 @@ denoised.sce.dellOrso$cell_type[inj1] <- "inj_60h_MuSCs"
 denoised.sce.dellOrso$cell_type[inj2] <- "inj_60h_MuSCs" 
 denoised.sce.dellOrso$cell_type[pmb] <- "Primary_MB"
 
-# Define sce objects to use
-denoised.sce.dellOrso.10 <- denoised.sce.dellOrso[rownames(denoised.sce.dellOrso) %in% hvgs10.dellOrso, ]
-denoised.sce.dellOrso.5 <- denoised.sce.dellOrso[rownames(denoised.sce.dellOrso) %in% hvgs5.dellOrso, ]
-denoised.sce.dellOrso.2.5 <- denoised.sce.dellOrso[rownames(denoised.sce.dellOrso) %in% hvgs2.5.dellOrso, ]
-denoised.sce.dellOrso.1 <- denoised.sce.dellOrso[rownames(denoised.sce.dellOrso) %in% hvgs1.dellOrso, ]
-denoised.sce.dellOrso.0.5 <- denoised.sce.dellOrso[rownames(denoised.sce.dellOrso) %in% hvgs0.5.dellOrso, ]
-denoised.sce.dellOrso.0.1 <- denoised.sce.dellOrso[rownames(denoised.sce.dellOrso) %in% hvgs0.1.dellOrso, ]
-denoised.sce.dellOrso.0.5.comp <- denoised.sce.dellOrso[!rownames(denoised.sce.dellOrso) %in% hvgs0.5.dellOrso, ]
-
-marker.genes <- c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2", "Tnnc1", "Tnnc2")
-denoised.sce.dellOrso.markers <- denoised.sce.dellOrso[rownames(denoised.sce.dellOrso) %in% marker.genes, ]
-
-#-------------#
-#  all genes  #
-#-------------#
 # Create expression and sample objects
 expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
 group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
@@ -293,163 +95,29 @@ traj.dellOrso <- infer_trajectory(space.dellOrso)
 draw_trajectory_plot(space = space.dellOrso, 
                      progression_group = group_name.dellOrso,
                      path = traj.dellOrso$path,
-                     contour = TRUE) + ggtitle("All genes, ndim = 2")
-
-
-#----------------#
-#  Top 10% HVGs  #
-#----------------#
-# Create expression and sample objects
-expression.dellOrso.10 <- as.matrix(t(logcounts(denoised.sce.dellOrso.10)))
-group_name.dellOrso.10 <- as.factor(denoised.sce.dellOrso.10$cell_type)
-
-# Trajectory inference
-space.dellOrso.10 <- reduce_dimensionality(expression.dellOrso.10, dist = "spearman", ndim = 2)
-traj.dellOrso.10 <- infer_trajectory(space.dellOrso.10)
-
-# plot by sample
-p.10 <- draw_trajectory_plot(space = space.dellOrso.10, 
-                             progression_group = group_name.dellOrso.10,
-                             path = traj.dellOrso.10$path,
-                             contour = TRUE) + ggtitle("Top10% HVGS, ndim = 2")
-
-#---------------#
-#  Top 5% HVGs  #
-#---------------#
-# Create expression and sample objects
-expression.dellOrso.5 <- as.matrix(t(logcounts(denoised.sce.dellOrso.5)))
-group_name.dellOrso.5 <- as.factor(denoised.sce.dellOrso.5$cell_type)
-
-# Trajectory inference
-space.dellOrso.5 <- reduce_dimensionality(expression.dellOrso.5, dist = "spearman", ndim = 2)
-traj.dellOrso.5 <- infer_trajectory(space.dellOrso.5)
-
-# plot by sample
-p.5 <- draw_trajectory_plot(space = space.dellOrso.5, 
-                            progression_group = group_name.dellOrso.5,
-                            path = traj.dellOrso.5$path,
-                            contour = TRUE) + ggtitle("Top5% HVGS, ndim = 2")
-
-
-#-----------------#
-#  Top 2.5% HVGs  #
-#-----------------#
-# Create expression and sample objects
-expression.dellOrso.2.5 <- as.matrix(t(logcounts(denoised.sce.dellOrso.2.5)))
-group_name.dellOrso.2.5 <- as.factor(denoised.sce.dellOrso.2.5$cell_type)
-
-# Trajectory inference
-space.dellOrso.2.5 <- reduce_dimensionality(expression.dellOrso.2.5, dist = "spearman", ndim = 2)
-traj.dellOrso.2.5 <- infer_trajectory(space.dellOrso.2.5)
-
-# plot by sample
-p.2.5 <- draw_trajectory_plot(space = space.dellOrso.2.5, 
-                              progression_group = group_name.dellOrso.2.5,
-                              path = traj.dellOrso.2.5$path,
-                              contour = TRUE) + ggtitle("Top2.5% HVGS, ndim = 2")
-
-#---------------#
-#  Top 1% HVGs  #
-#---------------#
-# Create expression and sample objects
-expression.dellOrso.1 <- as.matrix(t(logcounts(denoised.sce.dellOrso.1)))
-group_name.dellOrso.1 <- as.factor(denoised.sce.dellOrso.1$cell_type)
-
-# Trajectory inference
-space.dellOrso.1 <- reduce_dimensionality(expression.dellOrso.1, dist = "spearman", ndim = 2)
-traj.dellOrso.1 <- infer_trajectory(space.dellOrso.1)
-
-# plot by sample
-p.1 <- draw_trajectory_plot(space = space.dellOrso.1, 
-                             progression_group = group_name.dellOrso.1,
-                             path = traj.dellOrso.1$path,
-                             contour = TRUE) + ggtitle("Top1% HVGS, ndim = 2")
-
-# Plot with 10%, 5%, 2.5%, and 1% HVGS
-gridExtra::grid.arrange(p.10, p.5, p.2.5, p.1, ncol = 2)
-
-#-----------------#
-#  Top 0.5% HVGs  #
-#-----------------#
-# Create expression and sample objects
-expression.dellOrso.0.5 <- as.matrix(t(logcounts(denoised.sce.dellOrso.0.5)))
-group_name.dellOrso.0.5 <- as.factor(denoised.sce.dellOrso.0.5$cell_type)
-
-# Trajectory inference
-space.dellOrso.0.5 <- reduce_dimensionality(expression.dellOrso.0.5, dist = "spearman", ndim = 2)
-traj.dellOrso.0.5 <- infer_trajectory(space.dellOrso.0.5)
-
-# plot by sample
-p.0.5 <- draw_trajectory_plot(space = space.dellOrso.0.5, 
-                              progression_group = group_name.dellOrso.0.5,
-                              path = traj.dellOrso.0.5$path,
-                              contour = TRUE) + ggtitle("Top0.5% HVGS, ndim = 2")
-
-#-----------------#
-#  Top 0.1% HVGs  #
-#-----------------#
-# Create expression and sample objects
-expression.dellOrso.0.1 <- as.matrix(t(logcounts(denoised.sce.dellOrso.0.1)))
-group_name.dellOrso.0.1 <- as.factor(denoised.sce.dellOrso.0.1$cell_type)
-
-# Trajectory inference
-space.dellOrso.0.1 <- reduce_dimensionality(expression.dellOrso.0.1, dist = "spearman", ndim = 2)
-traj.dellOrso.0.1 <- infer_trajectory(space.dellOrso.0.1)
-
-# plot by sample
-p.0.1 <- draw_trajectory_plot(space = space.dellOrso.0.1, 
-                              progression_group = group_name.dellOrso.0.1,
-                              path = traj.dellOrso.0.1$path,
-                              contour = TRUE) + ggtitle("Top0.1% HVGS, ndim = 2")
-
-
-# Plot with 0.5% and 0.1% HVGs
-gridExtra::grid.arrange(p.0.5, p.0.1, ncol = 2)
-
-#---------------------------#
-#  Complement of 0.5% HVGs  #
-#---------------------------#
-#-----------------#
-#  Top 0.5% HVGs  #
-#-----------------#
-# Create expression and sample objects
-expression.dellOrso.0.5.comp <- as.matrix(t(logcounts(denoised.sce.dellOrso.0.5.comp)))
-group_name.dellOrso.0.5.comp <- as.factor(denoised.sce.dellOrso.0.5.comp$cell_type)
-
-# Trajectory inference
-space.dellOrso.0.5.comp <- reduce_dimensionality(expression.dellOrso.0.5.comp, dist = "spearman", ndim = 2)
-traj.dellOrso.0.5.comp <- infer_trajectory(space.dellOrso.0.5.comp)
-
-# plot by sample
-p.0.5.comp <- draw_trajectory_plot(space = space.dellOrso.0.5.comp, 
-                                   progression_group = group_name.dellOrso.0.5.comp,
-                                   path = traj.dellOrso.0.5.comp$path,
-                                   contour = TRUE) + ggtitle("Complement of top0.5% HVGS, ndim = 2")
-
-p.0.5.comp
-
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes, ndim = 2")
 ```
 
 
 ## 3. Identifying candidate marker genes
-
 ### 3.1 De Micheli et al. (2020) reference data
-```{r marker-genes-deMicheli, eval=FALSE}
+```{r marker-genes-deMicheli}
 # Identify candidate marker genes
 gimp.deMicheli <- gene_importances(x = expression.deMicheli,
                                    time = traj.deMicheli$time,
-                                   num_permutations = 0,
+                                   num_permutations = 10,
                                    num_threads = 8)
 
-gene_sel.deMicheli <- gimp.deMicheli[1:50,]
-expr_sel.deMicheli <- expression.deMicheli[, gene_sel.deMicheli$gene]
-
-gene_sel.deMicheli
+gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
+gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
+expr_sel.deMicheli <- expression.deMicheli[, gene_sel.deMicheli]
 
 # Visualize expression of selected genes
 draw_trajectory_heatmap(expr_sel.deMicheli, 
                         time = traj.deMicheli$time,
-                        progression_group = group_name.deMicheli)
+                        progression_group = group_name.deMicheli,
+                        show_labels_row = TRUE,
+                        fontsize_row = 8,)
 
 # Group genes to modules
 modules.deMicheli <- extract_modules(scale_quantile(expr_sel.deMicheli),
@@ -459,29 +127,32 @@ modules.deMicheli <- extract_modules(scale_quantile(expr_sel.deMicheli),
 draw_trajectory_heatmap(expr_sel.deMicheli, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli,
-                        modules = modules.deMicheli)
+                        modules = modules.deMicheli,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5)
 
 #saveRDS(modules.deMicheli, file = "./../saved/modules_deMicheli")
 #saveRDS(gimp.deMicheli, file = "./../saved/gimp_deMicheli")
 
 ```
-
-
 ### 3.2 Dell'Orso et al. (2019) reference data
-```{r marker-genes-dellOrso, eval=FALSE}
+```{r marker-genes-dellOrso}
 # Identify candidate marker genes
 gimp.dellOrso <- gene_importances(x = expression.dellOrso,
-                                   time = traj.dellOrso$time,
-                                   num_permutations = 0,
-                                   num_threads = 8)
+                                  time = traj.dellOrso$time,
+                                  num_permutations = 10,
+                                  num_threads = 8)
 
-gene_sel.dellOrso <- gimp.dellOrso[1:50,]
-expr_sel.dellOrso <- expression.dellOrso[, gene_sel.dellOrso$gene]
+gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrso$pvalue))
+gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
+expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
 
 # Visualize expression of selected genes
 draw_trajectory_heatmap(expr_sel.dellOrso, 
                         time = traj.dellOrso$time,
-                        progression_group = group_name.dellOrso)
+                        progression_group = group_name.dellOrso,
+                        show_labels_row = TRUE,
+                        fontsize_row = 8)
 
 # Group genes to modules
 modules.dellOrso <- extract_modules(scale_quantile(expr_sel.dellOrso),
@@ -491,7 +162,12 @@ modules.dellOrso <- extract_modules(scale_quantile(expr_sel.dellOrso),
 draw_trajectory_heatmap(expr_sel.dellOrso, 
                         time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso,
-                        modules = modules.dellOrso)
+                        modules = modules.dellOrso,
+                        show_labels_row = TRUE)
+
+#saveRDS(modules.dellOrso, file = "./../saved/modules_dellOrso")
+#saveRDS(gimp.dellOrso, file = "./../saved/gimp_dellOrso")
 ```
+
 
 
