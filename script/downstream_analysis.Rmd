@@ -55,6 +55,8 @@ denoised.sce.deMicheli$group[d7_muscle] <- "d7_mature_skeletal_muscle"
 # Create expression and sample objects
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
 group_name.deMicheli <- as.factor(denoised.sce.deMicheli$group)
+cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli$Phase)
+
 
 # Trajectory building
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
@@ -63,7 +65,13 @@ traj.deMicheli <- infer_trajectory(space.deMicheli)
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = group_name.deMicheli,
                      path = traj.deMicheli$path,
-                     contour = TRUE) + ggtitle("De Micheli et al.: All genes (ndim = 2)")
+                     contour = TRUE) + ggtitle("De Micheli et al.: All genes (ndim = 2) - Cell types")
+
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = cc.phases.deMicheli,
+                     path = traj.deMicheli$path,
+                     contour = TRUE) + ggtitle("De Micheli et al.: All genes (ndim = 2) - Cell cycle phases")
+
 ```
 
 
@@ -86,16 +94,24 @@ denoised.sce.dellOrso$cell_type[pmb] <- "Primary_MB"
 # Create expression and sample objects
 expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
 group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
+cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso$Phase)
 
 # Trajectory inference
 space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
 traj.dellOrso <- infer_trajectory(space.dellOrso)
 
-# plot by sample
+# plot by cell type
 draw_trajectory_plot(space = space.dellOrso, 
                      progression_group = group_name.dellOrso,
                      path = traj.dellOrso$path,
-                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes, ndim = 2")
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes, ndim = 2 - Cell types")
+
+# Plot by cell cycle phase
+draw_trajectory_plot(space = space.dellOrso, 
+                     progression_group = cc.phases.dellOrso,
+                     path = traj.dellOrso$path,
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes, ndim = 2 - Cell cycle phases")
+
 ```
 
 
