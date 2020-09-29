@@ -2,6 +2,8 @@ ANALYSIS
 data
 results
 saved
+old_stuff
 script/data_preprocessing_files/
 script/downstream_analysis_files/
-
+script/old_stuff
+script/puhti_scripts_and_objects
