@@ -916,7 +916,7 @@ ensembl.mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
 
 mouse_to_human_genes <- getLDS(attributes = c('external_gene_name'),
                                filters = 'external_gene_name',
-                               values = rownames(sce.n),
+                               values = c(rownames(sce.n), rownames(sce.deMicheli.n), rownames(sce.dellOrso.n)),
                                mart = ensembl.mouse,
                                attributesL = c('external_gene_name'),
                                martL = ensembl.human)
@@ -1171,11 +1171,22 @@ dellOrso.seurat <-CellCycleScoring(dellOrso.seurat, s.features = s.genes.mouse, 
 sce.deMicheli.cc <- as.SingleCellExperiment(deMicheli.seurat, assay = "RNA")
 sce.dellOrso.cc <- as.SingleCellExperiment(dellOrso.seurat, assay = "RNA")
 
+# Diagnose if cells separate by their phase
+set.seed(123)
+uncorrected.deMicheli.cc <- runPCA(sce.deMicheli.cc, subset_row = c(s.genes.mouse, g2m.genes.mouse), BSPARAM = BiocSingular::RandomParam())
+uncorrected.deMicheli.cc <- runTSNE(uncorrected.deMicheli.cc, dimred = "PCA")
+plotTSNE(uncorrected.deMicheli.cc, colour_by = "Phase") + ggtitle("De Micheli et al.: TSNE plot for Diagnosing cell cycle effects")
+
+set.seed(123)
+sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, subset_row = c(s.genes.mouse, g2m.genes.mouse), BSPARAM = BiocSingular::RandomParam())
+sce.dellOrso.cc <- runTSNE(sce.dellOrso.cc, dimred = "PCA")
+plotTSNE(sce.dellOrso.cc, colour_by = "Phase") + ggtitle("DellOrso et al.: TSNE plot for Diagnosing cell cycle effects")
+
 # Plot cc phases for the datasets
 phases.deMicheli <- as.data.frame.matrix(table(sce.deMicheli.cc$Phase, sce.deMicheli.cc$injury))
 phases.dellOrso <- as.data.frame.matrix(table(sce.dellOrso.cc$Phase, sce.dellOrso.cc$sample))
 
-par(mfrow=c(3,3))
+par(mfrow=c(1,3))
 pie(phases.deMicheli$`Day 0`, labels = rownames(phases.deMicheli), main = "Day 0")
 pie(phases.deMicheli$`Day 5`, labels = rownames(phases.deMicheli), main = "Day 5")
 pie(phases.deMicheli$`Day 7`, labels = rownames(phases.deMicheli), main = "Day 7")
@@ -1187,8 +1198,6 @@ pie(phases.dellOrso$inj_60h_MuSCs_rep1, labels = rownames(phases.dellOrso), main
 pie(phases.dellOrso$inj_60h_MuSCs_rep2, labels = rownames(phases.dellOrso), main = "inj_60h_MuSCs_rep2")
 pie(phases.dellOrso$Primary_MB, labels = rownames(phases.dellOrso), main = "Primary_MB")
 ```
-
-
 
 ## 11. Dimensionality reduction
   - PCA is performed on the log-normalized expression values by using runPCA() function
@@ -1368,6 +1377,9 @@ reducedDim(denoised.sce, "force") <- igraph::layout_with_fr(snng)
 denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
 denoised.sce <- runTSNE(denoised.sce, dimred = "PCA")
 
+# Save sce file
+#saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
+
 # Calculate modularity of the graph
 mod <- modularity(snng, clust)
 ratio <- clusterModularity(snng, clust, as.ratio = TRUE)
@@ -1386,17 +1398,17 @@ dist.data.f <- dist(reducedDim(denoised.sce.f, "PCA"))
 sil.f <- silhouette(clust.f, dist = dist.data.f)
 plot(sil.f)
 
-
 # Plot reduced dims
 plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force") + ggtitle("Primary data: force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
 plotReducedDim(denoised.sce, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data: PCA (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data: UMAP (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotReducedDim(denoised.sce, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
 plotTSNE(denoised.sce, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
-#saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
 ```
 
 ### 12.2 Primary data (Seurat cell cycle correction)
@@ -1413,6 +1425,9 @@ set.seed(123)
 reducedDim(denoised.sce.cc, "force") <- igraph::layout_with_fr(snng.cc)
 denoised.sce.cc <- runUMAP(denoised.sce.cc, dimred = "PCA", n_dimred = dimensions.cc)
 denoised.sce.cc <- runTSNE(denoised.sce.cc, dimred = "PCA")
+
+# save sce file
+#saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_clust")
 
 # Calculate modularity of the graph
 mod.cc <- modularity(snng.cc, clust.cc)
@@ -1435,13 +1450,14 @@ plot(sil.cc.f)
 # Plot reduced dims
 plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data (cc corrected) clustering: UMAP with clusters (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data (cc corrected): UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
-plotTSNE(denoised.sce.cc, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.cc, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected) with clusters: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
-#saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_clust")
+plotTSNE(denoised.sce.cc, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
 ```
 
 ### 12.3 Primary data: Subclustering and marker gene detection
