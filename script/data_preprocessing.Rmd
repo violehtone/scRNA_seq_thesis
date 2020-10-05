@@ -37,7 +37,6 @@ library(SingleCellExperiment)
 library(DropletUtils)
 library(Seurat)
 library(dplyr)
-library(docstring)
 library(ggplot2)
 library(edgeR)
 library(biomaRt)
@@ -45,16 +44,13 @@ library(scRNAseq)
 library(org.Mm.eg.db)
 library(SingleR)
 library(batchelor)
-library(pheatmap)
 library(igraph)
-library(fossil)
-library(cluster)
 ```
 
 ## 3. Utility functions
 ```{r utility-functions}
 firstColumnToRowNames <- function(data) {
-  #' Function to manipulate data so that the first column is moved to the rownames
+  # Function to manipulate data so that the first column is moved to the rownames
   rownames(data) <- data[, 1]
   data <- data[, -1]
   return(data)
@@ -265,7 +261,6 @@ cors <- cor(as.matrix(cdf))
 cors
 
 # Combine discards
-
 discard.control <- qc.lib.control | qc.nexprs.control | qc.mito.control
 discard.cap50 <- qc.lib.cap50 | qc.nexprs.cap50 | qc.mito.cap50
 discard.cap50_r4h <- qc.lib.cap50_r4h | qc.nexprs.cap50_r4h | qc.mito.cap50_r4h
@@ -803,7 +798,6 @@ hvgs.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.1)
 
 
 
-
 ## 9. Diagnosing batch effects
 Here we inspect whether replicate samples in the Dell'Orso dataset cluster together or if they create separate clusters, in which case there would be a batch effect present in the data.
 
@@ -908,6 +902,8 @@ Cell cycle scoring and regression is performed to inspect if the cell cycle phas
 
 We use two different methods for performing cell cycle correction. First, following a Seurat cell cycle correction (https://satijalab.org/seurat/v3.2/cell_cycle_vignette.html) and then, following a Bioconductor approach (https://osca.bioconductor.org/cell-cycle-assignment.html)
 
+
+
 ### 10.1 Prepare cell cycle markers and transform from human to mouse genes
 ```{r cell-cycle-markers}
 # Make mapping between human and mouse genes
@@ -947,7 +943,8 @@ for(g in g2m.genes) {
 ```
 
 
-### 10.2 Primary data (Method 1: Seurat cell cycle correction)
+
+### 10.2 Primary data (Seurat cell cycle correction)
 ```{r primary-data-cc1}
 # Convert sce into Seurat object
 data <- as.Seurat(sce.n, counts = "counts", data = "logcounts")
@@ -973,38 +970,30 @@ data <- FindVariableFeatures(data, selection.method = "vst")
 # Set HVGs from the sce object into the Seurat object's variable features
 data@assays$RNA@var.features <- hvgs.data
 
-# Create a sce object before regressing out the cell cycle effect
-sce.not.cc <- as.SingleCellExperiment(data, assay = "RNA")
-saveRDS(sce.not.cc, file = "./../saved/sce_not_cc")
-
 # Regress out CC difference using the HVGs as features
-data <- ScaleData(data, vars.to.regress = "CC.Difference", features = VariableFeatures(data), assay = "RNA")
+data <- ScaleData(data, vars.to.regress = "CC.Difference", features = VariableFeatures(data))
 
-# Run PCA
-data <- RunPCA(data, features = c(s.genes.mouse, g2m.genes.mouse))
+# Run PCA on HVGs and cell cycle genes
+data <- RunPCA(data, features = VariableFeatures(data), nfeatures.print = 10)
 DimPlot(data)
 
-data <- RunPCA(data, features = VariableFeatures(data), nfeatures.print = 10)
+data <- RunPCA(data, features = c(s.genes.mouse, g2m.genes.mouse), BSPARAM = BiocSingular::RandomParam())
 DimPlot(data)
 
 # Transform back to sce object
 sce.cc <- as.SingleCellExperiment(data, assay = "RNA")
 
 # Set the CC corrected data into the sce object as an alternative experiment
-cc_corrected <- SummarizedExperiment(list(counts = data@assays$RNA@scale.data))
-altExp(sce.cc, "CC_corrected") <- cc_corrected
+cc_corrected <- SummarizedExperiment(assays = list(scaled_logcounts = data@assays$RNA@scale.data),
+                                     colData = colData(sce.cc))
 
-# Swap the alternative experiment into the main experiment
-sce.cc <- swapAltExp(x = sce.cc,
-                     name = "CC_corrected",
-                     saved = "original",
-                     withColData = TRUE)
+altExp(sce.cc, "CC_corrected", withColData = TRUE) <- cc_corrected
 
 # save sce object
 #saveRDS(sce.cc, file = "./../saved/sce_cc")
 
 # Plot cell cycle phases for each sample as pie charts
-cc_vs_labels <- as.data.frame.matrix(table(sce.cc$Phase, sce.cc$sample))
+cc_vs_labels <- as.data.frame.matrix(table(altExp(sce.cc, "CC_corrected")$Phase, altExp(sce.cc, "CC_corrected")$sample))
 
 par(mfrow=c(2,3))
 pie(cc_vs_labels$control, labels = rownames(cc_vs_labels), main = "Control")
@@ -1013,7 +1002,7 @@ pie(cc_vs_labels$cap50_r4h, labels = rownames(cc_vs_labels), main = "Cap50_r4h")
 pie(cc_vs_labels$cap50_r8h, labels = rownames(cc_vs_labels), main = "Cap50_r8h")
 pie(cc_vs_labels$cap50_r16h, labels = rownames(cc_vs_labels), main = "Cap50_r16h")
 
-# Merge G2M and S-phase into "dividing"
+# Merge G2M and S-phase into "dividing" and make a new Phase2 variable based on this
 sce.cc$Phase2 <- ifelse(sce.cc$Phase == "G1", "non-dividing", "dividing")
 
 par(mfrow=c(1,1))
@@ -1043,114 +1032,63 @@ for(i in 1:dim(results)[1]) {
 }
 
 results$signifant <- ifelse(results$p.value < 0.05, TRUE, FALSE)
-
 results
 
-# Plot UMAP plots before and after regressing out the cell cycle effect
-set.seed(123)
-uncorrected.data <- runPCA(sce.not.cc, subset_row = hvgs.data)
-uncorrected.data <- denoisePCA(uncorrected.data, technical = dec.data, subset.row = hvgs.data, assay.type = "logcounts")
-dimensions <- ncol(reducedDim(uncorrected.data))
-uncorrected.data <- runUMAP(uncorrected.data, dimred = "PCA", n_dimred = dimensions)
+# Plot PCA and UMAP plots before and after regressing out the cell cycle effect
+sce.cc.uncorrected <- sce.cc
+sce.cc.corrected <- as(altExp(sce.cc, "CC_corrected"), "SingleCellExperiment")
 
-set.seed(123)
-corrected.data <- runPCA(sce.cc, subset_row = hvgs.data, exprs_values = "counts")
-corrected.data <- denoisePCA(corrected.data, technical = dec.data, subset.row = hvgs.data, assay.type = "counts")
-dimensions.cc <- ncol(reducedDim(corrected.data))
-corrected.data <- runUMAP(corrected.data, dimred = "PCA", n_dimred = dimensions.cc)
+sce.cc.uncorrected <- runPCA(sce.cc.uncorrected, exprs_values = "logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse))
+sce.cc.corrected <- runPCA(sce.cc.corrected, exprs_values = "scaled_logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse)[c(s.genes.mouse, g2m.genes.mouse) %in% rownames(sce.cc.corrected)])
 
-p1 <- plotReducedDim(uncorrected.data, colour_by = "Phase", dimred = "UMAP") + ggtitle("UMAP: non-corrected primary data")
-p2 <- plotReducedDim(corrected.data, colour_by = "Phase", dimred = "UMAP") + ggtitle("UMAP: cc-corrected primary data")
+pca.uncorrected <- plotReducedDim(sce.cc.uncorrected, dimred = "PCA", colour_by = "Phase") + ggtitle("Uncorrected dataset: PCA plot")
+pca.corrected <- plotReducedDim(sce.cc.corrected, dimred = "PCA", colour_by = "Phase") + ggtitle("CC corrected dataset: PCA plot")
 
-gridExtra::grid.arrange(p1,p2)
+gridExtra::grid.arrange(pca.corrected, pca.uncorrected, ncol = 2)
 
+sce.cc.uncorrected <- runUMAP(sce.cc.uncorrected, exprs_values = "logcounts", dimred = "PCA")
+sce.cc.corrected <- runUMAP(sce.cc.corrected, exprs_values = "scaled_logcounts", dimred = "PCA")
+umap.uncorrected <- plotUMAP(sce.cc.uncorrected, colour_by = "Phase") + ggtitle("Uncorrected dataset: UMAP plot")
+umap.corrected <- plotUMAP(sce.cc.corrected, colour_by = "Phase") + ggtitle("CC corrected dataset: UMAP plot")
+
+gridExtra::grid.arrange(umap.uncorrected, umap.corrected, ncol = 2)
 ```
 
 
+### 10.3 Reference datasets
+#### 10.3.1 Add cell annotations to reference datasets
+```{r reference-data-cell-annotations}
+# De Micheli et al.
+d0_muscle <- sce.deMicheli.n$injury == "Day 0" & sce.deMicheli.n$cell_annotation == "Mature skeletal muscle"
+d0_musc <- sce.deMicheli.n$injury == "Day 0" & sce.deMicheli.n$cell_annotation == "MuSCs and progenitors"
+d5_muscle <- sce.deMicheli.n$injury == "Day 5" & sce.deMicheli.n$cell_annotation == "Mature skeletal muscle"
+d5_musc <- sce.deMicheli.n$injury == "Day 5" & sce.deMicheli.n$cell_annotation == "MuSCs and progenitors"
+d7_muscle <- sce.deMicheli.n$injury == "Day 7" & sce.deMicheli.n$cell_annotation == "Mature skeletal muscle"
+d7_musc <- sce.deMicheli.n$injury == "Day 7" & sce.deMicheli.n$cell_annotation == "MuSCs and progenitors"
 
-### 10.3 Primary data (Method 2: Bioconductor, using reference profiles)
-```{r primary-data-cc2}
-# Get reference data containing mouse ESCs with known cell cycle phases
-sce.ref <- BuettnerESCData()
+sce.deMicheli.n$cell_type[d0_musc] <- "d0_MuSCs_and_progenitors"
+sce.deMicheli.n$cell_type[d5_musc] <- "d5_MuSCs_and_progenitors"
+sce.deMicheli.n$cell_type[d7_musc] <- "d7_MuSCs_and_progenitors"
+sce.deMicheli.n$cell_type[d0_muscle] <- "d0_mature_skeletal_muscle"
+sce.deMicheli.n$cell_type[d5_muscle] <- "d5_mature_skeletal_muscle"
+sce.deMicheli.n$cell_type[d7_muscle] <- "d7_mature_skeletal_muscle"
 
-# Find genes that are present in both datasets and are cell cycle-related.
-
-# Retrieve cycle genes from biomaRt
-cycle.anno <- biomaRt::select(org.Mm.eg.db, keytype="GOALL", keys="GO:0007049", 
-                     columns="SYMBOL")[,"SYMBOL"]
-
-# Transform reference data ensembl genes to symbols
-ensembl.mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
-
-gene_list <- getBM(filters= "ensembl_gene_id",
-                   attributes= c("ensembl_gene_id","external_gene_name"),
-                   values= rownames(sce.ref),
-                   mart= ensembl.mouse)
-
-# --------------------------------------------------------------- #
-# NOTE!
-# --------------------------------------------------------------- #
-# The code below is used for transforming the gene names from ensembl names to symbols. Due to the long computational time, the "cc_sce_ref_transformed" is saved as an R object and this can be used as well. In case this file wouldn't exist, the code below should be executed.
-
-# for(i in 1:length(rownames(sce.ref))) {
-#   gene <- rownames(sce.ref)[i]
-#   gene_name <- gene_list[gene_list$ensembl_gene_id == gene, ]$external_gene_name
-#   print(i)
-#   print(gene_name)
-#   if(length(gene_name) > 0) {
-#     rownames(sce.ref)[i] <- gene_name
-#   }
-# }
-
-# To avoid long computational time due to for loop above, read the object from file
-sce.ref <- readRDS("./../saved/cc_sce_ref_transformed")
-# --------------------------------------------------------------- #
-
-# Find genes that are present in both data sets and are cell cycle related
-candidates <- Reduce(intersect, 
-                     list(rownames(sce.ref), rownames(sce.n), cycle.anno))
-
-# Identify markers between cell cycle phases
-sce.ref <- logNormCounts(sce.ref)
-phase.stats <- pairwiseWilcox(logcounts(sce.ref),
-                              sce.ref$phase,
-                              direction = "up",
-                              subset.row = candidates)
-
-cycle.markers <- getTopMarkers(phase.stats[[1]],
-                               phase.stats[[2]])
-
-
-# Use markers to assign labels to the primary data set
-assignments <- SingleR(test = sce.n,
-                       ref = sce.ref,
-                       labels = sce.ref$phase,
-                       genes = cycle.markers)
-
-tab <- table(assignments$labels,
-             sce.n$sample)
-
-# Plot results
-tab.df <- as.data.frame.matrix(tab)
-par(mfrow=c(2,3))
-pie(tab.df$control, labels = rownames(tab.df), main = "Control")
-pie(tab.df$cap50, labels = rownames(tab.df), main = "Cap50")
-pie(tab.df$cap50_r4h, labels = rownames(tab.df), main = "Cap50_r4h")
-pie(tab.df$cap50_r8h, labels = rownames(tab.df), main = "Cap50_r8h")
-pie(tab.df$cap50_r16h, labels = rownames(tab.df), main = "Cap50_r16h")
-
-# Regress out cell cycle effect
-sce.cc.2 <- regressBatches(sce.n, batch = assignments$labels)
-
-# Add metadata 'sample' information to the newly created object
-sce.cc.2$sample <- sce.n$sample
-
-# Save cell cycle corrected sce
-#saveRDS(sce.cc.2, file = "./../saved/sce_cc_2")
+# Dell Orso et al.
+hom1 <- sce.dellOrso.n$sample == "homeostatic_MuSCs_rep1"
+hom2 <- sce.dellOrso.n$sample == "homeostatic_MuSCs_rep2"
+inj1 <- sce.dellOrso.n$sample == "inj_60h_MuSCs_rep1"
+inj2 <- sce.dellOrso.n$sample == "inj_60h_MuSCs_rep2"
+pmb <- sce.dellOrso.n$sample == "Primary_MB"
+  
+sce.dellOrso.n$cell_type[hom1] <- "homeostatic_MuSCs" 
+sce.dellOrso.n$cell_type[hom2] <- "homeostatic_MuSCs" 
+sce.dellOrso.n$cell_type[inj1] <- "inj_60h_MuSCs" 
+sce.dellOrso.n$cell_type[inj2] <- "inj_60h_MuSCs" 
+sce.dellOrso.n$cell_type[pmb] <- "Primary_MB"
 ```
 
 
-### 10.4 Annotation of cell cycle phases to reference datasets
+#### 10.3.2 Cell cycle annotation & correction for reference datasets
 ```{r ref-cellcycle-annotation}
 # Convert sce objects into Seurat objects
 deMicheli.seurat <- as.Seurat(sce.deMicheli.n, counts = "counts", data = "logcounts")
@@ -1158,46 +1096,103 @@ dellOrso.seurat <- as.Seurat(sce.dellOrso.n, counts = "counts", data = "logcount
 
 # Perform Seurat normalization and update normalized values from sce objects
 deMicheli.seurat <- NormalizeData(deMicheli.seurat)
-deMicheli.seurat@assays$RNA@data <- logcounts(sce.deMicheli.n)
-
 dellOrso.seurat <- NormalizeData(dellOrso.seurat)
+deMicheli.seurat@assays$RNA@data <- logcounts(sce.deMicheli.n)
 dellOrso.seurat@assays$RNA@data <- logcounts(sce.dellOrso.n)
 
 # Assign cell cycle scores
-deMicheli.seurat <-CellCycleScoring(deMicheli.seurat, s.features = s.genes.mouse, g2m.features = g2m.genes.mouse, set.ident = TRUE)
-dellOrso.seurat <-CellCycleScoring(dellOrso.seurat, s.features = s.genes.mouse, g2m.features = g2m.genes.mouse, set.ident = TRUE)
+deMicheli.seurat <- CellCycleScoring(deMicheli.seurat, s.features = s.genes.mouse, g2m.features = g2m.genes.mouse, set.ident = TRUE)
+dellOrso.seurat <- CellCycleScoring(dellOrso.seurat, s.features = s.genes.mouse, g2m.features = g2m.genes.mouse, set.ident = TRUE)
+
+# Visualize the distribution of cell cycle marker genes
+RidgePlot(deMicheli.seurat, features = c("Pcna", "Top2a", "Mcm6", "Mki67"), ncol = 2)
+RidgePlot(dellOrso.seurat, features = c("Pcna", "Top2a", "Mcm6", "Mki67"), ncol = 2)
+
+# Caluclate the CC differences
+deMicheli.seurat$CC.Difference <- deMicheli.seurat$S.Score - deMicheli.seurat$G2M.Score
+dellOrso.seurat$CC.Difference <- dellOrso.seurat$S.Score - dellOrso.seurat$G2M.Score
+
+# Find variable features and set HVGs from original sce object as variable features in the seurat object
+deMicheli.seurat <- FindVariableFeatures(deMicheli.seurat, selection.method = "vst")
+dellOrso.seurat <- FindVariableFeatures(dellOrso.seurat, selection.method = "vst")
+deMicheli.seurat@assays$RNA@var.features <- hvgs.deMicheli
+dellOrso.seurat@assays$RNA@var.features <- hvgs.dellOrso
+
+# Regress out CC difference using HVGs as features
+deMicheli.seurat <- ScaleData(deMicheli.seurat, vars.to.regress = "CC.Difference", features = VariableFeatures(deMicheli.seurat))
+dellOrso.seurat <- ScaleData(dellOrso.seurat, vars.to.regress = "CC.Difference", features = VariableFeatures(dellOrso.seurat))
 
 # Convert back to sce objects
 sce.deMicheli.cc <- as.SingleCellExperiment(deMicheli.seurat, assay = "RNA")
 sce.dellOrso.cc <- as.SingleCellExperiment(dellOrso.seurat, assay = "RNA")
 
-# Diagnose if cells separate by their phase
-set.seed(123)
-uncorrected.deMicheli.cc <- runPCA(sce.deMicheli.cc, subset_row = c(s.genes.mouse, g2m.genes.mouse), BSPARAM = BiocSingular::RandomParam())
-uncorrected.deMicheli.cc <- runTSNE(uncorrected.deMicheli.cc, dimred = "PCA")
-plotTSNE(uncorrected.deMicheli.cc, colour_by = "Phase") + ggtitle("De Micheli et al.: TSNE plot for Diagnosing cell cycle effects")
+# Set scaled & centered expression values to the sce objects as alternative experiment
+cc_corrected.deMicheli <- SummarizedExperiment(assays = list(scaled_logcounts = deMicheli.seurat@assays$RNA@scale.data),
+                                               colData = colData(sce.deMicheli.cc))
 
-set.seed(123)
-sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, subset_row = c(s.genes.mouse, g2m.genes.mouse), BSPARAM = BiocSingular::RandomParam())
-sce.dellOrso.cc <- runTSNE(sce.dellOrso.cc, dimred = "PCA")
-plotTSNE(sce.dellOrso.cc, colour_by = "Phase") + ggtitle("DellOrso et al.: TSNE plot for Diagnosing cell cycle effects")
+cc_corrected.dellOrso <- SummarizedExperiment(assays = list(scaled_logcounts = dellOrso.seurat@assays$RNA@scale.data),
+                                               colData = colData(sce.dellOrso.cc))
+
+altExp(sce.deMicheli.cc, "CC_corrected", withColData = TRUE) <- cc_corrected.deMicheli
+altExp(sce.dellOrso.cc, "CC_corrected", withColData = TRUE) <- cc_corrected.dellOrso
+
+# Save cc objects
+#saveRDS(sce.deMicheli.cc, file = "./../saved/sce_deMicheli_cc")
+#saveRDS(sce.dellOrso.cc, file = "./../saved/sce_dellOrso_cc")
 
 # Plot cc phases for the datasets
-phases.deMicheli <- as.data.frame.matrix(table(sce.deMicheli.cc$Phase, sce.deMicheli.cc$injury))
-phases.dellOrso <- as.data.frame.matrix(table(sce.dellOrso.cc$Phase, sce.dellOrso.cc$sample))
+phases.deMicheli <- as.data.frame.matrix(table(sce.deMicheli.cc$Phase, sce.deMicheli.cc$cell_type))
+phases.dellOrso <- as.data.frame.matrix(table(sce.dellOrso.cc$Phase, sce.dellOrso.cc$cell_type))
 
-par(mfrow=c(1,3))
-pie(phases.deMicheli$`Day 0`, labels = rownames(phases.deMicheli), main = "Day 0")
-pie(phases.deMicheli$`Day 5`, labels = rownames(phases.deMicheli), main = "Day 5")
-pie(phases.deMicheli$`Day 7`, labels = rownames(phases.deMicheli), main = "Day 7")
+par(mfrow=c(3,3))
+pie(phases.deMicheli$d0_mature_skeletal_muscle, labels = rownames(phases.deMicheli), main = "De Micheli: D0 mature skeletal muscle")
+pie(phases.deMicheli$d5_mature_skeletal_muscle, labels = rownames(phases.deMicheli), main = "De Micheli: D5 mature skeletal muscle")
+pie(phases.deMicheli$d7_mature_skeletal_muscle, labels = rownames(phases.deMicheli), main = "De Micheli: D7 mature skeletal muscle")
+pie(phases.deMicheli$d0_MuSCs_and_progenitors, labels = rownames(phases.deMicheli), main = "De Micheli: D0 MuSCs and progenitors")
+pie(phases.deMicheli$d5_MuSCs_and_progenitors, labels = rownames(phases.deMicheli), main = "De Micheli: D5 MuSCs and progenitors")
+pie(phases.deMicheli$d7_MuSCs_and_progenitors, labels = rownames(phases.deMicheli), main = "De Micheli: D7 MuSCs and progenitors")
+pie(phases.dellOrso$homeostatic_MuSCs, labels = rownames(phases.dellOrso), main = "Dell'Orso: homeostatic_MuSCs")
+pie(phases.dellOrso$inj_60h_MuSCs, labels = rownames(phases.dellOrso), main = "Dell'Orso: inj_60h_MuSCs")
+pie(phases.dellOrso$Primary_MB, labels = rownames(phases.dellOrso), main = "Dell'Orso: Primary_MB")
 
-par(mfrow=c(2,3))
-pie(phases.dellOrso$homeostatic_MuSCs_rep1, labels = rownames(phases.dellOrso), main = "homeostatic_MuSCs_rep1")
-pie(phases.dellOrso$homeostatic_MuSCs_rep2, labels = rownames(phases.dellOrso), main = "homeostatic_MuSCs_rep2")
-pie(phases.dellOrso$inj_60h_MuSCs_rep1, labels = rownames(phases.dellOrso), main = "inj_60h_MuSCs_rep1")
-pie(phases.dellOrso$inj_60h_MuSCs_rep2, labels = rownames(phases.dellOrso), main = "inj_60h_MuSCs_rep2")
-pie(phases.dellOrso$Primary_MB, labels = rownames(phases.dellOrso), main = "Primary_MB")
+
+# De Micheli - plot PCA and UMAP plots before and after regressing out the cell cycle effect
+sce.deMicheli.cc.uncorrected <- sce.deMicheli.cc
+sce.deMicheli.cc.corrected <- as(altExp(sce.deMicheli.cc, "CC_corrected"), "SingleCellExperiment")
+
+sce.deMicheli.cc.uncorrected <- runPCA(sce.deMicheli.cc.uncorrected, exprs_values = "logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse))
+sce.deMicheli.cc.corrected <- runPCA(sce.deMicheli.cc.corrected, exprs_values = "scaled_logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse)[c(s.genes.mouse, g2m.genes.mouse) %in% rownames(sce.deMicheli.cc.corrected)])
+
+pca.corrected.deMicheli <- plotReducedDim(sce.deMicheli.cc.corrected, dimred = "PCA", colour_by = "Phase") + ggtitle("CC corrected De Micheli dataset: PCA plot")
+pca.uncorrected.deMicheli <- plotReducedDim(sce.deMicheli.cc.uncorrected, dimred = "PCA", colour_by = "Phase") + ggtitle("Uncorrected De Micheli dataset: PCA plot")
+gridExtra::grid.arrange(pca.uncorrected.deMicheli, pca.corrected.deMicheli, ncol = 2)
+
+sce.deMicheli.cc.uncorrected <- runUMAP(sce.deMicheli.cc.uncorrected, exprs_values = "logcounts", dimred = "PCA")
+sce.deMicheli.cc.corrected <- runUMAP(sce.deMicheli.cc.corrected, exprs_values = "scaled_logcounts", dimred = "PCA")
+umap.uncorrected.deMicheli <- plotUMAP(sce.deMicheli.cc.uncorrected, colour_by = "Phase") + ggtitle("Uncorrected  De Micheli dataset: UMAP plot")
+umap.corrected.deMicheli <- plotUMAP(sce.deMicheli.cc.corrected, colour_by = "Phase") + ggtitle("CC corrected  De Micheli dataset: UMAP plot")
+gridExtra::grid.arrange(umap.uncorrected.deMicheli, umap.corrected.deMicheli, ncol = 2)
+
+
+# Dell'Orso - plot PCA and UMAP plots before and after regressing out the cell cycle effect
+sce.dellOrso.cc.uncorrected <- sce.dellOrso.cc
+sce.dellOrso.cc.corrected <- as(altExp(sce.dellOrso.cc, "CC_corrected"), "SingleCellExperiment")
+
+sce.dellOrso.cc.uncorrected <- runPCA(sce.dellOrso.cc.uncorrected, exprs_values = "logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse))
+sce.dellOrso.cc.corrected <- runPCA(sce.dellOrso.cc.corrected, exprs_values = "scaled_logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse)[c(s.genes.mouse, g2m.genes.mouse) %in% rownames(sce.dellOrso.cc.corrected)])
+
+pca.corrected.dellOrso <- plotReducedDim(sce.dellOrso.cc.corrected, dimred = "PCA", colour_by = "Phase") + ggtitle("CC corrected Dell'Orso dataset: PCA plot")
+pca.uncorrected.dellOrso <- plotReducedDim(sce.dellOrso.cc.uncorrected, dimred = "PCA", colour_by = "Phase") + ggtitle("Uncorrected Dell'Orso dataset: PCA plot")
+gridExtra::grid.arrange(pca.corrected.dellOrso, pca.uncorrected.dellOrso, ncol = 2)
+
+sce.dellOrso.cc.uncorrected <- runUMAP(sce.dellOrso.cc.uncorrected, exprs_values = "logcounts", dimred = "PCA")
+sce.dellOrso.cc.corrected <- runUMAP(sce.dellOrso.cc.corrected, exprs_values = "scaled_logcounts", dimred = "PCA")
+umap.uncorrected.dellOrso <- plotUMAP(sce.dellOrso.cc.uncorrected, colour_by = "Phase") + ggtitle("Uncorrected Dell'Orso dataset: UMAP plot")
+umap.corrected.dellOrso <- plotUMAP(sce.dellOrso.cc.corrected, colour_by = "Phase") + ggtitle("CC corrected Dell'Orso dataset: UMAP plot")
+gridExtra::grid.arrange(umap.uncorrected.dellOrso, umap.corrected.dellOrso, ncol = 2)
+
 ```
+
 
 ## 11. Dimensionality reduction
   - PCA is performed on the log-normalized expression values by using runPCA() function
@@ -1205,429 +1200,135 @@ pie(phases.dellOrso$Primary_MB, labels = rownames(phases.dellOrso), main = "Prim
       - Find elbow point in the % of variance explained by successive PCs
       - Remove PCs corresponding to technical noise
 
-### 11.1 Primary data (no cell cycle correction)
+### 11.1 Primary data
 ```{r primary-data-dimension-reduction}
-# Dimension reduction
+# PCA for non-corrected and cc-corrected data
 set.seed(123)
-sce.n <- runPCA(sce.n, subset_row = hvgs.data)
-plotReducedDim(sce.n, dimred = "PCA", colour_by = "sample")
+sce.cc <- runPCA(sce.cc, subset_row = hvgs.data, exprs_values = "logcounts", name = "PCA")
+sce.cc <- runPCA(sce.cc, altexp = "CC_corrected", subset_row = hvgs.data, exprs_values = "scaled_logcounts", name = "PCA_cc")
+
+# Plot reduced dims
+plotReducedDim(sce.cc, dimred = "PCA", colour_by = "sample") + ggtitle("Primary data: PCA")
+sce.cc.corrected <- as(altExp(sce.cc, "CC_corrected"), "SingleCellExperiment")
+reducedDim(sce.cc.corrected, "PCA_cc") <- reducedDim(sce.cc, "PCA_cc")
+plotReducedDim(sce.cc.corrected, dimred = "PCA_cc", colour_by = "sample") + ggtitle("Primary data (cc corrected): PCA")
 
 # Compute the variance explained by each PC
-percent.var <- attr(reducedDim(sce.n), "percentVar")
+percent.var <- attr(reducedDim(sce.cc, "PCA"), "percentVar")
+percent.var.cc <- attr(reducedDim(sce.cc, "PCA_cc"), "percentVar")
+
 chosen.elbow <- PCAtools::findElbowPoint(percent.var)
-chosen.elbow
-
-# Plot variance explained by PCs
-par(mfrow=c(1,1))
-plot(percent.var, xlab = "PC", ylab = "Variance explained (%)", main = "Primary data: Variance explained by each PC")
-abline(v = chosen.elbow, col = "red")
-
-# Remove PCs corresponding to technical noise
-set.seed(123)
-denoised.sce <- denoisePCA(sce.n, technical = dec.data, subset.row = hvgs.data)
-
-# Dimensions of denoised PCA
-ncol(reducedDim(denoised.sce))
-
-# Save the sce object
-#saveRDS(denoised.sce, file = "./../saved/denoised_sce")
-```
-
-### 11.2 Primary data (Seurat cell cycle correction)
-```{r primary-data-cc1-dimension-reduction}
-# Dimension reduction
-set.seed(123)
-sce.cc <- runPCA(x = sce.cc,
-                 subset_row = hvgs.data,
-                 exprs_values = "counts")
-
-plotReducedDim(sce.cc, dimred = "PCA", colour_by = "sample")
-
-# Compute variance explained by each PC
-percent.var.cc <- attr(reducedDim(sce.cc), "percentVar")
 chosen.elbow.cc <- PCAtools::findElbowPoint(percent.var.cc)
+chosen.elbow
 chosen.elbow.cc
 
 # Plot variance explained by PCs
-par(mfrow=c(1,1))
-plot(percent.var.cc, xlab = "PC", ylab = "Variance explained (%)", main = "Primary data (Seurat cell cycle corrected): Variance explained by each PC")
+par(mfrow=c(1,2))
+plot(percent.var, xlab = "PC", ylab = "Variance explained (%)", main = "Variance explained by each PC", sub = "Primary data")
+abline(v = chosen.elbow, col = "red")
+plot(percent.var.cc, xlab = "PC", ylab = "Variance explained (%)", sub = "Primary data (cc corrected)")
 abline(v = chosen.elbow.cc, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
-denoised.sce.cc <- denoisePCA(sce.cc, technical = dec.data, subset.row = hvgs.data,
-                              assay.type = "counts")
+denoised.sce <- denoisePCA(sce.cc, technical = dec.data, subset.row = hvgs.data, assay.type = "logcounts")
+sce.cc.corrected <- denoisePCA(sce.cc.corrected, technical = dec.data, assay.type = "scaled_logcounts")
+reducedDim(denoised.sce, "PCA_cc") <- reducedDim(sce.cc.corrected, "PCA")
 
 # Dimensions of denoised PCA
-ncol(reducedDim(denoised.sce.cc))
+ncol(reducedDim(denoised.sce, "PCA"))
+ncol(reducedDim(denoised.sce, "PCA_cc"))
 
 # Save the sce object
-#saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc")
-```
+#saveRDS(denoised.sce, file = "./../saved/denoised_sce")
 
-### 11.3 Primary data (Reference-based cell cycle correction)
-```{r primary-data-cc2-dimension-reduction}
-# Dimension reduction
-set.seed(123)
-sce.cc.2 <- runPCA(sce.cc.2, subset_row = hvgs.data, exprs_values = "corrected")
-plotReducedDim(sce.cc.2, dimred = "PCA", colour_by = "sample")
-
-# Compute variance explained by each PC
-percent.var.cc.2 <- attr(reducedDim(sce.cc.2), "percentVar")
-chosen.elbow.cc.2 <- PCAtools::findElbowPoint(percent.var.cc.2)
-chosen.elbow.cc.2
-
-# Plot variance explained by PCs
-par(mfrow=c(1,1))
-plot(percent.var.cc.2, xlab = "PC", ylab = "Variance explained (%)", main = "Primary data (reference-based cc correction): Variance explained by each PC")
-abline(v = chosen.elbow.cc.2, col = "red")
-
-# Remove PCs corresponding to technical noise
-set.seed(123)
-denoised.sce.cc.2 <- denoisePCA(sce.cc.2, 
-                                technical = dec.data,
-                                subset.row = hvgs.data,
-                                assay.type = "corrected")
-
-# Dimensions of denoised PCA
-ncol(reducedDim(denoised.sce.cc.2))
-
-# Save the sce object
-#saveRDS(denoised.sce.cc.2, file = "./../saved/denoised_sce_cc_2")
 ```
 
 
-### 11.4 De Micheli et al. (2020) reference data
+### 11.2 De Micheli et al. (2020) reference data
 ```{r deMicheli-dimension-reduction}
-# Perform dimension reduction
-sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, subset_row = hvgs.deMicheli)
-plotReducedDim(sce.deMicheli.cc, dimred = "PCA", colour_by = "injury")
+# PCA for non-corrected and cc-corrected data
+sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, subset_row = hvgs.deMicheli, exprs_values = "logcounts", name = "PCA")
+sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, altexp = "CC_corrected", subset_row = hvgs.deMicheli, exprs_values = "scaled_logcounts", name = "PCA_cc")
+
+# Plot reduced dims
+plotReducedDim(sce.deMicheli.cc, dimred = "PCA", colour_by = "cell_type")  + ggtitle("De Micheli data: PCA")
+sce.deMicheli.cc.corrected <- as(altExp(sce.deMicheli.cc, "CC_corrected"), "SingleCellExperiment")
+reducedDim(sce.deMicheli.cc.corrected, "PCA_cc") <- reducedDim(sce.deMicheli.cc, "PCA_cc")
+plotReducedDim(sce.deMicheli.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("De Micheli data (cc corrected): PCA")
 
 # Compute the variance explained by each PC
-percent.var.deMicheli <- attr(reducedDim(sce.deMicheli.cc), "percentVar")
+percent.var.deMicheli <- attr(reducedDim(sce.deMicheli.cc, "PCA"), "percentVar")
+percent.var.deMicheli.cc <- attr(reducedDim(sce.deMicheli.cc, "PCA_cc"), "percentVar")
+
 chosen.elbow.deMicheli <- PCAtools::findElbowPoint(percent.var.deMicheli)
+chosen.elbow.deMicheli.cc <- PCAtools::findElbowPoint(percent.var.deMicheli.cc)
 chosen.elbow.deMicheli
+chosen.elbow.deMicheli.cc
 
 # Plot variance explained by PCs
-par(mfrow=c(1,1))
-plot(percent.var.deMicheli, xlab = "PC", ylab = "Variance explained (%)", main = "De Micheli et al.: Variance explained by each PC")
+par(mfrow=c(1,2))
+plot(percent.var.deMicheli, xlab = "PC", ylab = "Variance explained (%)", main = "Variance explained by each PC", sub = "De Micheli data")
 abline(v=chosen.elbow.deMicheli, col = "red")
+plot(percent.var.deMicheli.cc, xlab = "PC", ylab = "Variance explained (%)", sub = "De Micheli data (cc corrected)")
+abline(v=chosen.elbow.deMicheli.cc, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
-denoised.sce.deMicheli <- denoisePCA(sce.deMicheli.cc,
-                                     technical = dec.deMicheli,
-                                     subset.row = hvgs.deMicheli)
+denoised.sce.deMicheli <- denoisePCA(sce.deMicheli.cc, technical = dec.deMicheli, subset.row = hvgs.deMicheli, assay.type = "logcounts")
+sce.deMicheli.cc.corrected <- denoisePCA(sce.deMicheli.cc.corrected, technical = dec.deMicheli, assay.type = "scaled_logcounts")
+reducedDim(denoised.sce.deMicheli, "PCA_cc") <- reducedDim(sce.deMicheli.cc.corrected, "PCA")
 
 # Dimensions of denoised PCA
-ncol(reducedDim(denoised.sce.deMicheli))
+ncol(reducedDim(denoised.sce.deMicheli, "PCA"))
+ncol(reducedDim(denoised.sce.deMicheli, "PCA_cc"))
 
 # Save sce object
 #saveRDS(denoised.sce.deMicheli, file = "./../saved/denoised_sce_deMicheli")
 ```
 
-### 11.5 Dell'Orso et al. (2019) reference data
+### 11.3 Dell'Orso et al. (2019) reference data
 ```{r dellOrso-dimension-reduction}
 # Perform dimension reduction
-sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, subset_row = hvgs.dellOrso)
-plotReducedDim(sce.dellOrso.cc, dimred = "PCA", colour_by = "sample")
+sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, subset_row = hvgs.dellOrso,  exprs_values = "logcounts", name = "PCA")
+sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, altexp = "CC_corrected", subset_row = hvgs.dellOrso,  exprs_values = "scaled_logcounts", name = "PCA_cc")
+
+
+# Plot reduced dims
+plotReducedDim(sce.dellOrso.cc, dimred = "PCA", colour_by = "cell_type")+ ggtitle("Dell'Orso data: PCA")
+sce.dellOrso.cc.corrected <- as(altExp(sce.dellOrso.cc, "CC_corrected"), "SingleCellExperiment")
+reducedDim(sce.dellOrso.cc.corrected, "PCA_cc") <- reducedDim(sce.dellOrso.cc, "PCA_cc")
+plotReducedDim(sce.dellOrso.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("Dell'Orso data (cc corrected): PCA")
 
 # Compute the variance explained by each PC
-percent.var.dellOrso <- attr(reducedDim(sce.dellOrso.cc), "percentVar")
+percent.var.dellOrso <- attr(reducedDim(sce.dellOrso.cc, "PCA"), "percentVar")
+percent.var.dellOrso.cc <- attr(reducedDim(sce.dellOrso.cc, "PCA_cc"), "percentVar")
+
 chosen.elbow.dellOrso <- PCAtools::findElbowPoint(percent.var.dellOrso)
+chosen.elbow.dellOrso.cc <- PCAtools::findElbowPoint(percent.var.dellOrso.cc)
 chosen.elbow.dellOrso
+chosen.elbow.dellOrso.cc
 
 # Plot variance explained by PCs
 par(mfrow=c(1,1))
-plot(percent.var.dellOrso, xlab = "PC", ylab = "Variance explained (%)",  main = "Dell'Orso et al.: Variance explained by each PC")
+plot(percent.var.dellOrso, xlab = "PC", ylab = "Variance explained (%)",  main = "Variance explained by each PC", sub = "Dell'Orso data")
 abline(v=chosen.elbow.dellOrso, col = "red")
+plot(percent.var.dellOrso.cc, xlab = "PC", ylab = "Variance explained (%)", sub = "Dell'Orso data (cc corrected)")
+abline(v=chosen.elbow.dellOrso.cc, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
-denoised.sce.dellOrso <- denoisePCA(sce.dellOrso.cc,
-                                    technical = dec.dellOrso,
-                                    subset.row = hvgs.dellOrso)
+denoised.sce.dellOrso <- denoisePCA(sce.dellOrso.cc, technical = dec.dellOrso, subset.row = hvgs.dellOrso, assay.type = "logcounts")
+sce.dellOrso.cc.corrected <- denoisePCA(sce.dellOrso.cc.corrected, technical = dec.dellOrso, assay.type = "scaled_logcounts")
+reducedDim(denoised.sce.dellOrso, "PCA_cc") <- reducedDim(sce.dellOrso.cc.corrected, "PCA")
 
 # Dimensions of denoised PCA
-ncol(reducedDim(denoised.sce.dellOrso))
+ncol(reducedDim(denoised.sce.dellOrso, "PCA"))
+ncol(reducedDim(denoised.sce.dellOrso, "PCA_cc"))
 
 # Save sce object
 #saveRDS(denoised.sce.dellOrso, file = "./../saved/denoised_sce_dellOrso")
 ```
 
-
-
-## 12. Clustering
-  - Graph-based clustering (i.e. SNN, Shared nearest neighbor) is a flexible and scalable technique for clustering large scRNA-seq datasets
-  - The major advantage of graph-based clustering lies in its scalability. It only requires a k-nearest neighbor search that can be done in log-linear time on average
-
-
-### 12.1 Primary data (no cell cycle correction)
-```{r primary-data-clustering}
-# Perform clustering with k=180
-dimensions <- ncol(reducedDim(denoised.sce))
-
-snng <- buildSNNGraph(denoised.sce, d = dimensions, k = 180)
-clust <- igraph::cluster_walktrap(snng)$membership
-table(clust)
-denoised.sce$cluster <- factor(clust)
-
-set.seed(123)
-reducedDim(denoised.sce, "force") <- igraph::layout_with_fr(snng)
-denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
-denoised.sce <- runTSNE(denoised.sce, dimred = "PCA")
-
-# Save sce file
-#saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
-
-# Calculate modularity of the graph
-mod <- modularity(snng, clust)
-ratio <- clusterModularity(snng, clust, as.ratio = TRUE)
-print("Modularity of the graph: ", mod)
-pheatmap(log2(ratio + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data, k = 180")
-
-# Perform silhouette analysis
-dist.data <- dist(reducedDim(denoised.sce, "PCA"))
-sil <- silhouette(clust, dist = dist.data)
-plot(sil)
-
-# Silhouette with subset of cells
-denoised.sce.f <- denoised.sce[, seq(1, 21808, by = 80)]
-clust.f <- clust[seq(1, 21808, by = 80)]
-dist.data.f <- dist(reducedDim(denoised.sce.f, "PCA"))
-sil.f <- silhouette(clust.f, dist = dist.data.f)
-plot(sil.f)
-
-# Plot reduced dims
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force") + ggtitle("Primary data: force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data: PCA (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data: UMAP (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotReducedDim(denoised.sce, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotTSNE(denoised.sce, colour_by = "sample") + ggtitle("Primary data clustering: TSNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-```
-
-### 12.2 Primary data (Seurat cell cycle correction)
-```{r primary-data-cc-clustering}
-# Perform clustering with k=180
-dimensions.cc <- ncol(reducedDim(denoised.sce.cc))
-
-snng.cc <- buildSNNGraph(denoised.sce.cc, d = dimensions.cc, assay.type = "counts", k = 180)
-clust.cc <- igraph::cluster_walktrap(snng.cc)$membership
-table(clust.cc)
-denoised.sce.cc$cluster <- factor(clust.cc)
-
-set.seed(123)
-reducedDim(denoised.sce.cc, "force") <- igraph::layout_with_fr(snng.cc)
-denoised.sce.cc <- runUMAP(denoised.sce.cc, dimred = "PCA", n_dimred = dimensions.cc)
-denoised.sce.cc <- runTSNE(denoised.sce.cc, dimred = "PCA")
-
-# save sce file
-#saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_clust")
-
-# Calculate modularity of the graph
-mod.cc <- modularity(snng.cc, clust.cc)
-ratio.cc <- clusterModularity(snng.cc, clust.cc, as.ratio = TRUE)
-print("Modularity of the graph: ", mod.cc)
-pheatmap(log2(ratio.cc + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data cell cycle corrected, k = 180")
-
-# Perform silhouette analysis
-dist.data.cc <- dist(reducedDim(denoised.sce.cc, "PCA"))
-sil.cc <- silhouette(clust.cc, dist = dist.data.cc)
-plot(sil.cc)
-
-# Silhouette with subset of cells
-denoised.sce.cc.f <- denoised.sce.cc[, seq(1, 21808, by = 80)]
-clust.cc.f <- clust.cc[seq(1, 21808, by = 80)]
-dist.data.cc.f <- dist(reducedDim(denoised.sce.cc.f, "PCA"))
-sil.cc.f <- silhouette(clust.cc.f, dist = dist.data.cc.f)
-plot(sil.cc.f)
-
-# Plot reduced dims
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force") + ggtitle("Primary data (cc corrected) clustering: force-directed layout (k=10)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "PCA") + ggtitle("Primary data (cc corrected) clustering: PCA (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data (cc corrected): UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotReducedDim(denoised.sce.cc, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected) with clusters: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-plotTSNE(denoised.sce.cc, colour_by = "sample") + ggtitle("Primary data (cc corrected) clustering: TSNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
-```
-
-### 12.3 Primary data: Subclustering and marker gene detection
-#### 12.3.1 Subclustering
-
-```{r subclustering}
-# Inspect clusters in each sample
-table(denoised.sce$sample, denoised.sce$cluster)
-table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
-
-# Perform subclustering
-subclust <- quickSubCluster(denoised.sce, groups = denoised.sce$sample, assay.type = "logcounts", normalize = FALSE)
-subclust.cc <- quickSubCluster(denoised.sce.cc, groups = denoised.sce.cc$sample, assay.type = "counts", normalize = FALSE)
-
-# Plot sublusters
-p.sub.control <- plotReducedDim(subclust[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, Control sample - UMAP plot: subclusters")
-p.sub.control.cc <- plotReducedDim(subclust.cc[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), Control sample - UMAP plot: subclusters")
-
-p.sub.cap50 <- plotReducedDim(subclust[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, Cap50 sample - UMAP plot: subclusters")
-p.sub.cap50.cc <- plotReducedDim(subclust.cc[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), Cap50 sample - UMAP plot: subclusters")
-
-p.sub.cap50r4h <- plotReducedDim(subclust[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R4H sample - UMAP plot: subclusters")
-p.sub.cap50r4h.cc <- plotReducedDim(subclust.cc[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R4H sample - UMAP plot: subclusters")
-
-p.sub.cap50r8h <- plotReducedDim(subclust[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R8H sample - UMAP plot: subclusters")
-p.sub.cap50r8h.cc <- plotReducedDim(subclust.cc[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R8H sample - UMAP plot: subclusters")
-
-p.sub.cap50r16h <- plotReducedDim(subclust[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R16H sample - UMAP plot: subclusters")
-p.sub.cap50r16h.cc <- plotReducedDim(subclust.cc[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R16H sample - UMAP plot: subclusters")
-
-gridExtra::grid.arrange(p.sub.control, p.sub.control.cc, ncol = 2)
-gridExtra::grid.arrange(p.sub.cap50, p.sub.cap50.cc, ncol = 2)
-gridExtra::grid.arrange(p.sub.cap50r4h, p.sub.cap50r4h.cc, ncol = 2)
-gridExtra::grid.arrange(p.sub.cap50r8h, p.sub.cap50r8h.cc, ncol = 2)
-gridExtra::grid.arrange(p.sub.cap50r16h, p.sub.cap50r16h.cc, ncol = 2)
-
-```
-
-#### 12.3.2 Marker gene detection
-**This code chunk is not evaluated (as it would produce quite a few plots) but it can be run if one wants to see the marker genes for each sub-cluster** 
-```{r marker-gene-detection, eval=FALSE}
-# Find marker genes for Control sample
-markers.control <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "logcounts", pval.type = "any", lfc = 1)
-markers.control.cc <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, assay.type = "counts", pval.type = "any", lfc = 1)
-
-Plot marker genes
-for(i in 1:length(markers.control)) {
-  print(i)
-  chosen <- markers.control[[i]][c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2"), ]
-  logFCs <- getMarkerEffects(chosen)
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Control Subcluster:", i))
-}
-
-for(i in 1:length(markers.control.cc)) {
-  print(i)
-  chosen <- markers.control.cc[[i]][c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2"), ]
-  logFCs <- getMarkerEffects(chosen)
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Control Subcluster:", i))
-}
-
-```
-
-#### 12.3.3 Clustering comparison between non-corrected and cc-corrected primary data
-```{r rand-index}
-# Plot a heatmap of the differences in clustering between original data and cc-corrected data
-tab <- table(clust, clust.cc)
-pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=viridis::viridis(100))
-
-# Calculate adjusted Rand index
-ari <- adj.rand.index(clust, clust.cc)
-print(paste("Adjusted Rand Index: ", ari))
-```
-
-
-### 12.3 Primary data (Reference-based cell cycle correction)
-**This code chunk should maybe be deleted as it is not used anymore(?)**
-```{r primary-data-cc2-clustering, eval=FALSE}
-# Perform clustering
-dimensions.cc.2 <- ncol(reducedDim(denoised.sce.cc.2))
-snng.cc.2 <- buildSNNGraph(denoised.sce.cc.2, d = dimensions.cc.2, assay.type = "corrected")
-clust.cc.2 <- igraph::cluster_walktrap(snng.cc.2)$membership
-denoised.sce.cc.2$cluster <- factor(clust.cc.2)
-
-set.seed(123)
-reducedDim(denoised.sce.cc.2, "force") <- igraph::layout_with_fr(snng.cc.2)
-table(clust.cc.2)
-
-# Plot results
-plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "force") + ggtitle("Primary data clustering (refernce-based cc correction): force-directed layout")
-plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "PCA")+ ggtitle("Primary data clustering (refernce-based cc correction): PCA")
-
-denoised.sce.cc.2 <- runUMAP(denoised.sce.cc.2, dimred = "PCA", n_dimred = dimensions.cc.2)
-plotReducedDim(denoised.sce.cc.2, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data clustering (refernce-based cc correction): UMAP")
-plotReducedDim(denoised.sce.cc.2, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data clustering (refernce-based cc correction): UMAP with clusters")
-
-denoised.sce.cc.2 <- runTSNE(denoised.sce.cc.2, dimred = "PCA")
-plotTSNE(denoised.sce.cc.2, colour_by = "sample") + ggtitle("Primary data clustering (refernce-based cc correction): TSNE")
-
-#saveRDS(denoised.sce.cc, file = "./../saved/denoised_sce_cc_2_clust")
-```
-
-### 12.4 De Micheli et al. (2020) reference data
-**This code chunk should maybe be deleted as it is not used anymore(?)**
-```{r deMicheli-clustering, eval=FALSE}
-# Perform clustering
-dimensions.deMicheli <- ncol(reducedDim(denoised.sce.deMicheli))
-snng.deMicheli <- buildSNNGraph(denoised.sce.deMicheli, d = dimensions.deMicheli, k = 50)
-clust.deMicheli <- igraph::cluster_walktrap(snng.deMicheli)$membership
-denoised.sce.deMicheli$cluster <- factor(clust.deMicheli)
-
-set.seed(123)
-reducedDim(denoised.sce.deMicheli, "force") <- igraph::layout_with_fr(snng.deMicheli)
-table(clust.deMicheli)
-
-# Plot results
-plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "force") + ggtitle("De Micheli et al.: force-directed layout")
-plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "PCA") + ggtitle("De Micheli et al.: PCA")
-
-denoised.sce.deMicheli <- runUMAP(denoised.sce.deMicheli, dimred = "PCA", n_dimred = dimensions.deMicheli)
-plotReducedDim(denoised.sce.deMicheli, colour_by = "injury", dimred = "UMAP") + ggtitle("De Micheli et al.: UMAP")
-
-denoised.sce.deMicheli <- runTSNE(denoised.sce.deMicheli, dimred = "PCA")
-plotTSNE(denoised.sce.deMicheli, colour_by = "injury") + ggtitle("De Micheli et al.: TSNE")
-
-#saveRDS(denoised.sce.deMicheli, file = "./../saved/denoised_sce_deMicheli_clust")
-```
-
-
-### 12.5 Dell'Orso et al. (2019) reference data
-**This code chunk should maybe be deleted as it is not used anymore(?)**
-```{r dellOrso-clustering, eval=FALSE}
-# Perform clustering
-dimensions.dellOrso <- ncol(reducedDim(denoised.sce.dellOrso))
-snng.dellOrso <- buildSNNGraph(denoised.sce.dellOrso, d = dimensions.dellOrso, k = 50)
-clust.dellOrso <- igraph::cluster_walktrap(snng.dellOrso)$membership
-denoised.sce.dellOrso$cluster <- factor(clust.dellOrso)
-
-set.seed(123)
-reducedDim(denoised.sce.dellOrso, "force") <- igraph::layout_with_fr(snng.dellOrso)
-table(clust.dellOrso)
-
-# Plot results
-plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "force") + ggtitle("Dell'Orso et al.: force-directed layout")
-plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "PCA") + ggtitle("Dell'Orso et al.: PCA")
-
-denoised.sce.dellOrso <- runUMAP(denoised.sce.dellOrso, dimred = "PCA", n_dimred = dimensions.dellOrso)
-plotReducedDim(denoised.sce.dellOrso, colour_by = "sample", dimred = "UMAP") + ggtitle("Dell'Orso et al.: UMAP")
-
-denoised.sce.dellOrso <- runTSNE(denoised.sce.dellOrso, dimred = "PCA")
-plotTSNE(denoised.sce.dellOrso, colour_by = "sample") + ggtitle("Dell'Orso et al.: TSNE")
-
-#saveRDS(denoised.sce.dellOrso, file = "./../saved/denoised_sce_dellOrso_clust")
-```
-
-
-### Extra: Create Cerebro files (.crb)
-```{r cerebro-files, eval=FALSE}
-denoised.sce.clust <- readRDS("./../saved/denoised_sce_clust")
-denoised.sce.cc.clust <- readRDS("./../saved/denoised_sce_cc_clust")
-logcounts(denoised.sce.cc.clust) <- counts(denoised.sce.cc.clust)
-
-sce.seurat <- as.Seurat(denoised.sce.clust)
-sce.cc.seurat <- as.Seurat(denoised.sce.cc.clust)
-
-exportFromSeurat(sce.seurat, file = "./../saved/primary_data.crb", experiment_name = "Primary data (no correction)", organism = "mm",
-                 column_nUMI = "sum", column_nGene = "detected", column_cluster = "cluster", column_sample = "sample")
-
-exportFromSeurat(sce.cc.seurat, file = "./../saved/primary_data_cc_corrected.crb", experiment_name = "Primary data (cell cycle corrected)", organism = "mm",
-                 column_nUMI = "sum", column_nGene = "detected", column_cluster = "cluster", column_sample = "sample", column_cell_cycle_seurat = "Phase")
-
-```
 
 
