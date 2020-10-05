@@ -23,6 +23,14 @@ library(scater)
 library(scran)
 library(SingleCellExperiment)
 library(dplyr)
+library(SingleR)
+library(igraph)
+library(stats)
+library(cluster)
+library(pheatmap)
+library(fossil)
+library(Seurat)
+library(cerebroApp)
 ```
 
 
@@ -33,28 +41,238 @@ denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
 denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 ```
 
+## 2. Clustering
+### 2.1 Primary data
 
-## 2. Trajectory inference
-### 2.1 De Micheli et al. (2020) reference data
+**The clusters are calculated using Puhti supercomputer and results are loaded in the code chunk below to speed up the process**
+```{r primary-data-clustering-shortcut}
+# Load data with clusters
+denoised.sce <- readRDS("./../saved/denoised_sce_clust")
+snng <- readRDS("./../saved/snng")
+snng.cc <- readRDS("./../saved/snng_cc")
+clust <- readRDS("./../saved/clust")
+clust.cc <- readRDS("./../saved/clust_cc")
+
+# Generate the CC corrected data
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+denoised.sce.cc$cluster.cc <- factor(clust.cc)
+reducedDim(denoised.sce.cc, "UMAP_cc") <- reducedDim(denoised.sce, "UMAP_cc")
+reducedDim(denoised.sce.cc, "TSNE_cc") <- reducedDim(denoised.sce, "TSNE_cc")
+reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
+```
+
+**Perform clustering (in case no pre-calculated files are available):**
+```{r primary-data-clustering, eval=FALSE}
+# Load data
+denoised.sce <- readRDS("./../saved/denoised_sce")
+
+# Get # of reduced dimensions for uncorrected & cc-corrected datasets
+dimensions <- ncol(reducedDim(denoised.sce, "PCA"))
+dimensions.cc <- ncol(reducedDim(denoised.sce, "PCA_cc"))
+dimensions
+dimensions.cc
+
+# Build SNN graph with k=180
+snng <- buildSNNGraph(denoised.sce, k = 180, use.dimred = "PCA") 
+
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+reducedDim(denoised.sce.cc, "PCA_cc") <- reducedDim(denoised.sce, "PCA_cc")
+snng.cc <- buildSNNGraph(denoised.sce.cc, k = 180, use.dimred = "PCA_cc")
+
+# Perform clustering and assign cluster labels
+clust <- igraph::cluster_walktrap(snng)$membership
+clust.cc <- igraph::cluster_walktrap(snng.cc)$membership
+table(clust)
+table(clust.cc)
+denoised.sce$cluster <- factor(clust)
+denoised.sce$cluster.cc <- factor(clust.cc)
+
+# Run UMAP, t-SNE, and force-directed layout
+## Uncorrected dataset
+set.seed(123)
+reducedDim(denoised.sce, "force") <- igraph::layout_with_fr(snng)
+denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
+denoised.sce <- runTSNE(denoised.sce, dimred = "PCA", n_dimred = dimensions)
+## Cc corrected data
+reducedDim(denoised.sce, "force_cc") <- igraph::layout_with_fr(snng.cc)
+denoised.sce <- runTSNE(denoised.sce, altexp = "CC_corrected", exprs_values = "scaled_logcounts", dimred = "PCA_cc", name = "TSNE_cc")
+denoised.sce.cc <- runUMAP(denoised.sce.cc, exprs_values = "scaled_logcounts", dimred = "PCA_cc", name = "UMAP_cc", n_neighbors = 180)
+
+# Set reduced dims to cc corrected experiment and vice versa
+reducedDim(denoised.sce, "UMAP_cc") <- reducedDim(denoised.sce.cc, "UMAP_cc")
+reducedDim(denoised.sce.cc, "TSNE_cc") <- reducedDim(denoised.sce, "TSNE_cc")
+reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
+
+# Save sce file
+#saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
+```
+
+**Plot the data using UMAP, force-directed layout, and t-SNE**
+```{r primary-data-clustering-plots}
+# force directed layout plots
+p.force <- plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force") + ggtitle("Primary data: force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+p.force.cc <- plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force_cc") + ggtitle("Primary data (cc corrected): force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+gridExtra::grid.arrange(p.force, p.force.cc, ncol = 2)
+
+# t-SNE plots
+p.tsne <- plotReducedDim(denoised.sce, colour_by = "sample", dimred = "TSNE") + ggtitle("Primary data: t-SNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+p.tsne.cc <- plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "TSNE_cc") + ggtitle("Primary data (cc corrected): t-SNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+gridExtra::grid.arrange(p.tsne, p.tsne.cc, ncol = 2)
+
+# UMAP plots by sample and by cluster
+plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data: UMAP (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP_cc") + ggtitle("Primary data (cc corrected): UMAP (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+plotReducedDim(denoised.sce, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+plotReducedDim(denoised.sce.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Primary data (cc corrected): UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+```
+
+### 2.2 Clustering comparison
+**Inspect the clusterings of primary data and compare the similarity of the uncorrected and cc-corrected clusterings**
+```{r primary-data-clustering-comparison}
+# Calculate modularities of the graphs
+mod <- modularity(snng, clust)
+mod.cc <- modularity(snng.cc, clust.cc)
+mod
+mod.cc
+
+# Plot the modularities of clusters
+ratio <- clusterModularity(snng, clust, as.ratio = TRUE)
+ratio.cc <- clusterModularity(snng.cc, clust.cc, as.ratio = TRUE)
+
+pheatmap(log2(ratio + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data, k = 180")
+pheatmap(log2(ratio.cc + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data (cc corrected), k = 180")
+
+# Calculate adjusted Rand index
+ari <- adj.rand.index(clust, clust.cc)
+print(paste("Adjusted Rand Index: ", ari))
+```
+```{r silhouette-analysis, eval=FALSE}
+# Perform silhouette analysis
+dist.data <- dist(reducedDim(denoised.sce, "PCA"))
+dist.data.cc <- dist(reducedDim(denoised.sce, "PCA_cc"))
+sil <- silhouette(clust, dist = dist.data)
+sil.cc <- silhouette(clust.cc, dist = dist.data.cc)
+plot(sil, main = "Primary data: silhouette plot")
+plot(sil, main = "Primary data (cc corrected): silhouette plot")
+
+# Silhouette with subset of cells
+denoised.sce.f <- denoised.sce[, seq(1, 21808, by = 80)]
+denoised.sce.f.cc <- denoised.sce[, seq(1, 21808, by = 80)]
+clust.f <- clust[seq(1, 21808, by = 80)]
+clust.f.cc <- clust.cc[seq(1, 21808, by = 80)]
+dist.data.f <- dist(reducedDim(denoised.sce.f, "PCA"))
+dist.data.f.cc <- dist(reducedDim(denoised.sce.f.cc, "PCA"))
+sil.f <- silhouette(clust.f, dist = dist.data.f)
+sil.f.cc <- silhouette(clust.f.cc, dist = dist.data.f.cc)
+
+plot(sil.f, main = "Subset of primary data: silhouette plot")
+plot(sil.f.cc, main = "Subset of primary data (cc corrected): silhouette plot")
+
+# Plot a heatmap of the differences in clustering between original data and cc-corrected data
+tab <- table(clust, clust.cc)
+pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=viridis::viridis(100))
+```
+
+
+### 2.3 Primary data: Subclustering and marker gene detection
+#### 2.3.1 Subclustering
+**Inspect subclusters within the clusters of the primary data**
+```{r primary-data-subclustering}
+# Inspect clusters in each sample
+table(denoised.sce$sample, denoised.sce$cluster)
+table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
+
+# Perform subclustering
+subclust <- quickSubCluster(denoised.sce, groups = denoised.sce$sample, normalize = FALSE)
+subclust.cc <- quickSubCluster(denoised.sce.cc, groups = denoised.sce.cc$sample, normalize = FALSE)
+
+# Plot sublusters
+p.sub.control <- plotReducedDim(subclust[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, Control sample - UMAP plot: subclusters")
+p.sub.control.cc <- plotReducedDim(subclust.cc[["control"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), Control sample - UMAP plot: subclusters")
+
+p.sub.cap50 <- plotReducedDim(subclust[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, Cap50 sample - UMAP plot: subclusters")
+p.sub.cap50.cc <- plotReducedDim(subclust.cc[["cap50"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), Cap50 sample - UMAP plot: subclusters")
+
+p.sub.cap50r4h <- plotReducedDim(subclust[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R4H sample - UMAP plot: subclusters")
+p.sub.cap50r4h.cc <- plotReducedDim(subclust.cc[["cap50_r4h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R4H sample - UMAP plot: subclusters")
+
+p.sub.cap50r8h <- plotReducedDim(subclust[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R8H sample - UMAP plot: subclusters")
+p.sub.cap50r8h.cc <- plotReducedDim(subclust.cc[["cap50_r8h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R8H sample - UMAP plot: subclusters")
+
+p.sub.cap50r16h <- plotReducedDim(subclust[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data, R16H sample - UMAP plot: subclusters")
+p.sub.cap50r16h.cc <- plotReducedDim(subclust.cc[["cap50_r16h"]], colour_by = "subcluster", dimred = "UMAP") + ggtitle("Primary data (cc corrected), R16H sample - UMAP plot: subclusters")
+
+gridExtra::grid.arrange(p.sub.control, p.sub.control.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50, p.sub.cap50.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50r4h, p.sub.cap50r4h.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50r8h, p.sub.cap50r8h.cc, ncol = 2)
+gridExtra::grid.arrange(p.sub.cap50r16h, p.sub.cap50r16h.cc, ncol = 2)
+
+```
+
+#### 2.3.2 Marker gene detection
+**This code chunk is not evaluated (as it would produce quite a few plots) but it can be run if one wants to see the marker genes for each sub-cluster** 
+```{r marker-gene-detection, eval=FALSE}
+# Find marker genes for Control sample
+markers.control <- findMarkers(subclust[["control"]], groups = subclust[["control"]]$subcluster, pval.type = "any", lfc = 1)
+markers.control.cc <- findMarkers(subclust.cc[["control"]], groups = subclust.cc[["control"]]$subcluster, pval.type = "any", lfc = 1)
+
+Plot marker genes
+for(i in 1:length(markers.control)) {
+  print(i)
+  chosen <- markers.control[[i]][c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2"), ]
+  logFCs <- getMarkerEffects(chosen)
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Control Subcluster:", i))
+}
+
+for(i in 1:length(markers.control.cc)) {
+  print(i)
+  chosen <- markers.control.cc[[i]][c("Tnnt1", "Tnnt2", "Tnnt3", "Myog", "Tpm1", "Tpm2"), ]
+  logFCs <- getMarkerEffects(chosen)
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Control Subcluster (cc):", i))
+}
+
+```
+
+### 2.4 Create Cerebro files (.crb)
+**This code chunk is used for producing cerebro files and it is by default not evaluated**
+```{r cerebro-files, eval=FALSE}
+sce.seurat <- as.Seurat(denoised.sce, counts = "counts", data = "logcounts")
+sce.cc.seurat <- as.Seurat(denoised.sce.cc, counts = "scaled_logcounts", data = "scaled_logcounts")
+
+exportFromSeurat(object = sce.seurat,
+                 file = "./../saved/primary_data.crb", 
+                 experiment_name = "Primary data (no correction)",
+                 organism = "mm",
+                 column_sample = "sample",
+                 column_cluster = "cluster",
+                 column_nUMI = "sum", 
+                 column_cell_cycle_seurat = "Phase",
+                 column_nGene = "detected", 
+                 add_all_meta_data = TRUE)
+
+
+exportFromSeurat(object = sce.cc.seurat,
+                 file = "./../saved/primary_data_cc_corrected.crb", 
+                 experiment_name = "Primary data (cell cycle corrected)",
+                 organism = "mm",
+                 column_sample = "sample",
+                 column_cluster = "cluster.cc",
+                 column_nUMI = "sum", 
+                 column_cell_cycle_seurat = "Phase",
+                 column_nGene = "detected", 
+                 add_all_meta_data = TRUE)
+```
+
+
+## 3. Trajectory inference
+### 3.1 De Micheli et al. (2020) reference data
 ```{r deMicheli-traj-inference-final}
-# Define groups
-d0_muscle <- denoised.sce.deMicheli$injury == "Day 0" & denoised.sce.deMicheli$cell_annotation == "Mature skeletal muscle"
-d0_musc <- denoised.sce.deMicheli$injury == "Day 0" & denoised.sce.deMicheli$cell_annotation == "MuSCs and progenitors"
-d5_muscle <- denoised.sce.deMicheli$injury == "Day 5" & denoised.sce.deMicheli$cell_annotation == "Mature skeletal muscle"
-d5_musc <- denoised.sce.deMicheli$injury == "Day 5" & denoised.sce.deMicheli$cell_annotation == "MuSCs and progenitors"
-d7_muscle <- denoised.sce.deMicheli$injury == "Day 7" & denoised.sce.deMicheli$cell_annotation == "Mature skeletal muscle"
-d7_musc <- denoised.sce.deMicheli$injury == "Day 7" & denoised.sce.deMicheli$cell_annotation == "MuSCs and progenitors"
-
-denoised.sce.deMicheli$group[d0_musc] <- "d0_MuSCs_and_progenitors"
-denoised.sce.deMicheli$group[d5_musc] <- "d5_MuSCs_and_progenitors"
-denoised.sce.deMicheli$group[d7_musc] <- "d7_MuSCs_and_progenitors"
-denoised.sce.deMicheli$group[d0_muscle] <- "d0_mature_skeletal_muscle"
-denoised.sce.deMicheli$group[d5_muscle] <- "d5_mature_skeletal_muscle"
-denoised.sce.deMicheli$group[d7_muscle] <- "d7_mature_skeletal_muscle"
-
 # Create expression and sample objects
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
-group_name.deMicheli <- as.factor(denoised.sce.deMicheli$group)
+group_name.deMicheli <- as.factor(denoised.sce.deMicheli$cell_type)
 cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli$Phase)
 
 
@@ -75,22 +293,9 @@ draw_trajectory_plot(space = space.deMicheli,
 ```
 
 
-
-### 2.2 Dell'Orso et al. (2019) reference data
+### 3.2 Dell'Orso et al. (2019) reference data
 ```{r}
 # Merge replicate samples to form groups per cell type
-hom1 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep1"
-hom2 <- denoised.sce.dellOrso$sample == "homeostatic_MuSCs_rep2"
-inj1 <- denoised.sce.dellOrso$sample == "inj_60h_MuSCs_rep1"
-inj2 <- denoised.sce.dellOrso$sample == "inj_60h_MuSCs_rep2"
-pmb <- denoised.sce.dellOrso$sample == "Primary_MB"
-  
-denoised.sce.dellOrso$cell_type[hom1] <- "homeostatic_MuSCs" 
-denoised.sce.dellOrso$cell_type[hom2] <- "homeostatic_MuSCs" 
-denoised.sce.dellOrso$cell_type[inj1] <- "inj_60h_MuSCs" 
-denoised.sce.dellOrso$cell_type[inj2] <- "inj_60h_MuSCs" 
-denoised.sce.dellOrso$cell_type[pmb] <- "Primary_MB"
-
 # Create expression and sample objects
 expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
 group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
@@ -111,13 +316,12 @@ draw_trajectory_plot(space = space.dellOrso,
                      progression_group = cc.phases.dellOrso,
                      path = traj.dellOrso$path,
                      contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes, ndim = 2 - Cell cycle phases")
-
 ```
 
 
-## 3. Identifying candidate marker genes
-### 3.1 De Micheli et al. (2020) reference data
-```{r marker-genes-deMicheli}
+## 4. Identifying candidate marker genes
+### 4.1 De Micheli et al. (2020) reference data
+```{r marker-genes-deMicheli, eval=FALSE}
 # Identify candidate marker genes
 gimp.deMicheli <- gene_importances(x = expression.deMicheli,
                                    time = traj.deMicheli$time,
@@ -151,8 +355,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli,
 #saveRDS(gimp.deMicheli, file = "./../saved/gimp_deMicheli")
 
 ```
-### 3.2 Dell'Orso et al. (2019) reference data
-```{r marker-genes-dellOrso}
+### 4.2 Dell'Orso et al. (2019) reference data
+```{r marker-genes-dellOrso, eval=FALSE}
 # Identify candidate marker genes
 gimp.dellOrso <- gene_importances(x = expression.dellOrso,
                                   time = traj.dellOrso$time,
@@ -185,5 +389,113 @@ draw_trajectory_heatmap(expr_sel.dellOrso,
 #saveRDS(gimp.dellOrso, file = "./../saved/gimp_dellOrso")
 ```
 
+
+## 5. Mapping of primary data to reference datasets
+### 5.1 load data
+```{r load-primary-data, eval=FALSE}
+# Load pre-processed sce objects
+denoised.sce <- readRDS("./../saved/denoised_sce_clust")
+denoised.sce.cc <- readRDS("./../saved/denoised_sce_cc_clust")
+```
+
+### 5.2 Map primary data to reference data
+```{r, eval=FALSE}
+# Predict cell types (from reference datasets) to primary data cells
+## De Micheli (corrected / uncorrected primary data)
+pred.deMicheli <- SingleR(test = denoised.sce,
+                          assay.type.test = "logcounts",
+                          ref = denoised.sce.deMicheli,
+                          labels = denoised.sce.deMicheli$group)
+
+table(pred.deMicheli$labels)
+saveRDS(pred.deMicheli, file = "pred_deMicheli")
+
+pred.deMicheli.cc <- SingleR(test = denoised.sce.cc,
+                             assay.type.test = "counts",
+                             ref = denoised.sce.deMicheli,
+                             labels = denoised.sce.deMicheli$group)
+
+table(pred.deMicheli.cc$labels)
+saveRDS(pred.deMicheli.cc, file = "pred_deMicheli_cc")
+
+
+## Dell'Orso (corrected / uncorrected primary data)
+pred.dellOrso <- SingleR(test = denoised.sce,
+                         ref = denoised.sce.dellOrso,
+                         labels = denoised.sce.dellOrso$cell_type)
+
+table(pred.dellOrso$labels)
+saveRDS(pred.dellOrso, file = "pred_dellOrso")
+
+
+pred.dellOrso.cc <- SingleR(test = denoised.sce.cc,
+                            assay.type.test = "counts",
+                            ref = denoised.sce.dellOrso,
+                            labels = denoised.sce.dellOrso$cell_type)
+
+table(pred.dellOrso.cc$labels)
+saveRDS(pred.dellOrso.cc, file = "pred_dellOrso_cc")
+
+# Inspection of predictions
+## Make tables
+tab.deMicheli <- table(pred.deMicheli$pruned.labels, denoised.sce$sample)
+tab.deMicheli.cc <- table(pred.deMicheli.cc$pruned.labels, denoised.sce.cc$sample)
+tab.dellOrso <- table(pred.dellOrso$pruned.labels, denoised.sce$sample)
+tab.dellOrso.cc <-table(pred.dellOrso.cc$pruned.labels, denoised.sce.cc$sample)
+
+## 'melt' tables
+library("reshape")
+tab.deMicheli.melt <- melt(tab.deMicheli)
+colnames(tab.deMicheli.melt) <- c("cell_type", "sample", "count")
+tab.deMicheli.cc.melt <- melt(tab.deMicheli.cc)
+colnames(tab.deMicheli.cc.melt) <- c("cell_type", "sample", "count")
+tab.dellOrso.melt <- melt(tab.dellOrso)
+colnames(tab.dellOrso.melt) <- c("cell_type", "sample", "count")
+tab.dellOrso.cc.melt <- melt(tab.dellOrso.cc)
+colnames(tab.dellOrso.cc.melt) <- c("cell_type", "sample", "count")
+
+
+p.deMicheli <- ggplot(tab.deMicheli.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
+  geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data - De Micheli cell types")
+p.deMicheli.cc <- ggplot(tab.deMicheli.cc.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
+  geom_bar(position = "dodge", stat = "identity")  + ggtitle("Primary data (cc) - De Micheli cell types")
+p.dellOrso <- ggplot(tab.dellOrso.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
+  geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data - Dell'Orso cell types")
+p.dellOrso.cc <- ggplot(tab.dellOrso.cc.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
+  geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data (cc) - Dell'Orso cell types")
+
+gridExtra::grid.arrange(p.deMicheli, p.deMicheli.cc, p.dellOrso, p.dellOrso.cc, ncol =)
+
+
+## visualize the table results
+par(mfrow = c(3,2))
+pie(tab.deMicheli$control, labels = rownames(tab.deMicheli), main = "Control sample - De Micheli cell types")
+pie(tab.deMicheli$cap50, labels = rownames(tab.deMicheli), main = "Cap50 sample - De Micheli cell types")
+pie(tab.deMicheli$cap50_r4h, labels = rownames(tab.deMicheli), main = "Cap50_r4h sample - De Micheli cell types")
+pie(tab.deMicheli$cap50_r8h, labels = rownames(tab.deMicheli), main = "Cap50_r8h sample - De Micheli cell types")
+pie(tab.deMicheli$cap50_r16h, labels = rownames(tab.deMicheli), main = "Cap50_r16h sample - De Micheli cell types")
+
+par(mfrow = c(3,2))
+pie(tab.deMicheli.cc$control, labels = rownames(tab.deMicheli.cc), main = "Control sample (cc) - De Micheli cell types")
+pie(tab.deMicheli.cc$cap50, labels = rownames(tab.deMicheli.cc), main = "Cap50 sample (cc) - De Micheli cell types")
+pie(tab.deMicheli.cc$cap50_r4h, labels = rownames(tab.deMicheli.cc), main = "Cap50_r4h sample (cc) - De Micheli cell types")
+pie(tab.deMicheli.cc$cap50_r8h, labels = rownames(tab.deMicheli.cc), main = "Cap50_r8h sample (cc) - De Micheli cell types")
+pie(tab.deMicheli.cc$cap50_r16h, labels = rownames(tab.deMicheli.cc), main = "Cap50_r16h sample (cc) - De Micheli cell types")
+
+par(mfrow = c(3,2))
+pie(tab.dellOrso$control, labels = rownames(tab.dellOrso), main = "Control sample - Dell'Orso cell types")
+pie(tab.dellOrso$cap50, labels = rownames(tab.dellOrso), main = "Cap50 sample - Dell'Orso cell types")
+pie(tab.dellOrso$cap50_r4h, labels = rownames(tab.dellOrso), main = "Cap50_r4h sample - Dell'Orso cell types")
+pie(tab.dellOrso$cap50_r8h, labels = rownames(tab.dellOrso), main = "Cap50_r8h sample - Dell'Orso cell types")
+pie(tab.dellOrso$cap50_r16h, labels = rownames(tab.dellOrso), main = "Cap50_r16h sample - Dell'Orso cell types")
+
+par(mfrow = c(3,2))
+pie(tab.dellOrso.cc$control, labels = rownames(tab.dellOrso.cc), main = "Control sample - Dell'Orso cell types")
+pie(tab.dellOrso.cc$cap50, labels = rownames(tab.dellOrso.cc), main = "Cap50 sample - Dell'Orso cell types")
+pie(tab.dellOrso.cc$cap50_r4h, labels = rownames(tab.dellOrso.cc), main = "Cap50_r4h sample - Dell'Orso cell types")
+pie(tab.dellOrso.cc$cap50_r8h, labels = rownames(tab.dellOrso.cc), main = "Cap50_r8h sample - Dell'Orso cell types")
+pie(tab.dellOrso.cc$cap50_r16h, labels = rownames(tab.dellOrso.cc), main = "Cap50_r16h sample - Dell'Orso cell types")
+
+```
 
 
