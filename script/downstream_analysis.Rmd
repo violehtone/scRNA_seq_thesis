@@ -148,6 +148,8 @@ pheatmap(log2(ratio.cc + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=c
 ari <- adj.rand.index(clust, clust.cc)
 print(paste("Adjusted Rand Index: ", ari))
 ```
+
+**Silhouette analysis:**
 ```{r silhouette-analysis, eval=FALSE}
 # Perform silhouette analysis
 dist.data <- dist(reducedDim(denoised.sce, "PCA"))
@@ -179,7 +181,7 @@ pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=v
 ### 2.3 Primary data: Subclustering and marker gene detection
 #### 2.3.1 Subclustering
 **Inspect subclusters within the clusters of the primary data**
-```{r primary-data-subclustering}
+```{r primary-data-subclustering, eval=FALSE}
 # Inspect clusters in each sample
 table(denoised.sce$sample, denoised.sce$cluster)
 table(denoised.sce.cc$sample, denoised.sce.cc$cluster)
@@ -269,32 +271,119 @@ exportFromSeurat(object = sce.cc.seurat,
 
 ## 3. Trajectory inference
 ### 3.1 De Micheli et al. (2020) reference data
-```{r deMicheli-traj-inference-final}
+```{r deMicheli-traj-inference}
 # Create expression and sample objects
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
 group_name.deMicheli <- as.factor(denoised.sce.deMicheli$cell_type)
 cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli$Phase)
 
-
 # Trajectory building
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
 traj.deMicheli <- infer_trajectory(space.deMicheli)
 
+# Plot trajectory by cell types
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = group_name.deMicheli,
                      path = traj.deMicheli$path,
-                     contour = TRUE) + ggtitle("De Micheli et al.: All genes (ndim = 2) - Cell types")
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes (ndim = 2) - Cell types")
 
+# Plot trajectory by cc phases
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = cc.phases.deMicheli,
                      path = traj.deMicheli$path,
-                     contour = TRUE) + ggtitle("De Micheli et al.: All genes (ndim = 2) - Cell cycle phases")
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes (ndim = 2) - Cell cycle phases")
+
+# Abundance of some marker genes
+pax7 <- expression.deMicheli[, "Pax7"]
+cdk1 <- expression.deMicheli[, "Cdk1"]
+myog <- expression.deMicheli[, "Myog"]
+btg2 <- expression.deMicheli[, "Btg2"]
+cdc20 <- expression.deMicheli[, "Cdc20"]
+cdkn1c <- expression.deMicheli[, "Cdkn1c"]
+
+pax7.plot <- draw_trajectory_plot(space = space.deMicheli, 
+                                  progression_group = pax7,
+                                  path = traj.deMicheli$path,
+                                  contour = FALSE) + 
+  ggtitle("De Micheli et al. dataset: Pax7 gene") +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+cdk1.plot <- draw_trajectory_plot(space = space.deMicheli, 
+                                  progression_group = cdk1,
+                                  path = traj.deMicheli$path,
+                                  contour = FALSE) +
+  ggtitle("De Micheli et al. dataset: Cdk1 gene") +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+
+myog.plot <- draw_trajectory_plot(space = space.deMicheli, 
+                                  progression_group = myog,
+                                  path = traj.deMicheli$path,
+                                  contour = FALSE) + 
+  ggtitle("De Micheli et al. dataset: Myog gene") +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+
+btg2.plot <- draw_trajectory_plot(space = space.deMicheli, 
+                                  progression_group = btg2,
+                                  path = traj.deMicheli$path,
+                                  contour = FALSE) +
+  ggtitle("De Micheli et al. dataset: Btg2 gene") +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+
+cdc20.plot <- draw_trajectory_plot(space = space.deMicheli, 
+                                  progression_group = cdc20,
+                                  path = traj.deMicheli$path,
+                                  contour = FALSE) + 
+  ggtitle("De Micheli et al. dataset: Cdc20 gene") + 
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+
+cdkn1c.plot <- draw_trajectory_plot(space = space.deMicheli, 
+                                  progression_group = cdkn1c,
+                                  path = traj.deMicheli$path,
+                                  contour = FALSE) + 
+  ggtitle("De Micheli et al. dataset: Cdkn1c gene") + 
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+
+gridExtra::grid.arrange(pax7.plot, cdk1.plot, myog.plot, btg2.plot, cdc20.plot, cdkn1c.plot, ncol = 2)
 
 ```
 
 
+**Trajectory inference for cell cycle corrected expression values:**
+```{r deMicheli-traj-inference-cc}
+# Create a sce object from the CC corrected alternative experiment
+denoised.sce.deMicheli.cc <- as(altExp(denoised.sce.deMicheli, "CC_corrected"), "SingleCellExperiment")
+
+
+# Create expression and sample objects
+expression.deMicheli.cc <- as.matrix(t(assay(denoised.sce.deMicheli.cc, "scaled_logcounts")))
+group_name.deMicheli.cc <- as.factor(denoised.sce.deMicheli.cc$cell_type)
+cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli.cc$Phase)
+
+# Trajectory building
+space.deMicheli.cc <- reduce_dimensionality(expression.deMicheli.cc, dist = "spearman", ndim = 2)
+traj.deMicheli.cc <- infer_trajectory(space.deMicheli.cc)
+
+draw_trajectory_plot(space = space.deMicheli.cc, 
+                     progression_group = group_name.deMicheli.cc,
+                     path = traj.deMicheli.cc$path,
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset (cc corrected): All genes (ndim = 2) - Cell types")
+
+draw_trajectory_plot(space = space.deMicheli.cc, 
+                     progression_group = cc.phases.deMicheli,
+                     path = traj.deMicheli.cc$path,
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset (cc corrected): All genes (ndim = 2) - Cell cycle phases")
+```
+
+
+
+
 ### 3.2 Dell'Orso et al. (2019) reference data
-```{r}
+```{r dellOrso-traj-inference}
 # Merge replicate samples to form groups per cell type
 # Create expression and sample objects
 expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
@@ -319,8 +408,54 @@ draw_trajectory_plot(space = space.dellOrso,
 ```
 
 
+**Trajectory inference for cell cycle corrected expression values:**
+```{r dellOrso-traj-inference-cc}
+# Create a sce object from the CC corrected alternative experiment
+denoised.sce.dellOrso.cc <- as(altExp(denoised.sce.dellOrso, "CC_corrected"), "SingleCellExperiment")
+
+# Create expression and sample objects
+expression.dellOrso.cc <- as.matrix(t(assay(denoised.sce.dellOrso.cc, "scaled_logcounts")))
+group_name.dellOrso.cc <- as.factor(denoised.sce.dellOrso.cc$cell_type)
+cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso.cc$Phase)
+
+# Trajectory building
+space.dellOrso.cc <- reduce_dimensionality(expression.dellOrso.cc, dist = "spearman", ndim = 2)
+traj.dellOrso.cc <- infer_trajectory(space.dellOrso.cc)
+
+draw_trajectory_plot(space = space.dellOrso.cc, 
+                     progression_group = group_name.dellOrso.cc,
+                     path = traj.dellOrso.cc$path,
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset (cc corrected): All genes (ndim = 2) - Cell types")
+
+draw_trajectory_plot(space = space.dellOrso.cc, 
+                     progression_group = cc.phases.dellOrso,
+                     path = traj.dellOrso.cc$path,
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset (cc corrected): All genes (ndim = 2) - Cell cycle phases")
+```
+
+
 ## 4. Identifying candidate marker genes
 ### 4.1 De Micheli et al. (2020) reference data
+
+**Shortcut for fetching the gimps & modules generated by Puhti supercomputer**
+```{r shortcut-gimp-modules}
+gimp.deMicheli <- readRDS("./../saved/gimp_deMicheli")
+gimp.dellOrso <- readRDS("./../saved/gimp_dellOrso")
+modules.deMicheli <- readRDS("./../saved/modules_deMicheli")
+modules.dellOrso <- readRDS("./../saved/modules_dellOrso")
+
+# Generate objects for de Micheli dataset
+gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
+gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
+expr_sel.deMicheli <- expression.deMicheli[, gene_sel.deMicheli]
+
+# Generate objects for dellOrso dataset
+gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrso$pvalue))
+gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
+expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
+```
+
+
 ```{r marker-genes-deMicheli, eval=FALSE}
 # Identify candidate marker genes
 gimp.deMicheli <- gene_importances(x = expression.deMicheli,
@@ -332,6 +467,17 @@ gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
 gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
 expr_sel.deMicheli <- expression.deMicheli[, gene_sel.deMicheli]
 
+# Group genes to modules
+modules.deMicheli <- extract_modules(scale_quantile(expr_sel.deMicheli),
+                                     time = traj.deMicheli$time,
+                                     verbose = FALSE)
+
+#saveRDS(modules.deMicheli, file = "./../saved/modules_deMicheli")
+#saveRDS(gimp.deMicheli, file = "./../saved/gimp_deMicheli")
+
+```
+**Visualizatio of gene importances and modules**
+```{r DeMicheli-gimp-modules-visualization}
 # Visualize expression of selected genes
 draw_trajectory_heatmap(expr_sel.deMicheli, 
                         time = traj.deMicheli$time,
@@ -339,22 +485,17 @@ draw_trajectory_heatmap(expr_sel.deMicheli,
                         show_labels_row = TRUE,
                         fontsize_row = 8,)
 
-# Group genes to modules
-modules.deMicheli <- extract_modules(scale_quantile(expr_sel.deMicheli),
-                                     time = traj.deMicheli$time,
-                                     verbose = FALSE)
-
+# Visualize modules
 draw_trajectory_heatmap(expr_sel.deMicheli, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli,
                         modules = modules.deMicheli,
                         show_labels_row = TRUE,
                         fontsize_row = 5)
-
-#saveRDS(modules.deMicheli, file = "./../saved/modules_deMicheli")
-#saveRDS(gimp.deMicheli, file = "./../saved/gimp_deMicheli")
-
 ```
+
+
+
 ### 4.2 Dell'Orso et al. (2019) reference data
 ```{r marker-genes-dellOrso, eval=FALSE}
 # Identify candidate marker genes
@@ -367,6 +508,17 @@ gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrs
 gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
 expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
 
+# Group genes to modules
+modules.dellOrso <- extract_modules(scale_quantile(expr_sel.dellOrso),
+                                     time = traj.dellOrso$time,
+                                     verbose = FALSE)
+
+#saveRDS(modules.dellOrso, file = "./../saved/modules_dellOrso")
+#saveRDS(gimp.dellOrso, file = "./../saved/gimp_dellOrso")
+```
+
+**Visualizatio of gene importances and modules**
+```{r DellOrso-gimp-modules-visualization}
 # Visualize expression of selected genes
 draw_trajectory_heatmap(expr_sel.dellOrso, 
                         time = traj.dellOrso$time,
@@ -374,20 +526,14 @@ draw_trajectory_heatmap(expr_sel.dellOrso,
                         show_labels_row = TRUE,
                         fontsize_row = 8)
 
-# Group genes to modules
-modules.dellOrso <- extract_modules(scale_quantile(expr_sel.dellOrso),
-                                     time = traj.dellOrso$time,
-                                     verbose = FALSE)
-
+# Visualize modules
 draw_trajectory_heatmap(expr_sel.dellOrso, 
                         time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso,
                         modules = modules.dellOrso,
                         show_labels_row = TRUE)
-
-#saveRDS(modules.dellOrso, file = "./../saved/modules_dellOrso")
-#saveRDS(gimp.dellOrso, file = "./../saved/gimp_dellOrso")
 ```
+
 
 
 ## 5. Mapping of primary data to reference datasets
