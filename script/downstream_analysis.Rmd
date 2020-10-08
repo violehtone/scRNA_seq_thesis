@@ -31,6 +31,8 @@ library(pheatmap)
 library(fossil)
 library(Seurat)
 library(cerebroApp)
+library(reshape)
+library(data.table)
 ```
 
 
@@ -107,6 +109,7 @@ reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
 #saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
 ```
 
+
 **Plot the data using UMAP, force-directed layout, and t-SNE**
 ```{r primary-data-clustering-plots}
 # force directed layout plots
@@ -129,7 +132,7 @@ plotReducedDim(denoised.sce.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + 
 ```
 
 ### 2.2 Clustering comparison
-**Inspect the clusterings of primary data and compare the similarity of the uncorrected and cc-corrected clusterings**
+**Calculate graph modularity and ARI of clusterings**
 ```{r primary-data-clustering-comparison}
 # Calculate modularities of the graphs
 mod <- modularity(snng, clust)
@@ -137,17 +140,22 @@ mod.cc <- modularity(snng.cc, clust.cc)
 mod
 mod.cc
 
+# Calculate adjusted Rand index
+ari <- adj.rand.index(clust, clust.cc)
+ari
+```
+
+
+**Calculate the modularity of each cluster and visualize the results**
+```{r plot-modularities, eval=FALSE}
 # Plot the modularities of clusters
 ratio <- clusterModularity(snng, clust, as.ratio = TRUE)
 ratio.cc <- clusterModularity(snng.cc, clust.cc, as.ratio = TRUE)
 
 pheatmap(log2(ratio + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data, k = 180")
 pheatmap(log2(ratio.cc + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data (cc corrected), k = 180")
-
-# Calculate adjusted Rand index
-ari <- adj.rand.index(clust, clust.cc)
-print(paste("Adjusted Rand Index: ", ari))
 ```
+
 
 **Silhouette analysis:**
 ```{r silhouette-analysis, eval=FALSE}
@@ -296,6 +304,7 @@ draw_trajectory_plot(space = space.deMicheli,
 # Abundance of some marker genes
 pax7 <- expression.deMicheli[, "Pax7"]
 cdk1 <- expression.deMicheli[, "Cdk1"]
+myod <- expression.deMicheli[, "Myod1"]
 myog <- expression.deMicheli[, "Myog"]
 btg2 <- expression.deMicheli[, "Btg2"]
 cdc20 <- expression.deMicheli[, "Cdc20"]
@@ -306,14 +315,14 @@ pax7.plot <- draw_trajectory_plot(space = space.deMicheli,
                                   path = traj.deMicheli$path,
                                   contour = FALSE) + 
   ggtitle("De Micheli et al. dataset: Pax7 gene") +
-  theme(plot.title = element_text(size = 12, face = "bold"))
+  theme(plot.title = element_text(size = 10, face = "bold"))
 
 cdk1.plot <- draw_trajectory_plot(space = space.deMicheli, 
                                   progression_group = cdk1,
                                   path = traj.deMicheli$path,
                                   contour = FALSE) +
   ggtitle("De Micheli et al. dataset: Cdk1 gene") +
-  theme(plot.title = element_text(size = 12, face = "bold"))
+  theme(plot.title = element_text(size = 10, face = "bold"))
 
 
 myog.plot <- draw_trajectory_plot(space = space.deMicheli, 
@@ -321,7 +330,14 @@ myog.plot <- draw_trajectory_plot(space = space.deMicheli,
                                   path = traj.deMicheli$path,
                                   contour = FALSE) + 
   ggtitle("De Micheli et al. dataset: Myog gene") +
-  theme(plot.title = element_text(size = 12, face = "bold"))
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+myod.plot <- draw_trajectory_plot(space = space.deMicheli, 
+                                  progression_group = myod,
+                                  path = traj.deMicheli$path,
+                                  contour = FALSE) + 
+  ggtitle("De Micheli et al. dataset: Myod gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
 
 
 btg2.plot <- draw_trajectory_plot(space = space.deMicheli, 
@@ -329,7 +345,7 @@ btg2.plot <- draw_trajectory_plot(space = space.deMicheli,
                                   path = traj.deMicheli$path,
                                   contour = FALSE) +
   ggtitle("De Micheli et al. dataset: Btg2 gene") +
-  theme(plot.title = element_text(size = 12, face = "bold"))
+  theme(plot.title = element_text(size = 10, face = "bold"))
 
 
 cdc20.plot <- draw_trajectory_plot(space = space.deMicheli, 
@@ -337,7 +353,7 @@ cdc20.plot <- draw_trajectory_plot(space = space.deMicheli,
                                   path = traj.deMicheli$path,
                                   contour = FALSE) + 
   ggtitle("De Micheli et al. dataset: Cdc20 gene") + 
-  theme(plot.title = element_text(size = 12, face = "bold"))
+  theme(plot.title = element_text(size = 10, face = "bold"))
 
 
 cdkn1c.plot <- draw_trajectory_plot(space = space.deMicheli, 
@@ -345,10 +361,10 @@ cdkn1c.plot <- draw_trajectory_plot(space = space.deMicheli,
                                   path = traj.deMicheli$path,
                                   contour = FALSE) + 
   ggtitle("De Micheli et al. dataset: Cdkn1c gene") + 
-  theme(plot.title = element_text(size = 12, face = "bold"))
+  theme(plot.title = element_text(size = 10, face = "bold"))
 
 
-gridExtra::grid.arrange(pax7.plot, cdk1.plot, myog.plot, btg2.plot, cdc20.plot, cdkn1c.plot, ncol = 2)
+gridExtra::grid.arrange(pax7.plot, cdk1.plot, myog.plot, myod.plot, btg2.plot, cdc20.plot, cdkn1c.plot, ncol = 2)
 
 ```
 
@@ -371,12 +387,12 @@ traj.deMicheli.cc <- infer_trajectory(space.deMicheli.cc)
 draw_trajectory_plot(space = space.deMicheli.cc, 
                      progression_group = group_name.deMicheli.cc,
                      path = traj.deMicheli.cc$path,
-                     contour = TRUE) + ggtitle("De Micheli et al. dataset (cc corrected): All genes (ndim = 2) - Cell types")
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset (cc corrected): HVGs (ndim = 2) - Cell types")
 
 draw_trajectory_plot(space = space.deMicheli.cc, 
                      progression_group = cc.phases.deMicheli,
                      path = traj.deMicheli.cc$path,
-                     contour = TRUE) + ggtitle("De Micheli et al. dataset (cc corrected): All genes (ndim = 2) - Cell cycle phases")
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset (cc corrected): HVGs (ndim = 2) - Cell cycle phases")
 ```
 
 
@@ -384,7 +400,6 @@ draw_trajectory_plot(space = space.deMicheli.cc,
 
 ### 3.2 Dell'Orso et al. (2019) reference data
 ```{r dellOrso-traj-inference}
-# Merge replicate samples to form groups per cell type
 # Create expression and sample objects
 expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
 group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
@@ -405,6 +420,116 @@ draw_trajectory_plot(space = space.dellOrso,
                      progression_group = cc.phases.dellOrso,
                      path = traj.dellOrso$path,
                      contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes, ndim = 2 - Cell cycle phases")
+
+
+# Abundance of some marker genes
+pax7 <- expression.dellOrso[, "Pax7"]
+hes1 <- expression.dellOrso[, "Hes1"]
+myf5 <- expression.dellOrso[, "Myf5"]
+myod <- expression.dellOrso[, "Myod1"]
+ccne1 <- expression.dellOrso[, "Ccne1"]
+eifs <- expression.dellOrso[, "Eif1"]
+ccnd1 <- expression.dellOrso[, "Ccnd1"]
+ccnd2 <- expression.dellOrso[, "Ccnd2"]
+myog <- expression.dellOrso[, "Myog"]
+tnnt2 <- expression.dellOrso[, "Tnnt2"]
+cdkn1a <- expression.dellOrso[, "Cdkn1a"]
+cdkn1b <- expression.dellOrso[, "Cdkn1b"]
+
+pax7.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = pax7,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Pax7 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+hes1.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = hes1,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Hes1 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+
+myf5.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = myf5,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Myf5 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+
+myod.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = myod,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Myod gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+ccne1.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = ccne1,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Ccne1 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+eifs.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = eifs,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: eIFs gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+ccnd1.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = ccnd1,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Ccnd1 gene") +
+  theme(plot.title = element_text(size = 12, face = "bold"))
+
+ccnd2.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = ccnd2,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Ccnd2 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+myog.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = myog,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Myog gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+tnnt2.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = tnnt2,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Tnnt2 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+cdkn1a.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = cdkn1a,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Cdkn1a gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+cdkn1b.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = cdkn1b,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Cdkn1b gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+
+gridExtra::grid.arrange(pax7.plot, hes1.plot,
+                        myf5.plot, myod.plot,
+                        ccne1.plot, eifs.plot,
+                        ccnd1.plot, ccnd2.plot,
+                        myog.plot, tnnt2.plot,
+                        cdkn1a.plot, cdkn1b.plot)
+
 ```
 
 
@@ -425,12 +550,12 @@ traj.dellOrso.cc <- infer_trajectory(space.dellOrso.cc)
 draw_trajectory_plot(space = space.dellOrso.cc, 
                      progression_group = group_name.dellOrso.cc,
                      path = traj.dellOrso.cc$path,
-                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset (cc corrected): All genes (ndim = 2) - Cell types")
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset (cc corrected): HVGs (ndim = 2) - Cell types")
 
 draw_trajectory_plot(space = space.dellOrso.cc, 
                      progression_group = cc.phases.dellOrso,
                      path = traj.dellOrso.cc$path,
-                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset (cc corrected): All genes (ndim = 2) - Cell cycle phases")
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset (cc corrected): HVGs (ndim = 2) - Cell cycle phases")
 ```
 
 
@@ -447,14 +572,13 @@ modules.dellOrso <- readRDS("./../saved/modules_dellOrso")
 # Generate objects for de Micheli dataset
 gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
 gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
-expr_sel.deMicheli <- expression.deMicheli[, gene_sel.deMicheli]
+expr_sel.deMicheli <- scale_quantile(expression.deMicheli[, gene_sel.deMicheli])
 
 # Generate objects for dellOrso dataset
 gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrso$pvalue))
 gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
 expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
 ```
-
 
 ```{r marker-genes-deMicheli, eval=FALSE}
 # Identify candidate marker genes
@@ -476,24 +600,29 @@ modules.deMicheli <- extract_modules(scale_quantile(expr_sel.deMicheli),
 #saveRDS(gimp.deMicheli, file = "./../saved/gimp_deMicheli")
 
 ```
-**Visualizatio of gene importances and modules**
-```{r DeMicheli-gimp-modules-visualization}
+
+
+**Visualization of gene importances and modules**
+```{r DeMicheli-gimp-modules-visualization, eval=FALSE}
 # Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_deMicheli.pdf")
 draw_trajectory_heatmap(expr_sel.deMicheli, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli,
                         show_labels_row = TRUE,
-                        fontsize_row = 8,)
+                        fontsize_row = 2)
+dev.off()
 
 # Visualize modules
+pdf("./../saved/modules_heatmap_deMicheli.pdf")
 draw_trajectory_heatmap(expr_sel.deMicheli, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli,
                         modules = modules.deMicheli,
                         show_labels_row = TRUE,
-                        fontsize_row = 5)
+                        fontsize_row = 3)
+dev.off()
 ```
-
 
 
 ### 4.2 Dell'Orso et al. (2019) reference data
@@ -517,131 +646,273 @@ modules.dellOrso <- extract_modules(scale_quantile(expr_sel.dellOrso),
 #saveRDS(gimp.dellOrso, file = "./../saved/gimp_dellOrso")
 ```
 
-**Visualizatio of gene importances and modules**
-```{r DellOrso-gimp-modules-visualization}
+**Visualization of gene importances and modules**
+```{r DellOrso-gimp-modules-visualization, eval=FALSE}
 # Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_dellOrso.pdf")
 draw_trajectory_heatmap(expr_sel.dellOrso, 
                         time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso,
                         show_labels_row = TRUE,
-                        fontsize_row = 8)
+                        fontsize_row = 1)
+dev.off()
 
 # Visualize modules
+pdf("./../saved/modules_heatmap_dellOrso.pdf")
 draw_trajectory_heatmap(expr_sel.dellOrso, 
                         time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso,
                         modules = modules.dellOrso,
-                        show_labels_row = TRUE)
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
 ```
-
-
 
 ## 5. Mapping of primary data to reference datasets
-### 5.1 load data
-```{r load-primary-data, eval=FALSE}
-# Load pre-processed sce objects
-denoised.sce <- readRDS("./../saved/denoised_sce_clust")
-denoised.sce.cc <- readRDS("./../saved/denoised_sce_cc_clust")
+### 5.1 Assign reference data cell types to primary data and inspect results
+
+**Predict cell types (shortcut)**
+```{r predict-cell-types-shortcut}
+# Load pre-saved prediction objects
+pred.deMicheli <- readRDS("./../saved/pred_deMicheli")
+pred.dellOrso <- readRDS("./../saved/pred_dellOrso")
+
+# Assign cell types to primary data
+denoised.sce$cell_type_deMicheli <- pred.deMicheli$pruned.labels
+denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
+
 ```
 
-### 5.2 Map primary data to reference data
-```{r, eval=FALSE}
-# Predict cell types (from reference datasets) to primary data cells
-## De Micheli (corrected / uncorrected primary data)
+**Predict cell types**
+```{r predict-cell-types, eval=FALSE}
+## De Micheli
 pred.deMicheli <- SingleR(test = denoised.sce,
                           assay.type.test = "logcounts",
                           ref = denoised.sce.deMicheli,
-                          labels = denoised.sce.deMicheli$group)
+                          labels = denoised.sce.deMicheli$cell_type)
 
-table(pred.deMicheli$labels)
-saveRDS(pred.deMicheli, file = "pred_deMicheli")
+denoised.sce$cell_type_deMicheli <- pred.deMicheli$pruned.labels
+#saveRDS(pred.deMicheli, file = "./../saved/pred_deMicheli")
 
-pred.deMicheli.cc <- SingleR(test = denoised.sce.cc,
-                             assay.type.test = "counts",
-                             ref = denoised.sce.deMicheli,
-                             labels = denoised.sce.deMicheli$group)
-
-table(pred.deMicheli.cc$labels)
-saveRDS(pred.deMicheli.cc, file = "pred_deMicheli_cc")
-
-
-## Dell'Orso (corrected / uncorrected primary data)
+## Dell'Orso
 pred.dellOrso <- SingleR(test = denoised.sce,
+                         assay.type.test = "logcounts",
                          ref = denoised.sce.dellOrso,
                          labels = denoised.sce.dellOrso$cell_type)
 
-table(pred.dellOrso$labels)
-saveRDS(pred.dellOrso, file = "pred_dellOrso")
+denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
+#saveRDS(pred.dellOrso, file = "./../saved/pred_dellOrso")
+
+```
 
 
-pred.dellOrso.cc <- SingleR(test = denoised.sce.cc,
-                            assay.type.test = "counts",
-                            ref = denoised.sce.dellOrso,
-                            labels = denoised.sce.dellOrso$cell_type)
-
-table(pred.dellOrso.cc$labels)
-saveRDS(pred.dellOrso.cc, file = "pred_dellOrso_cc")
-
+```{r cell-mapping-inspection}
 # Inspection of predictions
-## Make tables
-tab.deMicheli <- table(pred.deMicheli$pruned.labels, denoised.sce$sample)
-tab.deMicheli.cc <- table(pred.deMicheli.cc$pruned.labels, denoised.sce.cc$sample)
-tab.dellOrso <- table(pred.dellOrso$pruned.labels, denoised.sce$sample)
-tab.dellOrso.cc <-table(pred.dellOrso.cc$pruned.labels, denoised.sce.cc$sample)
+table(pred.deMicheli$pruned.labels)
+table(pred.dellOrso$labels)
+tab.deMicheli <- t(table(pred.deMicheli$pruned.labels, denoised.sce$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+tab.dellOrso <- t(table(pred.dellOrso$pruned.labels, denoised.sce$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+tab.deMicheli
+tab.dellOrso
 
 ## 'melt' tables
-library("reshape")
-tab.deMicheli.melt <- melt(tab.deMicheli)
+tab.deMicheli.melt <- melt(t(tab.deMicheli))
 colnames(tab.deMicheli.melt) <- c("cell_type", "sample", "count")
-tab.deMicheli.cc.melt <- melt(tab.deMicheli.cc)
-colnames(tab.deMicheli.cc.melt) <- c("cell_type", "sample", "count")
-tab.dellOrso.melt <- melt(tab.dellOrso)
+tab.dellOrso.melt <- melt(t(tab.dellOrso))
 colnames(tab.dellOrso.melt) <- c("cell_type", "sample", "count")
-tab.dellOrso.cc.melt <- melt(tab.dellOrso.cc)
-colnames(tab.dellOrso.cc.melt) <- c("cell_type", "sample", "count")
-
 
 p.deMicheli <- ggplot(tab.deMicheli.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
   geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data - De Micheli cell types")
-p.deMicheli.cc <- ggplot(tab.deMicheli.cc.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
-  geom_bar(position = "dodge", stat = "identity")  + ggtitle("Primary data (cc) - De Micheli cell types")
+
 p.dellOrso <- ggplot(tab.dellOrso.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
   geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data - Dell'Orso cell types")
-p.dellOrso.cc <- ggplot(tab.dellOrso.cc.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
-  geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data (cc) - Dell'Orso cell types")
 
-gridExtra::grid.arrange(p.deMicheli, p.deMicheli.cc, p.dellOrso, p.dellOrso.cc, ncol =)
+gridExtra::grid.arrange(p.deMicheli, p.dellOrso, ncol = 2)
+```
 
 
-## visualize the table results
-par(mfrow = c(3,2))
-pie(tab.deMicheli$control, labels = rownames(tab.deMicheli), main = "Control sample - De Micheli cell types")
-pie(tab.deMicheli$cap50, labels = rownames(tab.deMicheli), main = "Cap50 sample - De Micheli cell types")
-pie(tab.deMicheli$cap50_r4h, labels = rownames(tab.deMicheli), main = "Cap50_r4h sample - De Micheli cell types")
-pie(tab.deMicheli$cap50_r8h, labels = rownames(tab.deMicheli), main = "Cap50_r8h sample - De Micheli cell types")
-pie(tab.deMicheli$cap50_r16h, labels = rownames(tab.deMicheli), main = "Cap50_r16h sample - De Micheli cell types")
+**Create diagnstic plots for the cell type annotations**
+```{r deMicheli-annotation-diagnostic-plots, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/deMicheli_score_heatmap.pdf")
+plotScoreHeatmap(pred.deMicheli, 
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
+dev.off()
 
-par(mfrow = c(3,2))
-pie(tab.deMicheli.cc$control, labels = rownames(tab.deMicheli.cc), main = "Control sample (cc) - De Micheli cell types")
-pie(tab.deMicheli.cc$cap50, labels = rownames(tab.deMicheli.cc), main = "Cap50 sample (cc) - De Micheli cell types")
-pie(tab.deMicheli.cc$cap50_r4h, labels = rownames(tab.deMicheli.cc), main = "Cap50_r4h sample (cc) - De Micheli cell types")
-pie(tab.deMicheli.cc$cap50_r8h, labels = rownames(tab.deMicheli.cc), main = "Cap50_r8h sample (cc) - De Micheli cell types")
-pie(tab.deMicheli.cc$cap50_r16h, labels = rownames(tab.deMicheli.cc), main = "Cap50_r16h sample (cc) - De Micheli cell types")
+# Delta distribution
+pdf("./../saved/deMicheli_score_distribution.pdf")
+plotScoreDistribution(pred.deMicheli, show = "delta.med")
+dev.off()
 
-par(mfrow = c(3,2))
-pie(tab.dellOrso$control, labels = rownames(tab.dellOrso), main = "Control sample - Dell'Orso cell types")
-pie(tab.dellOrso$cap50, labels = rownames(tab.dellOrso), main = "Cap50 sample - Dell'Orso cell types")
-pie(tab.dellOrso$cap50_r4h, labels = rownames(tab.dellOrso), main = "Cap50_r4h sample - Dell'Orso cell types")
-pie(tab.dellOrso$cap50_r8h, labels = rownames(tab.dellOrso), main = "Cap50_r8h sample - Dell'Orso cell types")
-pie(tab.dellOrso$cap50_r16h, labels = rownames(tab.dellOrso), main = "Cap50_r16h sample - Dell'Orso cell types")
+# Get marker genes
+all.markers.deMicheli <- metadata(pred.deMicheli)$de.genes
 
-par(mfrow = c(3,2))
-pie(tab.dellOrso.cc$control, labels = rownames(tab.dellOrso.cc), main = "Control sample - Dell'Orso cell types")
-pie(tab.dellOrso.cc$cap50, labels = rownames(tab.dellOrso.cc), main = "Cap50 sample - Dell'Orso cell types")
-pie(tab.dellOrso.cc$cap50_r4h, labels = rownames(tab.dellOrso.cc), main = "Cap50_r4h sample - Dell'Orso cell types")
-pie(tab.dellOrso.cc$cap50_r8h, labels = rownames(tab.dellOrso.cc), main = "Cap50_r8h sample - Dell'Orso cell types")
-pie(tab.dellOrso.cc$cap50_r16h, labels = rownames(tab.dellOrso.cc), main = "Cap50_r16h sample - Dell'Orso cell types")
+# Write markers for each sample into a csv file
+all.markers.deMicheli.df <- data.table("d0_mature_skeletal_muscle" = unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
+                                       "d0_MuSCs_and_progenitors" = unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+                                       "d5_mature_skeletal_muscle" = unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
+                                       "d5_MuSCs_and_progenitors" = unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+                                       "d7_mature_skeletal_muscle" = unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
+                                       "d7_MuSCs_and_progenitors" = unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)))
+write.csv(all.markers.deMicheli.df, file ="./../saved/all_markers_deMicheli.csv")
+
+# Examine the expression of the marker genes for each label in the test dataset
+pdf("./../saved/heatmap_deMicheli_d0_muscle.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d0_musc.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d5_muscle.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d5_musc.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d7_muscle.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d7_musc.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+```
+
+```{r dellOrso-annotation-diagnostic-plots, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/dellOrso_score_heatmap.pdf")
+plotScoreHeatmap(pred.dellOrso, 
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
+dev.off()
+
+# Delta distribution
+pdf("./../saved/dellOrso_score_distribution.pdf")
+plotScoreDistribution(pred.dellOrso, show = "delta.med")
+dev.off()
+
+# Get marker genes
+all.markers.dellOrso <- metadata(pred.dellOrso)$de.genes
+
+# Write markers for each sample into a csv file
+all.markers.dellOrso.df <- data.table("Homeostatic_MuSCs" = unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+                                      "inj_60h_MuSCs" = unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+                                      "Primary_MB" = unique(unlist(all.markers.dellOrso$Primary_MB)))
+
+write.csv(all.markers.dellOrso.df, file = "./../saved/all_markers_dellOrso.csv")
+
+# Examine the expression of the marker genes for each label in the test dataset
+pdf("./../saved/heatmap_dellOrso_homeostatic_muscs.pdf")
+plotHeatmap(denoised.sce, order_columns_by="cell_type_dellOrso",
+    features=unique(unlist(all.markers.dellOrso.df$homeostatic_MuSCs)),
+    fontsize_row = 2)
+dev.off()
+
+pdf("./../saved/heatmap_dellOrso_inj_60h_muscs.pdf")
+plotHeatmap(denoised.sce, order_columns_by="cell_type_dellOrso",
+    features=unique(unlist(all.markers.dellOrso.df$inj_60h_MuSCs)),
+    fontsize_row = 2)
+dev.off()
+
+pdf("./../saved/heatmap_dellOrso_primary_mb.pdf")
+plotHeatmap(denoised.sce, order_columns_by="cell_type_dellOrso",
+    features=unique(unlist(all.markers.dellOrso.df$Primary_MB)),
+    fontsize_row = 2)
+dev.off()
+
 
 ```
+
+
+#### 5.2 Assign cell types from reference to another reference dataset
+**Shortcut for loading the prediction objects**
+```{r cell-type-reference-datasets-shortcut}
+# Load the pre-saved reference data cell annotation predictions
+pred.reference <- readRDS("./../saved/pred_reference")
+pred.reference2 <- readRDS("./../saved/pred_reference2")
+```
+
+
+```{r cell-type-reference-datasets, eval=FALSE}
+# Dell'Orso as reference
+pred.reference <- SingleR(test = denoised.sce.deMicheli,
+                          assay.type.test = "logcounts",
+                          ref = denoised.sce.dellOrso,
+                          labels = denoised.sce.dellOrso$cell_type)
+#saveRDS(pred.reference, file = "./../saved/pred_reference")
+
+# De Micheli as reference
+pred.reference2 <- SingleR(test = denoised.sce.dellOrso,
+                          assay.type.test = "logcounts",
+                          ref = denoised.sce.deMicheli,
+                          labels = denoised.sce.deMicheli$cell_type)
+#saveRDS(pred.reference2, file = "./../saved/pred_reference2")
+
+```
+```{r cell-type-reference-datasets-inspection}
+# Dell'Orso as reference:
+table(pred.reference$pruned.labels)
+t(table(pred.reference$pruned.labels, denoised.sce.deMicheli$cell_type))
+
+# DeMicheli as reference
+table(pred.reference2$pruned.labels)
+table(pred.reference2$pruned.labels, denoised.sce.dellOrso$cell_type)
+```
+
+
+
+### 5.2 Build trajectories of reference data with the primary data cell types
+```{r trajectories-with-primary-data-samples, eval=FALSE}
+# De Micheli
+## Predict primary data samples for reference data
+pred.deMicheli2 <- SingleR(test = denoised.sce.deMicheli,
+                           assay.type.test = "logcounts",
+                           ref = denoised.sce,
+                           labels = denoised.sce$sample)
+
+## Assign predicted primary data samples to reference datasets
+denoised.sce.deMicheli$primary_data_sample <- pred.deMicheli2$pruned.labels
+primary.group.deMicheli <- as.factor(denoised.sce.deMicheli$primary_data_sample)
+
+## Plot trajectories with primary data samples
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = primary.group.deMicheli,
+                     path = traj.deMicheli$path,
+                     contour = TRUE) + ggtitle("De Micheli et al. trajectory: Primary data samples")
+
+# Dell'Orso
+## Predict primary data samples for reference data
+pred.dellOrso2 <- SingleR(test = denoised.sce.dellOrso,
+                          assay.type.test = "logcounts",
+                          ref = denoised.sce,
+                          labels = denoised.sce$sample)
+
+## Assign predicted primary data samples to reference datasets
+denoised.sce.dellOrso$primary_data_sample <- pred.dellOrso2$pruned.labels
+primary.group.dellOrso <- as.factor(denoised.sce.dellOrso$primary_data_sample)
+
+## Plot trajectories with primary data samples
+draw_trajectory_plot(space = space.dellOrso, 
+                     progression_group = primary.group.dellOrso,
+                     path = traj.dellOrso$path,
+                     contour = TRUE) + ggtitle("Dell'Orso et al. trajectory: Primary data samples")
+```
+
 
 
