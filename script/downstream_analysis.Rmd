@@ -36,12 +36,24 @@ library(data.table)
 ```
 
 
-### Load saved sce objects
+### Load saved objects
+**Single Cell Experiments**
 ```{r load-objects}
 # Load pre-processed sce objects
 denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
 denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 ```
+
+**Cell cycle genes**
+```{r}
+# Load G2/M- and S- phase marker genes
+g2m.genes.mouse <- readRDS("./../saved/cc_g2m_genes_mouse")
+s.genes.mouse <- readRDS("./../saved/cc_gs_genes_mouse")
+
+# Combine genes into a single set of cc genes
+cc.genes.mouse <- c(g2m.genes.mouse, s.genes.mouse)
+```
+
 
 ## 2. Clustering
 ### 2.1 Primary data
@@ -368,6 +380,26 @@ gridExtra::grid.arrange(pax7.plot, cdk1.plot, myog.plot, myod.plot, btg2.plot, c
 
 ```
 
+**Trajectory inference without cell cycle genes**
+```{r deMicheli-traj-inference-cc-genes}
+# Remove cell cycle genes from the data
+denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.mouse, ]
+
+# Create expression and sample objects
+expression.deMicheli.cc.genes <- as.matrix(t(logcounts(denoised.sce.deMicheli.cc.genes)))
+group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_type)
+
+# Trajectory building
+space.deMicheli.cc.genes <- reduce_dimensionality(expression.deMicheli.cc.genes, dist = "spearman", ndim = 2)
+traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
+
+# Plot trajectory by cell types
+draw_trajectory_plot(space = space.deMicheli.cc.genes, 
+                     progression_group = group_name.deMicheli.cc.genes,
+                     path = traj.deMicheli.cc.genes$path,
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes except cell cycle marker genes, (ndim = 2) - Cell types")
+```
+
 
 **Trajectory inference for cell cycle corrected expression values:**
 ```{r deMicheli-traj-inference-cc}
@@ -394,7 +426,6 @@ draw_trajectory_plot(space = space.deMicheli.cc,
                      path = traj.deMicheli.cc$path,
                      contour = TRUE) + ggtitle("De Micheli et al. dataset (cc corrected): HVGs (ndim = 2) - Cell cycle phases")
 ```
-
 
 
 
@@ -531,6 +562,49 @@ gridExtra::grid.arrange(pax7.plot, hes1.plot,
                         cdkn1a.plot, cdkn1b.plot)
 
 ```
+
+
+**Trajectory inference without the Primary Myoblast cells**
+```{r dellOrso-traj-inference-without-primary-mb}
+# Remove PMs from the dellOrso data
+denoised.sce.dellOrso.f <- denoised.sce.dellOrso[, denoised.sce.dellOrso$cell_type != "Primary_MB"]
+
+# Create expression and sample objects
+expression.dellOrso.f <- as.matrix(t(logcounts(denoised.sce.dellOrso.f)))
+group_name.dellOrso.f <- as.factor(denoised.sce.dellOrso.f$cell_type)
+
+# Trajectory inference
+space.dellOrso.f <- reduce_dimensionality(expression.dellOrso.f, dist = "spearman", ndim = 2)
+traj.dellOrso.f <- infer_trajectory(space.dellOrso.f)
+
+# plot by cell type
+draw_trajectory_plot(space = space.dellOrso.f, 
+                     progression_group = group_name.dellOrso.f,
+                     path = traj.dellOrso.f$path,
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset: Only homeostatic and injured 60h MuSCs, All genes, ndim = 2")
+
+```
+
+**Trajectory inference without cell cycle genes**
+```{r dellOrso-traj-inference-cc-genes}
+# Remove cell cycle genes from the data
+denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!rownames(denoised.sce.dellOrso) %in% cc.genes.mouse, ]
+
+# Create expression and sample objects
+expression.dellOrso.cc.genes <- as.matrix(t(logcounts(denoised.sce.dellOrso.cc.genes)))
+group_name.dellOrso.cc.genes <- as.factor(denoised.sce.dellOrso.cc.genes$cell_type)
+
+# Trajectory inference
+space.dellOrso.cc.genes <- reduce_dimensionality(expression.dellOrso.cc.genes, dist = "spearman", ndim = 2)
+traj.dellOrso.cc.genes <- infer_trajectory(space.dellOrso.cc.genes)
+
+# plot by cell type
+draw_trajectory_plot(space = space.dellOrso.cc.genes, 
+                     progression_group = group_name.dellOrso.cc.genes,
+                     path = traj.dellOrso.cc.genes$path,
+                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes except cell cycle marker genes, ndim = 2 - Cell types")
+```
+
 
 
 **Trajectory inference for cell cycle corrected expression values:**

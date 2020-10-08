@@ -940,6 +940,10 @@ for(g in g2m.genes) {
     g2m.genes.mouse <- append(g2m.genes.mouse, gene)
   }
 }
+
+#saveRDS(g2m.genes.mouse, file = "./../saved/cc_g2m_genes_mouse")
+#saveRDS(s.genes.mouse, file = "./../saved/cc_gs_genes_mouse")
+
 ```
 
 
