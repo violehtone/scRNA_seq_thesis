@@ -7,3 +7,8 @@ script/data_preprocessing_files/
 script/downstream_analysis_files/
 script/old_stuff
 script/puhti_scripts_and_objects
+script/marker_gene_detection.R
+script/puhti_data_processing.R
+script/puhti_dellOrso_plots.R
+script/puhti_new_clustering.R
+
