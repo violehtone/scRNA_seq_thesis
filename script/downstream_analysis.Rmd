@@ -466,6 +466,7 @@ myog <- expression.dellOrso[, "Myog"]
 tnnt2 <- expression.dellOrso[, "Tnnt2"]
 cdkn1a <- expression.dellOrso[, "Cdkn1a"]
 cdkn1b <- expression.dellOrso[, "Cdkn1b"]
+gas1 <- expression.dellOrso[, "Gas1"]
 
 pax7.plot <- draw_trajectory_plot(space = space.dellOrso, 
                                   progression_group = pax7,
@@ -481,6 +482,12 @@ hes1.plot <- draw_trajectory_plot(space = space.dellOrso,
   ggtitle("Dell'Orso et al. dataset: Hes1 gene") +
   theme(plot.title = element_text(size = 10, face = "bold"))
 
+gas1.plot <- draw_trajectory_plot(space = space.dellOrso, 
+                                  progression_group = gas1,
+                                  path = traj.dellOrso$path,
+                                  contour = FALSE) +
+  ggtitle("Dell'Orso et al. dataset: Gas1 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
 
 myf5.plot <- draw_trajectory_plot(space = space.dellOrso, 
                                   progression_group = myf5,
@@ -585,6 +592,9 @@ draw_trajectory_plot(space = space.dellOrso.f,
 
 ```
 
+
+
+
 **Trajectory inference without cell cycle genes**
 ```{r dellOrso-traj-inference-cc-genes}
 # Remove cell cycle genes from the data
@@ -653,6 +663,15 @@ gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrs
 gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
 expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
 ```
+
+**Generate csv files from the important genes**
+```{r modules-as-csv}
+write.csv(modules.dellOrso, file = "./../saved/modules_dellOrso_excel.csv")
+write.csv(modules.deMicheli, file = "./../saved/modules_deMicheli_excel.csv")
+
+```
+
+
 
 ```{r marker-genes-deMicheli, eval=FALSE}
 # Identify candidate marker genes
