@@ -41,7 +41,6 @@ library(ggplot2)
 library(edgeR)
 library(biomaRt)
 library(scRNAseq)
-library(org.Mm.eg.db)
 library(SingleR)
 library(batchelor)
 library(igraph)
@@ -312,8 +311,6 @@ sce.f <- sce[,sce$discard==FALSE]
 # Check for cell type enrichment in the discarded pool
 lost <- calculateAverage(counts(sce)[,c(discard.control,discard.cap50,discard.cap50_r4h,discard.cap50_r8h,discard.cap50_r16h)])
 kept <- calculateAverage(counts(sce)[,!c(discard.control,discard.cap50,discard.cap50_r4h,discard.cap50_r8h,discard.cap50_r16h)])
-
-library(edgeR)
 
 logged <- cpm(cbind(lost, kept), log=TRUE, prior.count=2)
 logFC <- logged[,1] - logged[,2]
