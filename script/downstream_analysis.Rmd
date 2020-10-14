@@ -246,24 +246,24 @@ pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=v
 
 
 ### 2.3 Primary data: Subclustering and marker gene detection
-
 #### 2.3.1 Differentially expressed genes between clusters in the Cap50 sample
+
+**Non-corrected data**
 ```{r DE-analysis-of-cap50-sample}
 # Subset the cap50 sample
 cap50 <- denoised.sce[, denoised.sce$sample == "cap50"]
 
 # Plot UMAP plots to inspect clusters
-plotReducedDim(cap50, colour_by = "sample", dimred = "UMAP") + ggtitle("Cap 50 sample - cells coloured by assigned clusters")
-plotReducedDim(cap50, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - cells coloured by assigned clusters")
+plotReducedDim(cap50, colour_by = "sample", dimred = "UMAP") + ggtitle("Cap 50 sample - sample")
+plotReducedDim(cap50, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - cluster")
 
 # Plot only clusters 2 and 4
 cap50.f <- cap50[, cap50$cluster == c(2,4)]
 plotReducedDim(cap50.f, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - only clusters 2 and 4")
 
-# Remove cluster 5 as it contains only one cell and cluster 1 because it is well separated from the others
-cap50.final <- cap50[, cap50$cluster == c(2,4)]
-cap50.final$cluster <- factor(cap50.final$cluster)
-markers <- findMarkers(cap50.final, groups = cap50.final$cluster, lfc = 1, pval.type = "all", direction = "up")
+# Find DE genes between samples 2 and 4
+cap50.f$cluster <- factor(cap50.f$cluster)
+markers <- findMarkers(cap50.f, groups = cap50.f$cluster, lfc = 1, pval.type = "all", direction = "up")
 clust.2 <- markers[["2"]]
 clust.2.interesting <- clust.2[clust.2$p.value <= 0.05, ]
 
@@ -272,8 +272,42 @@ genes.df <- as.data.frame(clust.2.interesting)
 genes.df
 
 # Write genes into a csv file
-write.csv(genes.df, file = "./../saved/cap50_genes.csv")
+#write.csv(genes.df, file = "./../saved/cap50_genes.csv")
 ```
+
+**CC-corrected data**
+```{rDE-analysis-of-cap50-sample-cc}
+# Create cc corrected sce
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+denoised.sce.cc$cluster.cc <- factor(denoised.sce$cluster.cc)
+reducedDim(denoised.sce.cc, "UMAP_cc") <- reducedDim(denoised.sce, "UMAP_cc")
+
+# Subset the cap50 sample
+cap50.cc <- denoised.sce.cc[, denoised.sce.cc$sample == "cap50"]
+
+# Plot UMAP plots to inspect clusters
+plotReducedDim(denoised.sce.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Primary data (cc corrected) - cluster")
+plotReducedDim(cap50.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Cap 50 sample (cc corrected) - cluster")
+
+# Plot only clusters 3 and 4
+cap50.cc.f <- cap50.cc[, cap50$cluster.cc == c(3,4)]
+plotReducedDim(cap50.cc.f, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Cap 50 sample (cc corrected) - only clusters 3 and 4")
+
+# Find DE genes between clusters 3 and 4
+cap50.cc.f$cluster.cc <- factor(cap50.cc.f$cluster.cc)
+markers.cc <- findMarkers(cap50.cc.f, groups = cap50.cc.f$cluster.cc, lfc =  1, pval.type = "all", assay.type = "scaled_logcounts")
+
+clust.cc.4 <- markers.cc[["4"]]
+clust.cc.4.interesting <- clust.cc.4[clust.cc.4$p.value <= 0.05, ]
+
+# Print the list of genes
+genes.cc.df <- as.data.frame(clust.cc.4.interesting)
+genes.cc.df
+
+# Write genes into a csv file
+#write.csv(genes.cc.df, file = "./../saved/cap50_cc_genes.csv")
+```
+
 
 
 
