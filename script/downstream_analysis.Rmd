@@ -33,6 +33,9 @@ library(Seurat)
 library(cerebroApp)
 library(reshape)
 library(data.table)
+library(scRNAseq)
+library(org.Mm.eg.db)
+library(tidyr)
 ```
 
 
@@ -40,18 +43,63 @@ library(data.table)
 **Single Cell Experiments**
 ```{r load-objects}
 # Load pre-processed sce objects
+denoised.sce <- readRDS("./../saved/denoised_sce_clust")
 denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
 denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 ```
 
-**Cell cycle genes**
-```{r}
+**Cell cycle genes (From Seurat pipeline)**
+```{r cc-genes-seurat}
 # Load G2/M- and S- phase marker genes
 g2m.genes.mouse <- readRDS("./../saved/cc_g2m_genes_mouse")
 s.genes.mouse <- readRDS("./../saved/cc_gs_genes_mouse")
 
 # Combine genes into a single set of cc genes
-cc.genes.mouse <- c(g2m.genes.mouse, s.genes.mouse)
+cc.genes.seurat <- c(g2m.genes.mouse, s.genes.mouse)
+```
+
+
+**Cell cycle genes (from OSCA pipeline)**
+```{r cc-genes-osca-shortcut}
+cc.genes.osca <- readRDS("./../saved/cc_genes_osca")
+
+# Remove cell cycle genes from the datasets
+denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.osca, ]
+denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!rownames(denoised.sce.dellOrso) %in% cc.genes.osca, ]
+denoised.sce.cc.genes <- denoised.sce[!rownames(denoised.sce) %in% cc.genes.osca, ]
+```
+
+
+```{r cc-genes-osca, eval=FALSE}
+# Use Buettner et al. (2015) mouse data with known cell cycle phases as a reference
+sce.ref <- BuettnerESCData()
+
+# Find genes present in both our datasets and Buettner data and that are cell cycle related
+cycle.anno <- unique(select(org.Mm.eg.db, keytype="GOALL", keys="GO:0007049", 
+    columns="SYMBOL")[,"SYMBOL"])
+
+cc.genes.osca <- Reduce(intersect,
+                     list(as.character(rowData(sce.ref)$AssociatedGeneName),    
+                          rownames(denoised.sce),
+                          rownames(denoised.sce.deMicheli),
+                          rownames(denoised.sce.deMicheli),
+                          cycle.anno))
+
+saveRDS(cc.genes.osca, "./../saved/cc_genes_osca")
+
+# Identifying markers between cell cycle phases.
+sce.ref <- logNormCounts(sce.ref)
+rownames(sce.ref) <- as.character(rowData(sce.ref)$AssociatedGeneName)
+phase.stats <- pairwiseWilcox(logcounts(sce.ref), sce.ref$phase, 
+                              direction="up", subset.row=cc.genes.osca)
+cycle.markers <- getTopMarkers(phase.stats[[1]], phase.stats[[2]])
+```
+
+```{r cc-genes-comparison}
+length(cc.genes.seurat)
+length(cc.genes.osca)
+
+intersect(cc.genes.osca, cc.genes.seurat)
 ```
 
 
@@ -61,7 +109,6 @@ cc.genes.mouse <- c(g2m.genes.mouse, s.genes.mouse)
 **The clusters are calculated using Puhti supercomputer and results are loaded in the code chunk below to speed up the process**
 ```{r primary-data-clustering-shortcut}
 # Load data with clusters
-denoised.sce <- readRDS("./../saved/denoised_sce_clust")
 snng <- readRDS("./../saved/snng")
 snng.cc <- readRDS("./../saved/snng_cc")
 clust <- readRDS("./../saved/clust")
@@ -199,7 +246,41 @@ pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=v
 
 
 ### 2.3 Primary data: Subclustering and marker gene detection
-#### 2.3.1 Subclustering
+
+#### 2.3.1 Differentially expressed genes between clusters in the Cap50 sample
+```{r DE-analysis-of-cap50-sample}
+# Subset the cap50 sample
+cap50 <- denoised.sce[, denoised.sce$sample == "cap50"]
+
+# Plot UMAP plots to inspect clusters
+plotReducedDim(cap50, colour_by = "sample", dimred = "UMAP") + ggtitle("Cap 50 sample - cells coloured by assigned clusters")
+plotReducedDim(cap50, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - cells coloured by assigned clusters")
+
+# Plot only clusters 2 and 4
+cap50.f <- cap50[, cap50$cluster == c(2,4)]
+plotReducedDim(cap50.f, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - only clusters 2 and 4")
+
+# Remove cluster 5 as it contains only one cell and cluster 1 because it is well separated from the others
+cap50.final <- cap50[, cap50$cluster == c(2,3,4)]
+cap50.final$cluster <- factor(cap50.final$cluster)
+markers <- findMarkers(cap50.final, groups = cap50.final$cluster, pval.type = "any", lfc = 1)
+clust.2 <- markers[["2"]]
+clust.4 <- markers[["4"]]
+clust.2.interesting <- clust.2[clust.2$p.value <= 0.05, ]
+clust.4.interesting <- clust.4[clust.4$p.value <= 0.05, ]
+
+logFCs.2 <- getMarkerEffects(clust.2.interesting)
+logFCs.4 <- getMarkerEffects(clust.4.interesting)
+
+pheatmap(logFCs.2, breaks=seq(-5, 5, length.out=101), main = "Cluster 2 - DE genes between clusters 3 and 4", fontsize_row = 8)
+pheatmap(logFCs.4, breaks=seq(-5, 5, length.out=101), main = "Cluster 4 - DE genes between clusters 2 and 3", fontsize_row = 8)
+
+```
+
+
+
+#### 2.3.2 Subclustering
+
 **Inspect subclusters within the clusters of the primary data**
 ```{r primary-data-subclustering, eval=FALSE}
 # Inspect clusters in each sample
@@ -234,7 +315,7 @@ gridExtra::grid.arrange(p.sub.cap50r16h, p.sub.cap50r16h.cc, ncol = 2)
 
 ```
 
-#### 2.3.2 Marker gene detection
+#### 2.3.3 Marker gene detection
 **This code chunk is not evaluated (as it would produce quite a few plots) but it can be run if one wants to see the marker genes for each sub-cluster** 
 ```{r marker-gene-detection, eval=FALSE}
 # Find marker genes for Control sample
@@ -257,6 +338,7 @@ for(i in 1:length(markers.control.cc)) {
 }
 
 ```
+
 
 ### 2.4 Create Cerebro files (.crb)
 **This code chunk is used for producing cerebro files and it is by default not evaluated**
@@ -298,6 +380,7 @@ group_name.deMicheli <- as.factor(denoised.sce.deMicheli$cell_type)
 cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli$Phase)
 
 # Trajectory building
+set.seed(123)
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
 traj.deMicheli <- infer_trajectory(space.deMicheli)
 
@@ -380,16 +463,14 @@ gridExtra::grid.arrange(pax7.plot, cdk1.plot, myog.plot, myod.plot, btg2.plot, c
 
 ```
 
-**Trajectory inference without cell cycle genes**
+**Trajectory inference without cell cycle genes (Seurat cc genes)**
 ```{r deMicheli-traj-inference-cc-genes}
-# Remove cell cycle genes from the data
-denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.mouse, ]
-
 # Create expression and sample objects
 expression.deMicheli.cc.genes <- as.matrix(t(logcounts(denoised.sce.deMicheli.cc.genes)))
 group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_type)
 
 # Trajectory building
+set.seed(123)
 space.deMicheli.cc.genes <- reduce_dimensionality(expression.deMicheli.cc.genes, dist = "spearman", ndim = 2)
 traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
 
@@ -397,7 +478,28 @@ traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
 draw_trajectory_plot(space = space.deMicheli.cc.genes, 
                      progression_group = group_name.deMicheli.cc.genes,
                      path = traj.deMicheli.cc.genes$path,
-                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes except cell cycle marker genes, (ndim = 2) - Cell types")
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes except cell cycle marker genes (from Seurat workflow), ndim = 2")
+```
+
+**Trajectory inference without cell cycle genes (OSCA cc genes)**
+```{r deMicheli-traj-inference-cc-genes}
+# Remove cell cycle genes from the data
+denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.osca, ]
+
+# Create expression and sample objects
+expression.deMicheli.cc.genes <- as.matrix(t(logcounts(denoised.sce.deMicheli.cc.genes)))
+group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_type)
+
+# Trajectory building
+set.seed(123)
+space.deMicheli.cc.genes <- reduce_dimensionality(expression.deMicheli.cc.genes, dist = "spearman", ndim = 2)
+traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
+
+# Plot trajectory by cell types
+draw_trajectory_plot(space = space.deMicheli.cc.genes, 
+                     progression_group = group_name.deMicheli.cc.genes,
+                     path = traj.deMicheli.cc.genes$path,
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes except cell cycle marker genes (from OSCA workflow), ndim = 2")
 ```
 
 
@@ -406,13 +508,13 @@ draw_trajectory_plot(space = space.deMicheli.cc.genes,
 # Create a sce object from the CC corrected alternative experiment
 denoised.sce.deMicheli.cc <- as(altExp(denoised.sce.deMicheli, "CC_corrected"), "SingleCellExperiment")
 
-
 # Create expression and sample objects
 expression.deMicheli.cc <- as.matrix(t(assay(denoised.sce.deMicheli.cc, "scaled_logcounts")))
 group_name.deMicheli.cc <- as.factor(denoised.sce.deMicheli.cc$cell_type)
 cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli.cc$Phase)
 
 # Trajectory building
+set.seed(123)
 space.deMicheli.cc <- reduce_dimensionality(expression.deMicheli.cc, dist = "spearman", ndim = 2)
 traj.deMicheli.cc <- infer_trajectory(space.deMicheli.cc)
 
@@ -437,6 +539,7 @@ group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
 cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso$Phase)
 
 # Trajectory inference
+set.seed(123)
 space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
 traj.dellOrso <- infer_trajectory(space.dellOrso)
 
@@ -581,6 +684,7 @@ expression.dellOrso.f <- as.matrix(t(logcounts(denoised.sce.dellOrso.f)))
 group_name.dellOrso.f <- as.factor(denoised.sce.dellOrso.f$cell_type)
 
 # Trajectory inference
+set.seed(123)
 space.dellOrso.f <- reduce_dimensionality(expression.dellOrso.f, dist = "spearman", ndim = 2)
 traj.dellOrso.f <- infer_trajectory(space.dellOrso.f)
 
@@ -594,17 +698,14 @@ draw_trajectory_plot(space = space.dellOrso.f,
 
 
 
-
 **Trajectory inference without cell cycle genes**
 ```{r dellOrso-traj-inference-cc-genes}
-# Remove cell cycle genes from the data
-denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!rownames(denoised.sce.dellOrso) %in% cc.genes.mouse, ]
-
 # Create expression and sample objects
 expression.dellOrso.cc.genes <- as.matrix(t(logcounts(denoised.sce.dellOrso.cc.genes)))
 group_name.dellOrso.cc.genes <- as.factor(denoised.sce.dellOrso.cc.genes$cell_type)
 
 # Trajectory inference
+set.seed(123)
 space.dellOrso.cc.genes <- reduce_dimensionality(expression.dellOrso.cc.genes, dist = "spearman", ndim = 2)
 traj.dellOrso.cc.genes <- infer_trajectory(space.dellOrso.cc.genes)
 
@@ -614,7 +715,6 @@ draw_trajectory_plot(space = space.dellOrso.cc.genes,
                      path = traj.dellOrso.cc.genes$path,
                      contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes except cell cycle marker genes, ndim = 2 - Cell types")
 ```
-
 
 
 **Trajectory inference for cell cycle corrected expression values:**
@@ -628,6 +728,7 @@ group_name.dellOrso.cc <- as.factor(denoised.sce.dellOrso.cc$cell_type)
 cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso.cc$Phase)
 
 # Trajectory building
+set.seed(123)
 space.dellOrso.cc <- reduce_dimensionality(expression.dellOrso.cc, dist = "spearman", ndim = 2)
 traj.dellOrso.cc <- infer_trajectory(space.dellOrso.cc)
 
@@ -643,9 +744,177 @@ draw_trajectory_plot(space = space.dellOrso.cc,
 ```
 
 
-## 4. Identifying candidate marker genes
-### 4.1 De Micheli et al. (2020) reference data
 
+### 3.3 Primary data
+**Trajectory inference with uncorrected values**
+```{r primary-data-traj-inference}
+# Create expression and sample objects
+expression.primary <- as.matrix(t(logcounts(denoised.sce)))
+group_name.primary <- as.factor(denoised.sce$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary <- reduce_dimensionality(expression.primary, dist = "spearman", ndim = 2)
+traj.primary <- infer_trajectory(space.primary)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary, 
+                     progression_group = group_name.primary,
+                     path = traj.primary$path,
+                     contour = TRUE) + ggtitle("Primary dataset: All genes (ndim = 2)")
+```
+
+
+**Trajectory inference with cc-corrected expression values**
+```{r primary-data-cc-traj-inference}
+# Create a sce object from the CC corrected alternative experiment
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+
+# Create expression and sample objects
+expression.primary.cc <- as.matrix(t(assay(denoised.sce.cc, "scaled_logcounts")))
+group_name.primary.cc <- as.factor(denoised.sce.cc$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.cc <- reduce_dimensionality(expression.primary.cc, dist = "spearman", ndim = 2)
+traj.primary.cc <- infer_trajectory(space.primary.cc)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.cc, 
+                     progression_group = group_name.primary.cc,
+                     path = traj.primary.cc$path,
+                     contour = TRUE) + ggtitle("Primary dataset (cc corrected): HVGs (ndim = 2)")
+``` 
+
+
+**Trajectory inference with cc genes removed**
+```{r primary-data-cc-genes-traj-inference}
+# Create expression and sample objects
+expression.primary.cc.genes <- as.matrix(t(logcounts(denoised.sce.cc.genes)))
+group_name.primary.cc.genes <- as.factor(denoised.sce.cc.genes$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.cc.genes <- reduce_dimensionality(expression.primary.cc.genes, dist = "spearman", ndim = 2)
+traj.primary.cc.genes <- infer_trajectory(space.primary.cc.genes)
+#saveRDS(space.primary.cc.genes, file = "./../saved/space_primary_cc_genes")
+
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.cc.genes, 
+                     progression_group = group_name.primary.cc.genes,
+                     path = traj.primary.cc.genes$path,
+                     contour = TRUE) + ggtitle("Primary dataset: All genes except cell cycle marker genes (ndim = 2)")
+```
+
+
+**Trajectory inference with (cc corrected) with only control, cap50 and cap50_r16h samples**
+```{r primary-data-cc-traj-inference-subset-of-samples}
+# Create a sce object from the CC corrected alternative experiment
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+denoised.sce.cc.f <- denoised.sce.cc[, denoised.sce.cc$sample %in% c("control", "cap50", "cap50_r16h")]
+
+# Create expression and sample objects
+expression.primary.cc.f <- as.matrix(t(assay(denoised.sce.cc.f, "scaled_logcounts")))
+group_name.primary.cc.f <- as.factor(denoised.sce.cc.f$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.cc.f <- reduce_dimensionality(expression.primary.cc.f, dist = "spearman", ndim = 2)
+traj.primary.cc.f <- infer_trajectory(space.primary.cc.f)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.cc.f, 
+                     progression_group = group_name.primary.cc.f,
+                     path = traj.primary.cc.f$path,
+                     contour = TRUE) + ggtitle("Filtered primary dataset (cc corrected): HVGs (ndim = 2)")
+
+
+# Plot expression of marker genes
+cdh15 <- expression.primary.cc.f[, "Cdh15"]
+tnnt1 <- expression.primary.cc.f[, "Tnnt1"]
+tnnt3 <- expression.primary.cc.f[, "Tnnt3"]
+
+cdh15.plot <- draw_trajectory_plot(space = space.primary.cc.f, 
+                                  progression_group = cdh15,
+                                  path = traj.primary.cc.f$path,
+                                  contour = FALSE) + 
+  ggtitle("Filtered primary dataset (cc corrected): Cdh15 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+tnnt1.plot <- draw_trajectory_plot(space = space.primary.cc.f, 
+                                  progression_group = tnnt1,
+                                  path = traj.primary.cc.f$path,
+                                  contour = FALSE) + 
+  ggtitle("Filtered primary dataset (cc corrected): Tnnt1 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+tnnt3.plot <- draw_trajectory_plot(space = space.primary.cc.f, 
+                                  progression_group = tnnt3,
+                                  path = traj.primary.cc.f$path,
+                                  contour = FALSE) + 
+  ggtitle("Filtered primary dataset (cc corrected): Tnnt3 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+gridExtra::grid.arrange(cdh15.plot, tnnt1.plot, tnnt3.plot, ncol = 2)
+
+
+```
+
+
+**Trajectory inference with (cc genes removed) with only control, cap50 and cap50_r16h samples**
+```{r primary-data-cc-genes-traj-inference-subset-of-samples}
+# Create expression and sample objects
+denoised.sce.cc.genes.f <- denoised.sce.cc.genes[, denoised.sce.cc.genes$sample %in% c("control", "cap50", "cap50_r16h")]
+expression.primary.cc.genes.f <- as.matrix(t(logcounts(denoised.sce.cc.genes.f)))
+group_name.primary.cc.genes.f <- as.factor(denoised.sce.cc.genes.f$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.cc.genes.f <- reduce_dimensionality(expression.primary.cc.genes.f, dist = "spearman", ndim = 2)
+traj.primary.cc.genes.f <- infer_trajectory(space.primary.cc.genes.f)
+#saveRDS(space.primary.cc.genes.f, file = "./../saved/space_primary_cc_genes.f")
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.cc.genes.f, 
+                     progression_group = group_name.primary.cc.genes.f,
+                     path = traj.primary.cc.genes.f$path,
+                     contour = TRUE) + ggtitle("Filtered primary dataset: All genes except cell cycle marker genes (ndim = 2)")
+
+
+# Plot expression of marker genes
+cdh15 <- expression.primary.cc.genes.f[, "Cdh15"]
+tnnt1 <- expression.primary.cc.genes.f[, "Tnnt1"]
+tnnt3 <- expression.primary.cc.genes.f[, "Tnnt3"]
+
+cdh15.plot <- draw_trajectory_plot(space = space.primary.cc.genes.f, 
+                                  progression_group = cdh15,
+                                  path = traj.primary.cc.genes.f$path,
+                                  contour = FALSE) + 
+  ggtitle("Filtered primary dataset (cc genes excluded): Cdh15 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+tnnt1.plot <- draw_trajectory_plot(space = space.primary.cc.genes.f, 
+                                  progression_group = tnnt1,
+                                  path = traj.primary.cc.genes.f$path,
+                                  contour = FALSE) + 
+  ggtitle("Filtered primary dataset (cc genes excluded): Tnnt1 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+tnnt3.plot <- draw_trajectory_plot(space = space.primary.cc.genes.f, 
+                                  progression_group = tnnt3,
+                                  path = traj.primary.cc.genes.f$path,
+                                  contour = FALSE) + 
+  ggtitle("Filtered primary dataset (cc genes excluded): Tnnt3 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+gridExtra::grid.arrange(cdh15.plot, tnnt1.plot, tnnt3.plot, ncol = 2)
+
+```
+
+
+
+## 4. Identifying candidate marker genes
 **Shortcut for fetching the gimps & modules generated by Puhti supercomputer**
 ```{r shortcut-gimp-modules}
 gimp.deMicheli <- readRDS("./../saved/gimp_deMicheli")
@@ -671,8 +940,7 @@ write.csv(modules.deMicheli, file = "./../saved/modules_deMicheli_excel.csv")
 
 ```
 
-
-
+### 4.1 De Micheli et al. (2020) reference data
 ```{r marker-genes-deMicheli, eval=FALSE}
 # Identify candidate marker genes
 gimp.deMicheli <- gene_importances(x = expression.deMicheli,
@@ -682,10 +950,10 @@ gimp.deMicheli <- gene_importances(x = expression.deMicheli,
 
 gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
 gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
-expr_sel.deMicheli <- expression.deMicheli[, gene_sel.deMicheli]
+expr_sel.deMicheli <- scale_quantile(expression.deMicheli[, gene_sel.deMicheli])
 
 # Group genes to modules
-modules.deMicheli <- extract_modules(scale_quantile(expr_sel.deMicheli),
+modules.deMicheli <- extract_modules(expr_sel.deMicheli,
                                      time = traj.deMicheli$time,
                                      verbose = FALSE)
 
@@ -693,7 +961,6 @@ modules.deMicheli <- extract_modules(scale_quantile(expr_sel.deMicheli),
 #saveRDS(gimp.deMicheli, file = "./../saved/gimp_deMicheli")
 
 ```
-
 
 **Visualization of gene importances and modules**
 ```{r DeMicheli-gimp-modules-visualization, eval=FALSE}
@@ -731,7 +998,7 @@ gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
 expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
 
 # Group genes to modules
-modules.dellOrso <- extract_modules(scale_quantile(expr_sel.dellOrso),
+modules.dellOrso <- extract_modules(expr_sel.dellOrso,
                                      time = traj.dellOrso$time,
                                      verbose = FALSE)
 
@@ -761,10 +1028,122 @@ draw_trajectory_heatmap(expr_sel.dellOrso,
 dev.off()
 ```
 
+
+#### 4.2.1 - PMs removed
+```{r shortcut-marker-genes-dellOrso-without-PMs}
+gimp.dellOrso.f <- readRDS("./../saved/gimp_dellOrso_f")
+gimp.dellOrso.f$qvalue <- p.adjust(gimp.dellOrso.f$pvalue, "BH", length(gimp.dellOrso.f$pvalue))
+gene_sel.dellOrso.f <- gimp.dellOrso.f$gene[gimp.dellOrso.f$qvalue < .05]
+expr_sel.dellOrso.f <- scale_quantile(expression.dellOrso.f[, gene_sel.dellOrso.f])
+
+modules.dellOrso.f <- readRDS("./../saved/modules_dellOrso_f")
+
+```
+
+```{r marker-genes-dellOrso-without-PMs, eval=FALSE}
+# Identify candidate marker genes
+gimp.dellOrso.f <- gene_importances(x = expression.dellOrso.f,
+                                    time = traj.dellOrso.f$time,
+                                    num_permutations = 10,
+                                    num_threads = 8)
+
+gimp.dellOrso.f$qvalue <- p.adjust(gimp.dellOrso.f$pvalue, "BH", length(gimp.dellOrso.f$pvalue))
+gene_sel.dellOrso.f <- gimp.dellOrso.f$gene[gimp.dellOrso.f$qvalue < .05]
+expr_sel.dellOrso.f <- scale_quantile(expression.dellOrso.f[, gene_sel.dellOrso.f])
+
+# Group genes to modules
+modules.dellOrso.f <- extract_modules(expr_sel.dellOrso.f,
+                                      time = traj.dellOrso.f$time,
+                                      verbose = FALSE)
+
+#saveRDS(modules.dellOrso.f, file = "./../saved/modules_dellOrso_f")
+#saveRDS(gimp.dellOrso.f, file = "./../saved/gimp_dellOrso_f")
+
+```
+
+**Visualization of gene importances and modules**
+```{r DellOrso-without-PMs-gimp-modules-visualization, eval=FALSE}
+# Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_dellOrso_f.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso.f, 
+                        time = traj.dellOrso.f$time,
+                        progression_group = group_name.dellOrso.f,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+
+# Visualize modules
+pdf("./../saved/modules_heatmap_dellOrso_f.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso.f, 
+                        time = traj.dellOrso.f$time,
+                        progression_group = group_name.dellOrso.f,
+                        modules = modules.dellOrso.f,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+```
+
+
+### 4.2 Primary data
+
+```{r shortcut-primary-data-gimp-modules}
+gimp <- readRDS("./../saved/gimp")
+gimp$qvalue <- p.adjust(p = gimp$pvalue, method = "BH")
+gene_sel <- gimp$gene[gimp$qvalue < .05]
+expr_sel <- scale_quantile(expression.primary[, gene_sel])
+
+modules <- readRDS("./../saved/modules")
+```
+
+
+```{r primary-data-gimp-modules, eval=FALSE}
+# Identify candidate marker genes
+gimp <- gene_importances(x = expression.primary,
+                         time = traj.primary$time,
+                         num_permutations = 10,
+                         num_threads = 8)
+
+gimp$qvalue <- p.adjust(p = gimp$pvalue, method = "BH")
+gene_sel <- gimp$gene[gimp$qvalue < .05]
+expr_sel <- scale_quantile(expression.primary[, gene_sel])
+
+# Group genes to modules
+modules <- extract_modules(expr_sel,
+                           time = traj.primary$time,
+                           verbose = FALSE)
+
+saveRDS(modules, file = "./../saved/modules")
+saveRDS(gimp, file = "./../saved/gimp")
+```
+
+**Visualization of gene importances and modules**
+```{r primary-data-gimp-modules-visualization, eval=FALSE}
+# Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_primary_data.pdf")
+draw_trajectory_heatmap(expr_sel, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+
+# Visualize modules
+pdf("./../saved/modules_heatmap_primary_data.pdf")
+draw_trajectory_heatmap(expr_sel, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary,
+                        modules = modules,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+```
+
+
+
 ## 5. Mapping of primary data to reference datasets
 ### 5.1 Assign reference data cell types to primary data and inspect results
 
-**Predict cell types (shortcut)**
+**Predict cell types from reference datasets (shortcut)**
 ```{r predict-cell-types-shortcut}
 # Load pre-saved prediction objects
 pred.deMicheli <- readRDS("./../saved/pred_deMicheli")
@@ -776,7 +1155,7 @@ denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
 
 ```
 
-**Predict cell types**
+**Predict cell types from reference datasets**
 ```{r predict-cell-types, eval=FALSE}
 ## De Micheli
 pred.deMicheli <- SingleR(test = denoised.sce,
@@ -798,7 +1177,7 @@ denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
 
 ```
 
-
+**Inspect the cell mappings**
 ```{r cell-mapping-inspection}
 # Inspection of predictions
 table(pred.deMicheli$pruned.labels)
@@ -824,7 +1203,7 @@ gridExtra::grid.arrange(p.deMicheli, p.dellOrso, ncol = 2)
 ```
 
 
-**Create diagnstic plots for the cell type annotations**
+**DeMicheli diagnostic plots**
 ```{r deMicheli-annotation-diagnostic-plots, eval=FALSE}
 # Visualize the score matrix
 pdf("./../saved/deMicheli_score_heatmap.pdf")
@@ -888,6 +1267,7 @@ plotHeatmap(denoised.sce,
 dev.off()
 ```
 
+**Dell'Orso diagnostic plots**
 ```{r dellOrso-annotation-diagnostic-plots, eval=FALSE}
 # Visualize the score matrix
 pdf("./../saved/dellOrso_score_heatmap.pdf")
@@ -928,12 +1308,54 @@ plotHeatmap(denoised.sce, order_columns_by="cell_type_dellOrso",
     features=unique(unlist(all.markers.dellOrso.df$Primary_MB)),
     fontsize_row = 2)
 dev.off()
-
-
 ```
 
 
-#### 5.2 Assign cell types from reference to another reference dataset
+### 5.2 Cell mapping of reference datasets with cc-genes removed
+
+**Shortcut for predicting the cell types from cc-gene excluded data**
+```{r shortcut-predict-cell-types-cc-genes}
+pred.deMicheli.cc.genes <- readRDS("./../saved/pred_deMicheli_cc_genes")
+pred.dellOrso.cc.genes <- readRDS("./../saved/pred_dellOrso_cc_genes")
+```
+
+
+**Predict the cell types from data where cc genes have been removed**
+```{r predict-cell-types-cc-genes, eval=FALSE}
+# De Micheli
+pred.deMicheli.cc.genes <- SingleR(test = denoised.sce.cc.genes,
+                                   assay.type.test = "logcounts",
+                                   ref = denoised.sce.deMicheli.cc.genes,
+                                   labels = denoised.sce.deMicheli.cc.genes$cell_type)
+
+#saveRDS(pred.deMicheli.cc.genes, file = "./../saved/pred_deMicheli_cc_genes")
+
+## Dell'Orso
+pred.dellOrso.cc.genes <- SingleR(test = denoised.sce.cc.genes,
+                                  assay.type.test = "logcounts",
+                                  ref = denoised.sce.dellOrso.cc.genes,
+                                  labels = denoised.sce.dellOrso.cc.genes$cell_type)
+
+#saveRDS(pred.dellOrso.cc.genes, file = "./../saved/pred_dellOrso_cc_genes")
+
+```
+
+**Inspect the cell mappings**
+```{r inspect-cell-types-cc-genes}
+table(pred.deMicheli.cc.genes$pruned.labels)
+table(pred.dellOrso.cc.genes$labels)
+
+tab.deMicheli.cc.genes <- t(table(pred.deMicheli.cc.genes$pruned.labels, denoised.sce.cc.genes$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+
+tab.dellOrso.cc.genes <- t(table(pred.dellOrso.cc.genes$pruned.labels, denoised.sce.cc.genes$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+
+tab.deMicheli.cc.genes
+tab.dellOrso.cc.genes
+```
+
+
+
+#### 5.3 Assign cell types from reference to another reference dataset
 **Shortcut for loading the prediction objects**
 ```{r cell-type-reference-datasets-shortcut}
 # Load the pre-saved reference data cell annotation predictions
@@ -958,6 +1380,8 @@ pred.reference2 <- SingleR(test = denoised.sce.dellOrso,
 #saveRDS(pred.reference2, file = "./../saved/pred_reference2")
 
 ```
+
+
 ```{r cell-type-reference-datasets-inspection}
 # Dell'Orso as reference:
 table(pred.reference$pruned.labels)
@@ -969,42 +1393,140 @@ table(pred.reference2$pruned.labels, denoised.sce.dellOrso$cell_type)
 ```
 
 
+## 6. Refined cell mapping based on smaller segments of the trajectory
 
-### 5.2 Build trajectories of reference data with the primary data cell types
-```{r trajectories-with-primary-data-samples, eval=FALSE}
-# De Micheli
-## Predict primary data samples for reference data
-pred.deMicheli2 <- SingleR(test = denoised.sce.deMicheli,
-                           assay.type.test = "logcounts",
-                           ref = denoised.sce,
-                           labels = denoised.sce$sample)
+**Using all cells from De Micheli dataset**
+```{r deMicheli-traj-inference-segments}
+# Trajectory building
+expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
+set.seed(123)
+space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
+traj.deMicheli <- infer_trajectory(space.deMicheli)
 
-## Assign predicted primary data samples to reference datasets
-denoised.sce.deMicheli$primary_data_sample <- pred.deMicheli2$pruned.labels
-primary.group.deMicheli <- as.factor(denoised.sce.deMicheli$primary_data_sample)
+# Sort cells based on their progression
+ordered <- sort(traj.deMicheli$time, decreasing = FALSE)
 
-## Plot trajectories with primary data samples
-draw_trajectory_plot(space = space.deMicheli, 
-                     progression_group = primary.group.deMicheli,
+# Split cells into 10 segments based on their pseudo time value
+library(BBmisc)
+n = 10
+ordered_chunks = chunk(ordered, n.chunks = 10, shuffle = FALSE)
+segment.1 <- names(ordered_chunks[[1]])
+segment.2 <- names(ordered_chunks[[2]])
+segment.3 <- names(ordered_chunks[[3]])
+segment.4 <- names(ordered_chunks[[4]])
+segment.5 <- names(ordered_chunks[[5]])
+segment.6 <- names(ordered_chunks[[6]])
+segment.7 <- names(ordered_chunks[[7]])
+segment.8 <- names(ordered_chunks[[8]])
+segment.9 <- names(ordered_chunks[[9]])
+segment.10 <- names(ordered_chunks[[10]])
+
+# Label cells by their segment
+denoised.sce.deMicheli.s1 <- colnames(denoised.sce.deMicheli) %in% segment.1
+denoised.sce.deMicheli.s2 <- colnames(denoised.sce.deMicheli) %in% segment.2
+denoised.sce.deMicheli.s3 <- colnames(denoised.sce.deMicheli) %in% segment.3
+denoised.sce.deMicheli.s4 <- colnames(denoised.sce.deMicheli) %in% segment.4
+denoised.sce.deMicheli.s5 <- colnames(denoised.sce.deMicheli) %in% segment.5
+denoised.sce.deMicheli.s6 <- colnames(denoised.sce.deMicheli) %in% segment.6
+denoised.sce.deMicheli.s7 <- colnames(denoised.sce.deMicheli) %in% segment.7
+denoised.sce.deMicheli.s8 <- colnames(denoised.sce.deMicheli) %in% segment.8
+denoised.sce.deMicheli.s9 <- colnames(denoised.sce.deMicheli) %in% segment.9
+denoised.sce.deMicheli.s10 <- colnames(denoised.sce.deMicheli) %in% segment.10
+
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s1] <- "segment_1"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s2] <- "segment_2"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s3] <- "segment_3"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s4] <- "segment_4"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s5] <- "segment_5"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s6] <- "segment_6"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s7] <- "segment_7"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s8] <- "segment_8"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s9] <- "segment_9"
+denoised.sce.deMicheli$segment[denoised.sce.deMicheli.s10] <- "segment_10"
+segment.deMicheli <- as.factor(denoised.sce.deMicheli$segment)
+
+# Draw trajectory plot
+draw_trajectory_plot(space = space.deMicheli,
+                     progression_group = segment.deMicheli,
                      path = traj.deMicheli$path,
-                     contour = TRUE) + ggtitle("De Micheli et al. trajectory: Primary data samples")
+                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes (ndim = 2) - Segment")
 
-# Dell'Orso
-## Predict primary data samples for reference data
-pred.dellOrso2 <- SingleR(test = denoised.sce.dellOrso,
-                          assay.type.test = "logcounts",
-                          ref = denoised.sce,
-                          labels = denoised.sce$sample)
+# Predict segments of primary data cells
+pred.segments <- SingleR(test = denoised.sce,
+                         assay.type.test = "logcounts",
+                         ref = denoised.sce.deMicheli,
+                         labels = denoised.sce.deMicheli$segment)
 
-## Assign predicted primary data samples to reference datasets
-denoised.sce.dellOrso$primary_data_sample <- pred.dellOrso2$pruned.labels
-primary.group.dellOrso <- as.factor(denoised.sce.dellOrso$primary_data_sample)
+saveRDS(pred.segments, file = "./../saved/pred_segments")
+table(denoised.sce$sample, pred.segments$pruned.labels)
+```
 
-## Plot trajectories with primary data samples
-draw_trajectory_plot(space = space.dellOrso, 
-                     progression_group = primary.group.dellOrso,
-                     path = traj.dellOrso$path,
-                     contour = TRUE) + ggtitle("Dell'Orso et al. trajectory: Primary data samples")
+**Using only D5 MuSCs & progenitors sample**
+```{r deMicheli-traj-inference-segments-d5}
+# Sort cells by their pseudo time value
+ordered <- sort(traj.deMicheli$time, decreasing = FALSE)
+
+# Subset only D5 samples
+d5.muscs <- names(ordered) %in% colnames(denoised.sce.deMicheli[, denoised.sce.deMicheli$cell_type == "d5_MuSCs_and_progenitors"])
+ordered.d5 <- ordered[d5.muscs]
+
+# Split cells into 10 segments based on their pseudo time value
+n = 10
+ordered_chunks.d5 = chunk(ordered.d5, n.chunks = 10, shuffle = FALSE)
+segment.1 <- names(ordered_chunks.d5[[1]])
+segment.2 <- names(ordered_chunks.d5[[2]])
+segment.3 <- names(ordered_chunks.d5[[3]])
+segment.4 <- names(ordered_chunks.d5[[4]])
+segment.5 <- names(ordered_chunks.d5[[5]])
+segment.6 <- names(ordered_chunks.d5[[6]])
+segment.7 <- names(ordered_chunks.d5[[7]])
+segment.8 <- names(ordered_chunks.d5[[8]])
+segment.9 <- names(ordered_chunks.d5[[9]])
+segment.10 <- names(ordered_chunks.d5[[10]])
+
+# Label cells by their segment
+denoised.sce.deMicheli.s1 <- colnames(denoised.sce.deMicheli) %in% segment.1
+denoised.sce.deMicheli.s2 <- colnames(denoised.sce.deMicheli) %in% segment.2
+denoised.sce.deMicheli.s3 <- colnames(denoised.sce.deMicheli) %in% segment.3
+denoised.sce.deMicheli.s4 <- colnames(denoised.sce.deMicheli) %in% segment.4
+denoised.sce.deMicheli.s5 <- colnames(denoised.sce.deMicheli) %in% segment.5
+denoised.sce.deMicheli.s6 <- colnames(denoised.sce.deMicheli) %in% segment.6
+denoised.sce.deMicheli.s7 <- colnames(denoised.sce.deMicheli) %in% segment.7
+denoised.sce.deMicheli.s8 <- colnames(denoised.sce.deMicheli) %in% segment.8
+denoised.sce.deMicheli.s9 <- colnames(denoised.sce.deMicheli) %in% segment.9
+denoised.sce.deMicheli.s10 <- colnames(denoised.sce.deMicheli) %in% segment.10
+
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s1] <- "segment_1"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s2] <- "segment_2"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s3] <- "segment_3"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s4] <- "segment_4"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s5] <- "segment_5"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s6] <- "segment_6"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s7] <- "segment_7"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s8] <- "segment_8"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s9] <- "segment_9"
+denoised.sce.deMicheli$segment.d5[denoised.sce.deMicheli.s10] <- "segment_10"
+
+denoised.sce.deMicheli$segment.d5 <- replace_na(denoised.sce.deMicheli$segment.d5, "non_d5_musc_sample")
+
+table(denoised.sce.deMicheli$segment.d5)
+segment.deMicheli.d5 <- as.factor(denoised.sce.deMicheli$segment.d5)
+
+# Draw trajectory plot
+draw_trajectory_plot(space = space.deMicheli,
+                     progression_group = segment.deMicheli.d5,
+                     point_size = 1,
+                     path = traj.deMicheli$path,
+                     contour = FALSE) + ggtitle("De Micheli et al. dataset (Day 5 MuSCs & progenitors): All genes (ndim = 2) - Segment")
+
+# Predict segments of primary data cells
+pred.segments.d5 <- SingleR(test = denoised.sce,
+                            assay.type.test = "logcounts",
+                            ref = denoised.sce.deMicheli,
+                            labels = denoised.sce.deMicheli$segment.d5)
+
+#saveRDS(pred.segments.d5, file = "./../saved/pred_segments_d5")
+table(denoised.sce$sample, pred.segments.d5$pruned.labels)
 ```
 
 
