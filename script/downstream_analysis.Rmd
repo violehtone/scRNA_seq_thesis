@@ -261,20 +261,18 @@ cap50.f <- cap50[, cap50$cluster == c(2,4)]
 plotReducedDim(cap50.f, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - only clusters 2 and 4")
 
 # Remove cluster 5 as it contains only one cell and cluster 1 because it is well separated from the others
-cap50.final <- cap50[, cap50$cluster == c(2,3,4)]
+cap50.final <- cap50[, cap50$cluster == c(2,4)]
 cap50.final$cluster <- factor(cap50.final$cluster)
-markers <- findMarkers(cap50.final, groups = cap50.final$cluster, pval.type = "any", lfc = 1)
+markers <- findMarkers(cap50.final, groups = cap50.final$cluster, lfc = 1, pval.type = "all", direction = "up")
 clust.2 <- markers[["2"]]
-clust.4 <- markers[["4"]]
 clust.2.interesting <- clust.2[clust.2$p.value <= 0.05, ]
-clust.4.interesting <- clust.4[clust.4$p.value <= 0.05, ]
 
-logFCs.2 <- getMarkerEffects(clust.2.interesting)
-logFCs.4 <- getMarkerEffects(clust.4.interesting)
+# Print the list of genes
+genes.df <- as.data.frame(clust.2.interesting)
+genes.df
 
-pheatmap(logFCs.2, breaks=seq(-5, 5, length.out=101), main = "Cluster 2 - DE genes between clusters 3 and 4", fontsize_row = 8)
-pheatmap(logFCs.4, breaks=seq(-5, 5, length.out=101), main = "Cluster 4 - DE genes between clusters 2 and 3", fontsize_row = 8)
-
+# Write genes into a csv file
+write.csv(genes.df, file = "./../saved/cap50_genes.csv")
 ```
 
 
