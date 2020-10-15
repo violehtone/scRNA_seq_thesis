@@ -96,9 +96,11 @@ cycle.markers <- getTopMarkers(phase.stats[[1]], phase.stats[[2]])
 ```
 
 ```{r cc-genes-comparison}
+# Inspect the cc related gene sets
 length(cc.genes.seurat)
 length(cc.genes.osca)
 
+# Inspect the intersection of the two gene sets
 intersect(cc.genes.osca, cc.genes.seurat)
 ```
 
@@ -248,18 +250,20 @@ pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=v
 ### 2.3 Primary data: Subclustering and marker gene detection
 #### 2.3.1 Differentially expressed genes between clusters in the Cap50 sample
 
-**Non-corrected data**
-```{r DE-analysis-of-cap50-sample}
+**Uncorrected data**
+```{r DE-analysis-of-cap50-sample, eval=FALSE}
 # Subset the cap50 sample
 cap50 <- denoised.sce[, denoised.sce$sample == "cap50"]
 
 # Plot UMAP plots to inspect clusters
-plotReducedDim(cap50, colour_by = "sample", dimred = "UMAP") + ggtitle("Cap 50 sample - sample")
-plotReducedDim(cap50, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - cluster")
+p1 <- plotReducedDim(denoised.sce, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - sample")
+p2 <- plotReducedDim(cap50, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - cluster")
 
 # Plot only clusters 2 and 4
 cap50.f <- cap50[, cap50$cluster == c(2,4)]
-plotReducedDim(cap50.f, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - only clusters 2 and 4")
+p3 <- plotReducedDim(cap50.f, colour_by = "cluster", dimred = "UMAP") + ggtitle("Cap 50 sample - only clusters 2 and 4")
+gridExtra::grid.arrange(p1,p2,p3, ncol = 3)
+
 
 # Find DE genes between samples 2 and 4
 cap50.f$cluster <- factor(cap50.f$cluster)
@@ -276,7 +280,7 @@ genes.df
 ```
 
 **CC-corrected data**
-```{rDE-analysis-of-cap50-sample-cc}
+```{rDE-analysis-of-cap50-sample-cc, eval=FALSE}
 # Create cc corrected sce
 denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
 denoised.sce.cc$cluster.cc <- factor(denoised.sce$cluster.cc)
@@ -286,12 +290,14 @@ reducedDim(denoised.sce.cc, "UMAP_cc") <- reducedDim(denoised.sce, "UMAP_cc")
 cap50.cc <- denoised.sce.cc[, denoised.sce.cc$sample == "cap50"]
 
 # Plot UMAP plots to inspect clusters
-plotReducedDim(denoised.sce.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Primary data (cc corrected) - cluster")
-plotReducedDim(cap50.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Cap 50 sample (cc corrected) - cluster")
+p1 <- plotReducedDim(denoised.sce.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Primary data (cc corrected) - cluster")
+p2 <- plotReducedDim(cap50.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Cap 50 sample (cc corrected) - cluster")
 
 # Plot only clusters 3 and 4
 cap50.cc.f <- cap50.cc[, cap50$cluster.cc == c(3,4)]
-plotReducedDim(cap50.cc.f, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Cap 50 sample (cc corrected) - only clusters 3 and 4")
+p3 <- plotReducedDim(cap50.cc.f, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Cap 50 sample (cc corrected) - only clusters 3 and 4")
+gridExtra::grid.arrange(p1,p2,p3, ncol = 3)
+
 
 # Find DE genes between clusters 3 and 4
 cap50.cc.f$cluster.cc <- factor(cap50.cc.f$cluster.cc)
@@ -307,8 +313,6 @@ genes.cc.df
 # Write genes into a csv file
 #write.csv(genes.cc.df, file = "./../saved/cap50_cc_genes.csv")
 ```
-
-
 
 
 #### 2.3.2 Subclustering
@@ -414,6 +418,7 @@ cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli$Phase)
 # Trajectory building
 set.seed(123)
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.deMicheli <- infer_trajectory(space.deMicheli)
 
 # Plot trajectory by cell types
@@ -504,6 +509,7 @@ group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_
 # Trajectory building
 set.seed(123)
 space.deMicheli.cc.genes <- reduce_dimensionality(expression.deMicheli.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
 
 # Plot trajectory by cell types
@@ -525,6 +531,7 @@ group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_
 # Trajectory building
 set.seed(123)
 space.deMicheli.cc.genes <- reduce_dimensionality(expression.deMicheli.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
 
 # Plot trajectory by cell types
@@ -548,6 +555,7 @@ cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli.cc$Phase)
 # Trajectory building
 set.seed(123)
 space.deMicheli.cc <- reduce_dimensionality(expression.deMicheli.cc, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.deMicheli.cc <- infer_trajectory(space.deMicheli.cc)
 
 draw_trajectory_plot(space = space.deMicheli.cc, 
@@ -573,6 +581,7 @@ cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso$Phase)
 # Trajectory inference
 set.seed(123)
 space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.dellOrso <- infer_trajectory(space.dellOrso)
 
 # plot by cell type
@@ -718,6 +727,7 @@ group_name.dellOrso.f <- as.factor(denoised.sce.dellOrso.f$cell_type)
 # Trajectory inference
 set.seed(123)
 space.dellOrso.f <- reduce_dimensionality(expression.dellOrso.f, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.dellOrso.f <- infer_trajectory(space.dellOrso.f)
 
 # plot by cell type
@@ -739,6 +749,7 @@ group_name.dellOrso.cc.genes <- as.factor(denoised.sce.dellOrso.cc.genes$cell_ty
 # Trajectory inference
 set.seed(123)
 space.dellOrso.cc.genes <- reduce_dimensionality(expression.dellOrso.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.dellOrso.cc.genes <- infer_trajectory(space.dellOrso.cc.genes)
 
 # plot by cell type
@@ -762,6 +773,7 @@ cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso.cc$Phase)
 # Trajectory building
 set.seed(123)
 space.dellOrso.cc <- reduce_dimensionality(expression.dellOrso.cc, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.dellOrso.cc <- infer_trajectory(space.dellOrso.cc)
 
 draw_trajectory_plot(space = space.dellOrso.cc, 
@@ -787,6 +799,7 @@ group_name.primary <- as.factor(denoised.sce$sample)
 # Trajectory inference
 set.seed(123)
 space.primary <- reduce_dimensionality(expression.primary, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.primary <- infer_trajectory(space.primary)
 
 # Plot the trajectory
@@ -809,6 +822,7 @@ group_name.primary.cc <- as.factor(denoised.sce.cc$sample)
 # Trajectory inference
 set.seed(123)
 space.primary.cc <- reduce_dimensionality(expression.primary.cc, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.primary.cc <- infer_trajectory(space.primary.cc)
 
 # Plot the trajectory
@@ -828,6 +842,7 @@ group_name.primary.cc.genes <- as.factor(denoised.sce.cc.genes$sample)
 # Trajectory inference
 set.seed(123)
 space.primary.cc.genes <- reduce_dimensionality(expression.primary.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.primary.cc.genes <- infer_trajectory(space.primary.cc.genes)
 #saveRDS(space.primary.cc.genes, file = "./../saved/space_primary_cc_genes")
 
@@ -853,6 +868,7 @@ group_name.primary.cc.f <- as.factor(denoised.sce.cc.f$sample)
 # Trajectory inference
 set.seed(123)
 space.primary.cc.f <- reduce_dimensionality(expression.primary.cc.f, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.primary.cc.f <- infer_trajectory(space.primary.cc.f)
 
 # Plot the trajectory
@@ -904,6 +920,7 @@ group_name.primary.cc.genes.f <- as.factor(denoised.sce.cc.genes.f$sample)
 # Trajectory inference
 set.seed(123)
 space.primary.cc.genes.f <- reduce_dimensionality(expression.primary.cc.genes.f, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.primary.cc.genes.f <- infer_trajectory(space.primary.cc.genes.f)
 #saveRDS(space.primary.cc.genes.f, file = "./../saved/space_primary_cc_genes.f")
 
@@ -994,6 +1011,7 @@ modules.deMicheli <- extract_modules(expr_sel.deMicheli,
 
 ```
 
+
 **Visualization of gene importances and modules**
 ```{r DeMicheli-gimp-modules-visualization, eval=FALSE}
 # Visualize expression of selected genes
@@ -1038,6 +1056,7 @@ modules.dellOrso <- extract_modules(expr_sel.dellOrso,
 #saveRDS(gimp.dellOrso, file = "./../saved/gimp_dellOrso")
 ```
 
+
 **Visualization of gene importances and modules**
 ```{r DellOrso-gimp-modules-visualization, eval=FALSE}
 # Visualize expression of selected genes
@@ -1063,6 +1082,7 @@ dev.off()
 
 #### 4.2.1 - PMs removed
 ```{r shortcut-marker-genes-dellOrso-without-PMs}
+# Load gimp and modules objects
 gimp.dellOrso.f <- readRDS("./../saved/gimp_dellOrso_f")
 gimp.dellOrso.f$qvalue <- p.adjust(gimp.dellOrso.f$pvalue, "BH", length(gimp.dellOrso.f$pvalue))
 gene_sel.dellOrso.f <- gimp.dellOrso.f$gene[gimp.dellOrso.f$qvalue < .05]
@@ -1119,6 +1139,7 @@ dev.off()
 ### 4.2 Primary data
 
 ```{r shortcut-primary-data-gimp-modules}
+# Load gimp and modules objects
 gimp <- readRDS("./../saved/gimp")
 gimp$qvalue <- p.adjust(p = gimp$pvalue, method = "BH")
 gene_sel <- gimp$gene[gimp$qvalue < .05]
@@ -1433,6 +1454,7 @@ table(pred.reference2$pruned.labels, denoised.sce.dellOrso$cell_type)
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
 set.seed(123)
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
+set.seed(123)
 traj.deMicheli <- infer_trajectory(space.deMicheli)
 
 # Sort cells based on their progression
@@ -1489,7 +1511,7 @@ pred.segments <- SingleR(test = denoised.sce,
                          ref = denoised.sce.deMicheli,
                          labels = denoised.sce.deMicheli$segment)
 
-saveRDS(pred.segments, file = "./../saved/pred_segments")
+#saveRDS(pred.segments, file = "./../saved/pred_segments")
 table(denoised.sce$sample, pred.segments$pruned.labels)
 ```
 
