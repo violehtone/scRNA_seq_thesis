@@ -36,6 +36,7 @@ library(data.table)
 library(scRNAseq)
 library(org.Mm.eg.db)
 library(tidyr)
+library(BBmisc)
 ```
 
 
@@ -420,6 +421,7 @@ set.seed(123)
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
 set.seed(123)
 traj.deMicheli <- infer_trajectory(space.deMicheli)
+traj.deMicheli <- reverse_trajectory(traj.deMicheli)
 
 # Plot trajectory by cell types
 draw_trajectory_plot(space = space.deMicheli, 
@@ -1259,14 +1261,18 @@ gridExtra::grid.arrange(p.deMicheli, p.dellOrso, ncol = 2)
 **DeMicheli diagnostic plots**
 ```{r deMicheli-annotation-diagnostic-plots, eval=FALSE}
 # Visualize the score matrix
-pdf("./../saved/deMicheli_score_heatmap.pdf")
+pdf("./../saved/deMicheli_score_heatmap.pdf", width = 30, height = 50)
 plotScoreHeatmap(pred.deMicheli, 
-                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
 dev.off()
 
+to.remove <- pruneScores(pred.deMicheli, min.diff.next=0.1)
+table(Label=pred.deMicheli$labels, Removed=to.remove)
+
+
 # Delta distribution
-pdf("./../saved/deMicheli_score_distribution.pdf")
-plotScoreDistribution(pred.deMicheli, show = "delta.med")
+pdf("./../saved/deMicheli_score_distribution.pdf", width = 20, height = 15)
+plotScoreDistribution(results = pred.deMicheli, show = "delta.med")
 dev.off()
 
 # Get marker genes
@@ -1448,6 +1454,7 @@ table(pred.reference2$pruned.labels, denoised.sce.dellOrso$cell_type)
 
 ## 6. Refined cell mapping based on smaller segments of the trajectory
 
+### 6.1 Trajectory building and mapping of cells
 **Using all cells from De Micheli dataset**
 ```{r deMicheli-traj-inference-segments}
 # Trajectory building
@@ -1461,7 +1468,6 @@ traj.deMicheli <- infer_trajectory(space.deMicheli)
 ordered <- sort(traj.deMicheli$time, decreasing = FALSE)
 
 # Split cells into 10 segments based on their pseudo time value
-library(BBmisc)
 n = 10
 ordered_chunks = chunk(ordered, n.chunks = 10, shuffle = FALSE)
 segment.1 <- names(ordered_chunks[[1]])
@@ -1538,6 +1544,31 @@ segment.8 <- names(ordered_chunks.d5[[8]])
 segment.9 <- names(ordered_chunks.d5[[9]])
 segment.10 <- names(ordered_chunks.d5[[10]])
 
+# Inspect min / max values of each segment
+df.values <- data.frame(segment = c(1:10),
+                        min_pseudo_time_value = c(min(ordered_chunks.d5[[1]]),
+                                min(ordered_chunks.d5[[2]]),
+                                min(ordered_chunks.d5[[3]]),
+                                min(ordered_chunks.d5[[4]]),
+                                min(ordered_chunks.d5[[5]]),
+                                min(ordered_chunks.d5[[6]]),
+                                min(ordered_chunks.d5[[7]]),
+                                min(ordered_chunks.d5[[8]]),
+                                min(ordered_chunks.d5[[9]]),
+                                min(ordered_chunks.d5[[10]])),
+                        max_pseudo_time_value = c(max(ordered_chunks.d5[[1]]),
+                                max(ordered_chunks.d5[[2]]),
+                                max(ordered_chunks.d5[[3]]),
+                                max(ordered_chunks.d5[[4]]),
+                                max(ordered_chunks.d5[[5]]),
+                                max(ordered_chunks.d5[[6]]),
+                                max(ordered_chunks.d5[[7]]),
+                                max(ordered_chunks.d5[[8]]),
+                                max(ordered_chunks.d5[[9]]),
+                                max(ordered_chunks.d5[[10]])))
+
+                        
+
 # Label cells by their segment
 denoised.sce.deMicheli.s1 <- colnames(denoised.sce.deMicheli) %in% segment.1
 denoised.sce.deMicheli.s2 <- colnames(denoised.sce.deMicheli) %in% segment.2
@@ -1583,5 +1614,78 @@ pred.segments.d5 <- SingleR(test = denoised.sce,
 table(denoised.sce$sample, pred.segments.d5$pruned.labels)
 ```
 
+
+**Visualization of only segment 10 on trajectory**
+```{r seg10-visualization-on-trajectory}
+primary.data.cells <- denoised.sce.deMicheli$segment.d5 == "segment_10"
+other.cells <- !primary.data.cells
+
+denoised.sce.deMicheli$primary.cells[primary.data.cells] <- "primary_data_cells"
+denoised.sce.deMicheli$primary.cells[other.cells] <- "other_cell_types"
+
+colpalette <- c('primary_data_cells' ="#2CDA4E",
+                'other_cell_types' = "#070707")
+
+draw_trajectory_plot(space = space.deMicheli,
+                     progression_group = as.factor(denoised.sce.deMicheli$primary.cells),
+                     progression_group_palette = colpalette,
+                     path = traj.deMicheli$path,
+                     contour = FALSE) + ggtitle("De Micheli et al. trajectory: Primary data cells shown on trajectory")
+```
+
+
+
+
+### 6.2 Day 5 MuSCS & Progenitors: Gene importances grouped into modules
+```{r deMicheli-d5-muscs-gimp-modules-heatmap, eval=FALSE}
+# Identify candidate marker genes from the Day 5 sample
+# Visualize modules
+group_name.deMicheli.d5 <- as.factor(denoised.sce.deMicheli$segment.d5)
+  
+pdf("./../saved/modules_heatmap_deMicheli_d5_segments.pdf")
+draw_trajectory_heatmap(expr_sel.deMicheli, 
+                        time = traj.deMicheli$time,
+                        progression_group = group_name.deMicheli.d5,
+                        modules = modules.deMicheli,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+
+```
+
+### 6.3 DE genes between segments
+```{r de-genes-between-segments}
+# Subset the day 5 MuSCs and progenitors sample
+deMicheli.d5.muscs <- denoised.sce.deMicheli[, denoised.sce.deMicheli$cell_type == "d5_MuSCs_and_progenitors"]
+table(deMicheli.d5.muscs$segment.d5)
+
+# Find marker genes for each of the 10 segments
+markers.d5 <- findMarkers(deMicheli.d5.muscs, groups = deMicheli.d5.muscs$segment.d5, direction = "up", pval.type = "any", lfc = 1)
+
+# Add the DE genes into a list of marker genes for each segment
+de_genes <- list()
+for(segment in names(markers.d5)) {
+  interesting <- markers.d5[[segment]]
+  best.set <- interesting[interesting$Top <= 6, ]
+  de_genes[[segment]] <- best.set
+}
+
+# Inspect the genes
+de_genes
+
+# Plot heatmaps for each segment
+for(segment in names(de_genes)) {
+  logFCs <- getMarkerEffects(de_genes[[segment]])
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste("Upregulated genes in: ", segment, " (Top <=6)"))
+}
+
+# Inspect the segment 10 in more detail
+seg10 <- markers.d5[["segment_10"]]
+best.seg10 <- seg10[seg10$p.value < 0.05, ]
+logFCs.seg10 <- getMarkerEffects(best.seg10)
+pheatmap(logFCs.seg10, breaks=seq(-5, 5, length.out=101), main = "Upregulated genes in segment 10 (p.value <0.05)", fontsize_row = 7)
+
+
+```
 
 
