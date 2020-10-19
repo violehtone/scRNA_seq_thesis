@@ -1652,8 +1652,41 @@ draw_trajectory_heatmap(expr_sel.deMicheli,
 dev.off()
 
 ```
+## 7. Differential expressed genes
 
-### 6.3 DE genes between segments
+### 7.1 DE genes between samples in primary dataset
+**uncorrected expression values**
+```{r de-genes-primary-data}
+markers.primary <- findMarkers(denoised.sce, groups = denoised.sce$sample, pval.type = "some", direction = "up", lfc = 1)
+for(sample in unique(denoised.sce$sample)) {
+  markers <- markers.primary[[sample]]
+  markers.interesting <- markers[markers$p.value < .05, ]
+  # Print out the marker genes
+  print(markers.interesting)
+  # Get marker effects and plot on a heatmap
+  logFCs <- getMarkerEffects(markers.interesting)
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
+}
+
+```
+
+
+**cell cycle corrected values**
+```{r de-genes-primary-data-cc-corrected}
+markers.primary.cc <- findMarkers(denoised.sce.cc, groups = denoised.sce.cc$sample, pval.type = "some", direction = "up", lfc = 1, assay.type = "scaled_logcounts")
+for(sample in unique(denoised.sce.cc$sample)) {
+  markers <- markers.primary.cc[[sample]]
+  markers.interesting <- markers[markers$p.value < .05, ]
+  # Print out the marker genes
+  print(markers.interesting)
+  # Get marker effects and plot on a heatmap
+  logFCs <- getMarkerEffects(markers.interesting)
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste(sample, " (cell cycle corrected) marker genes"), fontsize_row = 5)
+}
+
+```
+
+### 7.2 De Micheli et al.: DE genes between D5 MuSC segments
 ```{r de-genes-between-segments}
 # Subset the day 5 MuSCs and progenitors sample
 deMicheli.d5.muscs <- denoised.sce.deMicheli[, denoised.sce.deMicheli$cell_type == "d5_MuSCs_and_progenitors"]
@@ -1685,7 +1718,8 @@ best.seg10 <- seg10[seg10$p.value < 0.05, ]
 logFCs.seg10 <- getMarkerEffects(best.seg10)
 pheatmap(logFCs.seg10, breaks=seq(-5, 5, length.out=101), main = "Upregulated genes in segment 10 (p.value <0.05)", fontsize_row = 7)
 
-
+rownames(best.seg10)
+write.csv(best.seg10, file = "./../saved/segment_10_genes.csv")
 ```
 
 
