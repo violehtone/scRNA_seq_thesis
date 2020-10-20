@@ -37,6 +37,7 @@ library(scRNAseq)
 library(org.Mm.eg.db)
 library(tidyr)
 library(BBmisc)
+library(KEGGREST)
 ```
 
 
@@ -809,6 +810,42 @@ draw_trajectory_plot(space = space.primary,
                      progression_group = group_name.primary,
                      path = traj.primary$path,
                      contour = TRUE) + ggtitle("Primary dataset: All genes (ndim = 2)")
+
+# Plot expression of marker genes
+cdh15 <- expression.primary[, "Cdh15"]
+tnnt1 <- expression.primary[, "Tnnt1"]
+tnnt3 <- expression.primary[, "Tnnt3"]
+
+cdh15.plot <- draw_trajectory_plot(space = space.primary, 
+                                  progression_group = cdh15,
+                                  point_size = 0.5,
+                                  point_alpha = 0.5,
+                                  path = traj.primary$path,
+                                  contour = FALSE) + 
+  ggtitle("Primary data: Cdh15 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+tnnt1.plot <- draw_trajectory_plot(space = space.primary, 
+                                  progression_group = tnnt1,
+                                  point_size = 0.5,
+                                  point_alpha = 0.5,
+                                  path = traj.primary$path,
+                                  contour = FALSE) + 
+  ggtitle("Primary data: Tnnt1 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+tnnt3.plot <- draw_trajectory_plot(space = space.primary, 
+                                  progression_group = tnnt3,
+                                  point_size = 0.5,
+                                  point_alpha = 0.5,
+                                  path = traj.primary$path,
+                                  contour = FALSE) + 
+  ggtitle("Primary data: Tnnt3 gene") +
+  theme(plot.title = element_text(size = 10, face = "bold"))
+
+gridExtra::grid.arrange(cdh15.plot, tnnt1.plot, tnnt3.plot, ncol = 3)
+
+
 ```
 
 
@@ -1665,7 +1702,7 @@ for(sample in unique(denoised.sce$sample)) {
   print(markers.interesting)
   # Get marker effects and plot on a heatmap
   logFCs <- getMarkerEffects(markers.interesting)
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
+  pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
 }
 
 ```
@@ -1681,7 +1718,7 @@ for(sample in unique(denoised.sce.cc$sample)) {
   print(markers.interesting)
   # Get marker effects and plot on a heatmap
   logFCs <- getMarkerEffects(markers.interesting)
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste(sample, " (cell cycle corrected) marker genes"), fontsize_row = 5)
+  pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " (cell cycle corrected) marker genes"), fontsize_row = 5)
 }
 
 ```
@@ -1720,6 +1757,56 @@ pheatmap(logFCs.seg10, breaks=seq(-5, 5, length.out=101), main = "Upregulated ge
 
 rownames(best.seg10)
 write.csv(best.seg10, file = "./../saved/segment_10_genes.csv")
+```
+
+
+## 8. Differential metabolic pathways
+**Map genes to metabolic modules**
+```{r kegg-modules}
+# Fetch the modules for mouse
+mouse.org.id <- "T01002"
+mouse.modules <- keggLink(target = "module", source = mouse.org.id)
+
+# Create a dataframe for storing the gene names and associated modules
+df.mouse.modules <- data.frame(entry = names(mouse.modules),
+                               module = unname(mouse.modules),
+                               geneName = NA)
+
+# Loop over all 1282 rows and add the gene names to the dataframe
+for (i in 1:nrow(df.mouse.modules)) {
+  entry <- df.mouse.modules[i,]$entry
+  query <- keggGet(entry)
+  geneName <- query[[1]]$NAME
+  df.mouse.modules[i,]$geneName <- geneName
+}
+```
+
+
+
+**Add module information to primary data set's rowData**
+```{r add-module-information-to-primary-data}
+# Create a new sce object
+denoised.sce.m <- denoised.sce
+rowData(denoised.sce.m)$module <- NA
+
+# Add module information for each gene
+for(i in 1:nrow(df.mouse.modules)) {
+  print(i)
+  geneNames <- df.mouse.modules[i,]$geneName
+  geneNameList <- unlist(lapply(strsplit(geneNames, split = ",")[[1]], trimws))
+  if(sum(rownames(rowData(denoised.sce.m)) %in% geneNameList) > 0) {
+    rowData(denoised.sce.m)[rownames(rowData(denoised.sce.m)) %in% geneNameList, ]$module <- df.mouse.modules[i,]$module
+  }else{
+    print(paste(geneNameList, " not in genes of primary data"))
+  }
+}
+
+# Inspect the unique modules
+unique(rowData(denoised.sce.m)$module)
+length(unique(rowData(denoised.sce.m)$module)) - 1 
+
+# Save sce object
+saveRDS(denoised.sce.m, "./../saved/denoised_sce_m")
 ```
 
 
