@@ -587,6 +587,9 @@ space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", 
 set.seed(123)
 traj.dellOrso <- infer_trajectory(space.dellOrso)
 
+# Reverse trajectory
+traj.dellOrso <- reverse_trajectory(traj.dellOrso)
+
 # plot by cell type
 draw_trajectory_plot(space = space.dellOrso, 
                      progression_group = group_name.dellOrso,
@@ -804,6 +807,7 @@ set.seed(123)
 space.primary <- reduce_dimensionality(expression.primary, dist = "spearman", ndim = 2)
 set.seed(123)
 traj.primary <- infer_trajectory(space.primary)
+traj.primary <- reverse_trajectory(traj.primary)
 
 # Plot the trajectory
 draw_trajectory_plot(space = space.primary, 
@@ -1689,6 +1693,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli,
 dev.off()
 
 ```
+
+
 ## 7. Differential expressed genes
 
 ### 7.1 DE genes between samples in primary dataset
@@ -1722,6 +1728,7 @@ for(sample in unique(denoised.sce.cc$sample)) {
 }
 
 ```
+
 
 ### 7.2 De Micheli et al.: DE genes between D5 MuSC segments
 ```{r de-genes-between-segments}
@@ -1761,6 +1768,8 @@ write.csv(best.seg10, file = "./../saved/segment_10_genes.csv")
 
 
 ## 8. Differential metabolic pathways
+
+### 8.1 Mapping of KEGG metabolic modules and mouse genes
 **Map genes to metabolic modules**
 ```{r kegg-modules}
 # Fetch the modules for mouse
@@ -1779,19 +1788,26 @@ for (i in 1:nrow(df.mouse.modules)) {
   geneName <- query[[1]]$NAME
   df.mouse.modules[i,]$geneName <- geneName
 }
+
+#saveRDS(df.mouse.modules, file = "./../saved/df_mouse_modules")
+
 ```
 
 
+### 8.2 Primary data
+**Create a new sce with only metabolic genes**
+```{r add-module-information-to-primary-data, eval=FALSE}
+# Load mouse modules if it doesn't exist
+if(!exists("df_mouse_modules")) {
+  df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
+}
 
-**Add module information to primary data set's rowData**
-```{r add-module-information-to-primary-data}
 # Create a new sce object
 denoised.sce.m <- denoised.sce
 rowData(denoised.sce.m)$module <- NA
 
 # Add module information for each gene
 for(i in 1:nrow(df.mouse.modules)) {
-  print(i)
   geneNames <- df.mouse.modules[i,]$geneName
   geneNameList <- unlist(lapply(strsplit(geneNames, split = ",")[[1]], trimws))
   if(sum(rownames(rowData(denoised.sce.m)) %in% geneNameList) > 0) {
@@ -1805,8 +1821,420 @@ for(i in 1:nrow(df.mouse.modules)) {
 unique(rowData(denoised.sce.m)$module)
 length(unique(rowData(denoised.sce.m)$module)) - 1 
 
+# Inspect number of genes with module associated
+length(rownames(denoised.sce.m)[!is.na(rowData(denoised.sce.m)$module)])
+
+# Remove genes that don't have a metabolic module linked
+genes.to.use <- rownames(denoised.sce.m)[!is.na(rowData(denoised.sce.m)$module)]
+denoised.sce.m <- denoised.sce.m[rownames(denoised.sce.m) %in% genes.to.use, ]
+
 # Save sce object
 saveRDS(denoised.sce.m, "./../saved/denoised_sce_m")
+```
+
+
+**Shortcut: gimp and modules of primary data with metabolic genes**
+```{r shortcut-gimp-modules-primary-metabolic-genes}
+# Primary data with only metabolic genes
+if(!exists("denoised.sce.m")){denoised.sce.m <- readRDS("./../saved/denoised_sce_m")}
+gimp.primary.m <- readRDS("./../saved/gimp_primary_m")
+modules.primary.m <- readRDS("./../saved/modules_primary_m")
+if(!exists("expression.primary.m")) {expression.primary.m <- readRDS("./../saved/expression_primary_m")}
+if(!exists("traj.primary")) {traj.primary <- readRDS("./../saved/traj_primary")}
+if(!exists("group_name.primary.m")) {group_name.primary.m <- as.factor(denoised.sce.m$sample)}
+
+
+gimp.primary.m$qvalue <- p.adjust(p = gimp.primary.m$pvalue, method = "BH")
+gene_sel.primary.m <- gimp.primary.m$gene[gimp.primary.m$qvalue < .05]
+expr_sel.primary.m <- scale_quantile(expression.primary.m[, gene_sel.primary.m])
+```
+
+
+**Gene importances and modules with metabolic genes**
+```{r gimp-modules-primary-metabolic-genes, eval=FALSE}
+# Read trajectory from a file (if not defined)
+if(!exists("traj.primary")) {
+  traj.primary <- readRDS("./../saved/traj_primary")
+}
+
+# Create expression and sample objects
+expression.primary.m <- as.matrix(t(logcounts(denoised.sce.m)))
+group_name.primary.m <- as.factor(denoised.sce.m$sample)
+
+# Gene importances
+gimp.primary.m <- gene_importances(x = expression.primary.m,
+                                           time = traj.primary$time,
+                                           num_permutations = 10,
+                                           num_threads = 8)
+
+gimp.primary.m$qvalue <- p.adjust(p = gimp.primary.m$pvalue, method = "BH")
+gene_sel.primary.m <- gimp.primary.m$gene[gimp.primary.m$qvalue < .05]
+expr_sel.primary.m <- scale_quantile(expression.primary.m[, gene_sel.primary.m])
+
+#saveRDS(gimp.primary.m, file = "./../saved/gimp_primary_m")
+
+# Extract modules
+modules.primary.m <- extract_modules(expr_sel.primary.m,
+                                     time = traj.primary$time,
+                                     verbose = FALSE)
+#saveRDS(modules.primary.m, "./../saved/modules_primary_m")
+```
+
+
+**Visualization of the gimp & modules plots**
+```{r primary-data-gimp-modules-metabolic-genes, eval=FALSE}
+# Get rowdata (incl. KEGG modules for each gene) for the metabolic genes
+rowdata.primary <- rowData(denoised.sce.m)
+genes.f <- rownames(rowdata.primary) %in% colnames(expr_sel.primary.m)
+rowdata.primary.f <- rowdata.primary[genes.f, ]
+
+# Create an annotation row df
+ann_row <- data.frame(metabolic_module = factor(rowdata.primary.f$module))
+rownames(ann_row) <- rownames(rowdata.primary.f)
+
+# Order genes to same order as in modules object
+ann_row <- ann_row[modules.primary.m$feature, ,drop=FALSE]
+
+# Add metabolic module information to the modules object
+modules.primary.m$metabolic_module <- ann_row$metabolic_module
+
+# Arrange modules object by module and by metabolic_module
+modules.primary.m <- arrange(modules.primary.m,
+                             as.character(modules.primary.m$module),
+                             as.character(modules.primary.m$metabolic_module))
+
+# Create annotation row color palette (43 colors)
+ann_colors <- colorRampPalette(grDevices::rainbow(length(unique(ann_row$metabolic_module))))
+ann_colors <- ann_colors(length(unique(ann_row$metabolic_module)))
+names(ann_colors) <- unique(ann_row$metabolic_module)
+ann_colors <- list(metabolic_module = ann_colors)
+
+# Gimp
+pdf("./../saved/gimp_heatmap_primary_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.primary.m, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary.m,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5)
+dev.off()
+
+
+# Modules
+pdf("./../saved/modules_heatmap_primary_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.primary.m, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary.m,
+                        modules = modules.primary.m,
+                        show_labels_row = TRUE,
+                        annotation_row = ann_row,
+                        #annotation_colors = ann_colors,
+                        fontsize_row = 5,
+                        fontsize = 4)
+dev.off()
+
+# Save modules object as csv
+write.csv(as.data.frame(modules.primary.m), file = "./../saved/modules_primary_m.csv")
+```
+
+
+### 8.3 De Micheli dataset
+**Create a new sce with only metabolic genes**
+```{r add-module-information-to-deMicheli-data, eval=FALSE}
+# Load mouse modules if it doesn't exist
+if(!exists("df_mouse_modules")) {
+  df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
+}
+
+# Create a new sce object
+denoised.sce.deMicheli.m <- denoised.sce.deMicheli
+rowData(denoised.sce.deMicheli.m)$module <- NA
+
+# Add module information for each gene
+for(i in 1:nrow(df.mouse.modules)) {
+  geneNames <- df.mouse.modules[i,]$geneName
+  geneNameList <- unlist(lapply(strsplit(geneNames, split = ",")[[1]], trimws))
+  if(sum(rownames(denoised.sce.deMicheli.m) %in% geneNameList) > 0) {
+    rowData(denoised.sce.deMicheli.m)[rownames(rowData(denoised.sce.deMicheli.m)) %in% geneNameList, ]$module <- df.mouse.modules[i,]$module
+  }else{
+    print(paste(geneNameList, " not in genes of deMicheli data"))
+  }
+}
+
+# Remove genes that don't have a metabolic module linked
+metabolic.genes.deMicheli <- rownames(denoised.sce.deMicheli.m)[!is.na(rowData(denoised.sce.deMicheli.m)$module)]
+denoised.sce.deMicheli.m <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% metabolic.genes.deMicheli, ]
+
+# Save sce object
+saveRDS(denoised.sce.deMicheli.m, "./../saved/denoised_sce_deMicheli_m")
+```
+
+
+**Shortcut: gimp and modules of deMicheli data with metabolic genes**
+```{r shortcut-gimp-modules-deMicheli-metabolic-genes}
+# Read deMicheli data with metabolic genes (if not defined)
+if(!exists("denoised.sce.deMicheli.m")){denoised.sce.deMicheli.m <- readRDS("./../saved/denoised_sce_deMicheli_m")}
+
+# Read gimp & modules from a file
+gimp.deMicheli.m <- readRDS("./../saved/gimp_deMicheli_m")
+modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m")
+
+# Create expression and sample objects
+if(!exists("expression.deMicheli.m")) {expression.deMicheli.m <- as.matrix(t(logcounts(denoised.sce.deMicheli.m)))}
+if(!exists("group_name.deMicheli.m")) {group_name.deMicheli.m <- as.factor(denoised.sce.deMicheli.m$cell_type)}
+
+# Read trajectory from a file (if not defined)
+if(!exists("traj.deMicheli")) {traj.deMicheli <- readRDS("./../saved/traj_deMicheli")}
+
+gimp.deMicheli.m$qvalue <- p.adjust(p = gimp.deMicheli.m$pvalue, method = "BH")
+gene_sel.deMicheli.m <- gimp.deMicheli.m$gene[gimp.deMicheli.m$qvalue < .05]
+expr_sel.deMicheli.m <- scale_quantile(expression.deMicheli.m[, gene_sel.deMicheli.m])
+```
+
+
+**Gene importances and modules with metabolic genes**
+```{r gimp-modules-deMicheli-metabolic-genes, eval=FALSE}
+# Read trajectory from a file (if not defined)
+if(!exists("traj.deMicheli")) {
+  traj.deMicheli <- readRDS("./../saved/traj_deMicheli")
+}
+
+# Create expression and sample objects
+expression.deMicheli.m <- as.matrix(t(logcounts(denoised.sce.deMicheli.m)))
+group_name.deMicheli.m <- as.factor(denoised.sce.deMicheli.m$cell_type)
+
+# Gene importances
+gimp.deMicheli.m <- gene_importances(x = expression.deMicheli.m,
+                                     time = traj.deMicheli$time,
+                                     num_permutations = 10,
+                                     num_threads = 8)
+
+gimp.deMicheli.m$qvalue <- p.adjust(p = gimp.deMicheli.m$pvalue, method = "BH")
+gene_sel.deMicheli.m <- gimp.deMicheli.m$gene[gimp.deMicheli.m$qvalue < .05]
+expr_sel.deMicheli.m <- scale_quantile(expression.deMicheli.m[, gene_sel.deMicheli.m])
+
+#saveRDS(gimp.deMicheli.m, file = "./../saved/gimp_deMicheli_m")
+
+# Extract modules
+modules.deMicheli.m <- extract_modules(expr_sel.deMicheli.m,
+                                       time = traj.deMicheli$time,
+                                       verbose = FALSE)
+
+#saveRDS(modules.deMicheli.m, "./../saved/modules_deMicheli_m")
+```
+
+
+**Visualization of the gimp & modules plots**
+```{r deMicheli-gimp-modules-metabolic-genes, eval=FALSE}
+# Get rowdata (incl. KEGG modules for each gene) for the metabolic genes
+rowdata.deMicheli <- rowData(denoised.sce.deMicheli.m)
+genes.deMicheli.f <- rownames(rowdata.deMicheli) %in% colnames(expr_sel.deMicheli.m)
+rowdata.deMicheli.f <- rowdata.deMicheli[genes.deMicheli.f, ]
+
+# Create an annotation row df
+ann_row_deMicheli <- data.frame(metabolic_module = factor(rowdata.deMicheli.f$module))
+rownames(ann_row_deMicheli) <- rownames(rowdata.deMicheli.f)
+
+# Order genes to same order as in modules object
+ann_row_deMicheli <- ann_row_deMicheli[modules.deMicheli.m$feature, ,drop=FALSE]
+
+# Add metabolic module information to the modules object
+modules.deMicheli.m$metabolic_module <- ann_row_deMicheli$metabolic_module
+
+# Arrange modules object by module and by metabolic_module
+modules.deMicheli.m <- arrange(modules.deMicheli.m,
+                             as.character(modules.deMicheli.m$module),
+                             as.character(modules.deMicheli.m$metabolic_module))
+
+# Gimp
+pdf("./../saved/gimp_heatmap_deMicheli_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.deMicheli.m, 
+                        time = traj.deMicheli$time,
+                        progression_group = group_name.deMicheli.m,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+dev.off()
+
+# Modules
+pdf("./../saved/modules_heatmap_deMicheli_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.deMicheli.m, 
+                        time = traj.deMicheli$time,
+                        progression_group = group_name.deMicheli.m,
+                        modules = modules.deMicheli.m,
+                        annotation_row = ann_row_deMicheli,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+dev.off()
+
+# Save modules object as csv
+write.csv(as.data.frame(modules.deMicheli.m), file = "./../saved/modules_deMicheli_m.csv")
+
+```
+
+
+
+### 8.4 Dell'Orso dataset
+**Create a new sce with only metabolic genes**
+```{r add-module-information-to-dellOrso-data, eval=FALSE}
+# Load mouse modules if it doesn't exist
+if(!exists("df_mouse_modules")) {
+  df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
+}
+
+# Create a new sce object
+denoised.sce.dellOrso.m <- denoised.sce.dellOrso
+rowData(denoised.sce.dellOrso.m)$module <- NA
+
+# Add module information for each gene
+for(i in 1:nrow(df.mouse.modules)) {
+  geneNames <- df.mouse.modules[i,]$geneName
+  geneNameList <- unlist(lapply(strsplit(geneNames, split = ",")[[1]], trimws))
+  if(sum(rownames(denoised.sce.dellOrso.m) %in% geneNameList) > 0) {
+    rowData(denoised.sce.dellOrso.m)[rownames(rowData(denoised.sce.dellOrso.m)) %in% geneNameList, ]$module <- df.mouse.modules[i,]$module
+  }else{
+    print(paste(geneNameList, " not in genes of dellOrso data"))
+  }
+}
+
+# Remove genes that don't have a metabolic module linked
+metabolic.genes.dellOrso <- rownames(denoised.sce.dellOrso.m)[!is.na(rowData(denoised.sce.dellOrso.m)$module)]
+denoised.sce.dellOrso.m <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% metabolic.genes.dellOrso, ]
+
+# Save sce object
+saveRDS(denoised.sce.dellOrso.m, "./../saved/denoised_sce_dellOrso_m")
+```
+
+
+**Shortcut: gimp and modules of dellOrso data with metabolic genes**
+```{r shortcut-gimp-modules-dellOrso-metabolic-genes}
+# Read deMicheli data with metabolic genes (if not defined)
+if(!exists("denoised.sce.dellOrso.m")){denoised.sce.dellOrso.m <- readRDS("./../saved/denoised_sce_dellOrso_m")}
+
+# Read gimp & modules from a file
+gimp.dellOrso.m <- readRDS("./../saved/gimp_dellOrso_m")
+modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m")
+
+# Create expression and sample objects
+if(!exists("expression.dellOrso.m")) {expression.dellOrso.m <- as.matrix(t(logcounts(denoised.sce.dellOrso.m)))}
+if(!exists("group_name.dellOrso.m")) {group_name.dellOrso.m <- as.factor(denoised.sce.dellOrso.m$cell_type)}
+
+# Read trajectory from a file (if not defined)
+if(!exists("traj.deMicheli")) {traj.deMicheli <- readRDS("./../saved/traj_deMicheli")}
+
+gimp.dellOrso.m$qvalue <- p.adjust(p = gimp.dellOrso.m$pvalue, method = "BH")
+gene_sel.dellOrso.m <- gimp.dellOrso.m$gene[gimp.dellOrso.m$qvalue < .05]
+expr_sel.dellOrso.m <- scale_quantile(expression.dellOrso.m[, gene_sel.dellOrso.m])
+```
+
+
+**Gene importances and modules with metabolic genes**
+```{r gimp-modules-dellOrso-metabolic-genes, eval=FALSE}
+# Read trajectory from a file (if not defined)
+if(!exists("traj.dellOrso")) {
+  traj.dellOrso <- readRDS("./../saved/traj_dellOrso")
+}
+
+# Create expression and sample objects
+expression.dellOrso.m <- as.matrix(t(logcounts(denoised.sce.dellOrso.m)))
+group_name.dellOrso.m <- as.factor(denoised.sce.dellOrso.m$cell_type)
+
+# Gene importances
+gimp.dellOrso.m <- gene_importances(x = expression.dellOrso.m,
+                                    time = traj.dellOrso$time,
+                                    num_permutations = 10,
+                                    num_threads = 8)
+
+gimp.dellOrso.m$qvalue <- p.adjust(p = gimp.dellOrso.m$pvalue, method = "BH")
+gene_sel.dellOrso.m <- gimp.dellOrso.m$gene[gimp.dellOrso.m$qvalue < .05]
+expr_sel.dellOrso.m <- scale_quantile(expression.dellOrso.m[, gene_sel.dellOrso.m])
+
+#saveRDS(gimp.dellOrso.m, file = "./../saved/gimp_dellOrso_m")
+
+# Extract modules
+modules.dellOrso.m <- extract_modules(expr_sel.dellOrso.m,
+                                      time = traj.dellOrso$time,
+                                      verbose = FALSE)
+
+#saveRDS(modules.dellOrso.m, "./../saved/modules_dellOrso_m")
+```
+
+
+
+**Visualization of the gimp & modules plots**
+```{r dellOrso-gimp-modules-metabolic-genes, eval=FALSE}
+# Get rowdata (incl. KEGG modules for each gene) for the metabolic genes
+rowdata.dellOrso <- rowData(denoised.sce.dellOrso.m)
+genes.dellOrso.f <- rownames(rowdata.dellOrso) %in% colnames(expr_sel.dellOrso.m)
+rowdata.dellOrso.f <- rowdata.dellOrso[genes.dellOrso.f, ]
+
+# Create an annotation row df
+ann_row_dellOrso <- data.frame(metabolic_module = factor(rowdata.dellOrso.f$module))
+rownames(ann_row_dellOrso) <- rownames(rowdata.dellOrso.f)
+
+# Order genes to same order as in modules object
+ann_row_dellOrso <- ann_row_dellOrso[modules.dellOrso.m$feature, ,drop=FALSE]
+
+# Add metabolic module information to the modules object
+modules.dellOrso.m$metabolic_module <- ann_row_dellOrso$metabolic_module
+
+# Arrange modules object by module and by metabolic_module
+modules.dellOrso.m <- arrange(modules.dellOrso.m,
+                              as.character(modules.dellOrso.m$module),
+                              as.character(modules.dellOrso.m$metabolic_module))
+
+# Gimp
+pdf("./../saved/gimp_heatmap_dellOrso_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso.m, 
+                        time = traj.dellOrso$time,
+                        progression_group = group_name.dellOrso.m,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+dev.off()
+
+# Modules
+pdf("./../saved/modules_heatmap_dellOrso_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso.m, 
+                        time = reverse_trajectory(traj.dellOrso)$time,
+                        progression_group = group_name.dellOrso.m,
+                        modules = modules.dellOrso.m,
+                        annotation_row = ann_row_dellOrso,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+dev.off()
+
+# Save modules object as csv
+write.csv(as.data.frame(modules.dellOrso.m), file = "./../saved/modules_dellOrso_m.csv")
+
+```
+
+
+
+
+## 9. Highly expressed modules (quick & dirty)
+### 9.1 Primary data
+```{r DE-modules-primary-data}
+# Convert genes <-> modules
+denoised.sce.m.modules <- denoised.sce.m
+rownames(denoised.sce.m.modules) <- rowData(denoised.sce.m)$module
+
+# Find marker modules between samples
+marker.modules.primary <- findMarkers(denoised.sce.m.modules, groups = denoised.sce.m.modules$sample, pval.type = "any", direction = "up", lfc = 1)
+
+for(sample in unique(denoised.sce.m.modules$sample)) {
+  markers <- marker.modules.primary[[sample]]
+  markers.interesting <- markers[markers$p.value < .05, ]
+  # Print out the marker genes
+  print(markers.interesting)
+  # Get marker effects and plot on a heatmap
+  logFCs <- getMarkerEffects(markers.interesting)
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste(sample, " marker modules"), fontsize_row = 5)
+}
+
+
+
 ```
 
 
