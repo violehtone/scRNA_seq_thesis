@@ -2459,13 +2459,14 @@ p.dellOrso <- ggplot(df.modules.dellOrso, aes(x = Scorpius_module, y = frequency
   theme(legend.position="right") +
   geom_text(aes(label=ifelse(frequency>4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
 
+```
+**Save plots as pdf**
+```{r kegg-module-plots-as-pdf, eval=FALSE}
 pdf("./../saved/KEGG_modules_in_trajectories", width = 11, height = 5)
 p.primary
 p.deMicheli
 p.dellOrso
 dev.off()
-
-
 ```
 
 
