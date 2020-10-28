@@ -38,6 +38,11 @@ library(org.Mm.eg.db)
 library(tidyr)
 library(BBmisc)
 library(KEGGREST)
+library(RColorBrewer)
+library(ggpubr)
+library(grid)
+library(gridExtra)
+library(plyr)
 ```
 
 
@@ -181,18 +186,91 @@ p.force.cc <- plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "fo
 gridExtra::grid.arrange(p.force, p.force.cc, ncol = 2)
 
 # t-SNE plots
-p.tsne <- plotReducedDim(denoised.sce, colour_by = "sample", dimred = "TSNE") + ggtitle("Primary data: t-SNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-p.tsne.cc <- plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "TSNE_cc") + ggtitle("Primary data (cc corrected): t-SNE (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-gridExtra::grid.arrange(p.tsne, p.tsne.cc, ncol = 2)
+## Uncorrected
+p.tsne <- plotReducedDim(denoised.sce, 
+               colour_by = "sample",
+               text_by = "cluster",
+               dimred = "TSNE",
+               point_alpha = 0.4,
+               point_size = 1) +
+  ggtitle("t-SNE projection to visualize variation \nin single cell transcriptomes", subtitle = "t-SNE plot of primary data: Number of nearest neighbours (k): 180,\ncells coloured by sample groups and clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"), guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
 
-# UMAP plots by sample and by cluster
-plotReducedDim(denoised.sce, colour_by = "sample", dimred = "UMAP") + ggtitle("Primary data: UMAP (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "UMAP_cc") + ggtitle("Primary data (cc corrected): UMAP (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+## cc corrected
+p.tsne.cc <- plotReducedDim(denoised.sce.cc, 
+               colour_by = "sample",
+               text_by = "cluster.cc",
+               dimred = "TSNE_cc",
+               point_alpha = 0.4,
+               point_size = 1) +
+  ggtitle("t-SNE projection to visualize variation \nin single cell transcriptomes after cell\ncycle correction", subtitle = "t-SNE plot of cell cycle corrected primary data: Number of\nnearest neighbours (k): 180, cells coloured by sample groups\nand clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"), guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
 
+p.tsne
+p.tsne.cc
+
+# UMAP plots by sample
+## Uncorrected
+p.umap <- plotReducedDim(denoised.sce, 
+               colour_by = "sample",
+               text_by = "cluster",
+               dimred = "UMAP",
+               point_alpha = 0.4,
+               point_size = 1) +
+  ggtitle("UMAP projection to visualize variation \nin single cell transcriptomes", subtitle = "UMAP plot of primary data: Number of nearest neighbours (k): 180,\ncells coloured by sample groups and clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"), guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+
+
+## CC-corrected
+p.umap.cc <- plotReducedDim(denoised.sce.cc, 
+               colour_by = "sample",
+               text_by = "cluster.cc",
+               dimred = "UMAP_cc",
+               point_alpha = 0.4,
+               point_size = 1) +
+  ggtitle("UMAP projection to visualize variation \nin single cell transcriptomes after cell\ncycle correction", subtitle = "UMAP plot of cell cycle corrected primary data: Number of\nnearest neighbours (k): 180, cells coloured by sample groups\nand clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"), guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+p.umap
+p.umap.cc
+
+# Umap plots by cluster
 plotReducedDim(denoised.sce, colour_by = "cluster", dimred = "UMAP") + ggtitle("Primary data: UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 plotReducedDim(denoised.sce.cc, colour_by = "cluster.cc", dimred = "UMAP_cc") + ggtitle("Primary data (cc corrected): UMAP with clusters (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
 
 ```
+**Save UMAP and t-SNE plots in a pdf file**
+```{r umap-tsne-into-pdf, eval=FALSE}
+pdf("./../saved/primary_data_umap_and_tsne_plots.pdf", width = 7, height = 7)
+p.tsne
+p.tsne.cc
+p.umap
+p.umap.cc
+dev.off()
+```
+
+
 
 ### 2.2 Clustering comparison
 **Calculate graph modularity and ARI of clusterings**
@@ -428,7 +506,14 @@ traj.deMicheli <- reverse_trajectory(traj.deMicheli)
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = group_name.deMicheli,
                      path = traj.deMicheli$path,
-                     contour = TRUE) + ggtitle("De Micheli et al. dataset: All genes (ndim = 2) - Cell types")
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "De Micheli et al. dataset: All genes (ndim = 2) - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
 
 # Plot trajectory by cc phases
 draw_trajectory_plot(space = space.deMicheli, 
@@ -594,7 +679,14 @@ traj.dellOrso <- reverse_trajectory(traj.dellOrso)
 draw_trajectory_plot(space = space.dellOrso, 
                      progression_group = group_name.dellOrso,
                      path = traj.dellOrso$path,
-                     contour = TRUE) + ggtitle("Dell'Orso et al. dataset: All genes, ndim = 2 - Cell types")
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset: All genes, ndim = 2 - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title = element_text(size = 16))
+
 
 # Plot by cell cycle phase
 draw_trajectory_plot(space = space.dellOrso, 
@@ -868,11 +960,80 @@ space.primary.cc <- reduce_dimensionality(expression.primary.cc, dist = "spearma
 set.seed(123)
 traj.primary.cc <- infer_trajectory(space.primary.cc)
 
+# Custom colors
+colpalette.primary.cc <- colpal <- RColorBrewer::brewer.pal(5, "Set1")
+names(colpalette.primary.cc) <- c("cap50", "cap50_r16h", "cap50_r4h", "cap50_r8h", "control")
+colpalette.primary.cc["cap50_r8h"] <- "#FFFF33" # set purple -> yellow
+
+
 # Plot the trajectory
 draw_trajectory_plot(space = space.primary.cc, 
                      progression_group = group_name.primary.cc,
+                     progression_group_palette = colpalette.primary.cc,
                      path = traj.primary.cc$path,
-                     contour = TRUE) + ggtitle("Primary dataset (cc corrected): HVGs (ndim = 2)")
+                     point_size = 1,
+                     point_alpha = 0.4,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 16))
+
+# Marker genes
+cdh15 <- expression.primary.cc[, "Cdh15"]
+tnnt1 <- expression.primary.cc[, "Tnnt1"]
+tnnt2 <- expression.primary.cc[, "Tnnt2"]
+tnnt3 <- expression.primary.cc[, "Tnnt3"]
+pax7 <- expression.primary.cc[, "Pax7"]
+hes1 <- expression.primary.cc[, "Hes1"]
+myf5 <- expression.primary.cc[, "Myf5"]
+myod <- expression.primary.cc[, "Myod1"]
+ccne1 <- expression.primary.cc[, "Ccne1"]
+eifs <- expression.primary.cc[, "Eif1"]
+ccnd1 <- expression.primary.cc[, "Ccnd1"]
+ccnd2 <- expression.primary.cc[, "Ccnd2"]
+myog <- expression.primary.cc[, "Myog"]
+cdkn1a <- expression.primary.cc[, "Cdkn1a"]
+gas1 <- expression.primary.cc[, "Gas1"]
+
+prog.groups <- list(cdh15 = cdh15,
+                    tnnt1 = tnnt1,
+                    tnnt2 = tnnt2,
+                    tnnt3 = tnnt3,
+                    pax7 = pax7,
+                    hes1 = hes1,
+                    myf5 = myf5,
+                    myod = myod,
+                    ccne1 = ccne1,
+                    eifs = eifs,
+                    ccnd1 = ccnd1,
+                    ccnd2 = ccnd2,
+                    myog = myog,
+                    cdkn1a = cdkn1a,
+                    gas1 = gas1)
+
+marker.gene.plots <- list()
+for(gene in names(prog.groups)) {
+  p <- draw_trajectory_plot(space = space.primary.cc, 
+                            progression_group = prog.groups[[gene]],
+                            progression_group_palette = colpalette.primary.cc.markers,
+                            point_size = 0.5,
+                            point_alpha = 0.5,
+                            path = traj.primary.cc$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+# Plot the marker genes
+gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
+                        marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
+                        marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
+                        ncol = 5)
+
 ``` 
 
 
@@ -1284,18 +1445,35 @@ tab.deMicheli
 tab.dellOrso
 
 ## 'melt' tables
-tab.deMicheli.melt <- melt(t(tab.deMicheli))
-colnames(tab.deMicheli.melt) <- c("cell_type", "sample", "count")
-tab.dellOrso.melt <- melt(t(tab.dellOrso))
-colnames(tab.dellOrso.melt) <- c("cell_type", "sample", "count")
+df.deMicheli <- melt(t(tab.deMicheli))
+colnames(df.deMicheli) <- c("cell_type", "sample", "count")
+df.dellOrso <- melt(t(tab.dellOrso))
+colnames(df.dellOrso) <- c("cell_type", "sample", "count")
 
-p.deMicheli <- ggplot(tab.deMicheli.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
-  geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data - De Micheli cell types")
+# Add missing cell types
+df.deMicheli.missing.rows <- data.frame("cell_type" = c(rep("d0_MuSCs_and_progenitors", 5), rep("d0_mature_skeletal_muscle", 5), rep("d7_mature_skeletal_muscle", 5)),
+                                        "sample" = rep(c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"), 3),
+                                        "count" = rep(0, 15))
+df.dellOrso.missing.rows <- data.frame("cell_type" = rep("homeostatic_MuSCs", 5),
+                                       "sample" = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"),
+                                       "count" = rep(0, 5))
 
-p.dellOrso <- ggplot(tab.dellOrso.melt, mapping = aes(x = sample, y = count, fill = cell_type)) + 
-  geom_bar(position = "dodge", stat = "identity") + ggtitle("Primary data - Dell'Orso cell types")
+df.deMicheli <- rbind(df.deMicheli, df.deMicheli.missing.rows)
+df.dellOrso <- rbind(df.dellOrso, df.dellOrso.missing.rows)
 
-gridExtra::grid.arrange(p.deMicheli, p.dellOrso, ncol = 2)
+# De Micheli balloon plot
+balloon.deMicheli <- ggballoonplot(df.deMicheli, x = "sample", y = "cell_type", size = "count",
+              fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("De Micheli et al. reference dataset")
+
+# Dell Orso balloon plot
+balloon.dellOrso <- ggballoonplot(df.dellOrso, x = "sample", y = "cell_type", size = "count",
+              fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("Dell'Orso et al. reference dataset")
+
+gridExtra::grid.arrange(balloon.deMicheli, balloon.dellOrso, ncol = 2,      top = textGrob("Mapping of primary data cells to reference datasest shown in a balloon plot",gp=gpar(fontsize=20)))
 ```
 
 
@@ -1664,14 +1842,22 @@ other.cells <- !primary.data.cells
 denoised.sce.deMicheli$primary.cells[primary.data.cells] <- "primary_data_cells"
 denoised.sce.deMicheli$primary.cells[other.cells] <- "other_cell_types"
 
-colpalette <- c('primary_data_cells' ="#2CDA4E",
-                'other_cell_types' = "#070707")
+colpalette <- c('primary_data_cells' ="#009900",
+                'other_cell_types' = "#404040")
 
 draw_trajectory_plot(space = space.deMicheli,
                      progression_group = as.factor(denoised.sce.deMicheli$primary.cells),
                      progression_group_palette = colpalette,
+                     point_size = 2,
+                     point_alpha = 0.5,
                      path = traj.deMicheli$path,
-                     contour = FALSE) + ggtitle("De Micheli et al. trajectory: Primary data cells shown on trajectory")
+                     contour = FALSE) +
+  ggtitle("Trajectory inference", subtitle = "De Micheli et al. trajectory: Primary data cells shown on trajectory") +
+    theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 16))
 ```
 
 
@@ -1703,7 +1889,7 @@ dev.off()
 markers.primary <- findMarkers(denoised.sce, groups = denoised.sce$sample, pval.type = "some", direction = "up", lfc = 1)
 for(sample in unique(denoised.sce$sample)) {
   markers <- markers.primary[[sample]]
-  markers.interesting <- markers[markers$p.value < .05, ]
+  markers.interesting <- markers[markers$p.value <= .05, ]
   # Print out the marker genes
   print(markers.interesting)
   # Get marker effects and plot on a heatmap
@@ -1716,7 +1902,11 @@ for(sample in unique(denoised.sce$sample)) {
 
 **cell cycle corrected values**
 ```{r de-genes-primary-data-cc-corrected}
-markers.primary.cc <- findMarkers(denoised.sce.cc, groups = denoised.sce.cc$sample, pval.type = "some", direction = "up", lfc = 1, assay.type = "scaled_logcounts")
+# All samples
+markers.primary.cc <- findMarkers(denoised.sce.cc, groups = denoised.sce.cc$sample, assay.type = "scaled_logcounts", lfc = 1, direction = "up", pval.type = "some")
+
+heatmap.plots = list()
+
 for(sample in unique(denoised.sce.cc$sample)) {
   markers <- markers.primary.cc[[sample]]
   markers.interesting <- markers[markers$p.value < .05, ]
@@ -1724,9 +1914,12 @@ for(sample in unique(denoised.sce.cc$sample)) {
   print(markers.interesting)
   # Get marker effects and plot on a heatmap
   logFCs <- getMarkerEffects(markers.interesting)
-  pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " (cell cycle corrected) marker genes"), fontsize_row = 5)
+  p <- pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), angle_col = 90, main = paste(sample, "\n(cell cycle corrected)\nmarker genes"), fontsize_row = 5, fontsize = 12)
+  heatmap.plots[[sample]] <- p[[4]]
 }
 
+gridExtra::grid.arrange(heatmap.plots$control, heatmap.plots$cap50, ncol = 2)
+gridExtra::grid.arrange(heatmap.plots$control, heatmap.plots$cap50, heatmap.plots$cap50_r4h, heatmap.plots$cap50_r8h, heatmap.plots$cap50_r16h, ncol = 3)
 ```
 
 
@@ -1903,6 +2096,9 @@ modules.primary.m <- arrange(modules.primary.m,
                              as.character(modules.primary.m$module),
                              as.character(modules.primary.m$metabolic_module))
 
+# save modules object
+saveRDS(modules.primary.m, file = "./../saved/modules_primary_m_kegg_modules")
+
 # Create annotation row color palette (43 colors)
 ann_colors <- colorRampPalette(grDevices::rainbow(length(unique(ann_row$metabolic_module))))
 ann_colors <- ann_colors(length(unique(ann_row$metabolic_module)))
@@ -2045,6 +2241,9 @@ modules.deMicheli.m <- arrange(modules.deMicheli.m,
                              as.character(modules.deMicheli.m$module),
                              as.character(modules.deMicheli.m$metabolic_module))
 
+# save modules object
+saveRDS(modules.deMicheli.m, file = "./../saved/modules_deMicheli_m_kegg_modules")
+
 # Gimp
 pdf("./../saved/gimp_heatmap_deMicheli_metabolic_genes.pdf")
 draw_trajectory_heatmap(expr_sel.deMicheli.m, 
@@ -2183,6 +2382,9 @@ modules.dellOrso.m <- arrange(modules.dellOrso.m,
                               as.character(modules.dellOrso.m$module),
                               as.character(modules.dellOrso.m$metabolic_module))
 
+# save modules object
+saveRDS(modules.dellOrso.m, file = "./../saved/modules_dellOrso_m_kegg_modules")
+
 # Gimp
 pdf("./../saved/gimp_heatmap_dellOrso_metabolic_genes.pdf")
 draw_trajectory_heatmap(expr_sel.dellOrso.m, 
@@ -2210,6 +2412,61 @@ write.csv(as.data.frame(modules.dellOrso.m), file = "./../saved/modules_dellOrso
 
 ```
 
+### 8.6 Inspection of metabolic modules
+```{r}
+# Load modules objects with kegg modules
+modules.primary.m  <- readRDS("./../saved/modules_primary_m_kegg_modules")
+modules.deMicheli.m  <- readRDS("./../saved/modules_deMicheli_m_kegg_modules")
+modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m_kegg_modules")
+
+# Create count tables
+tab.modules.primary <- table(modules.primary.m$metabolic_module, modules.primary.m$module)
+tab.modules.deMicheli <- table(modules.deMicheli.m$metabolic_module, modules.deMicheli.m$module)
+tab.modules.dellOrso <- table(modules.dellOrso.m$metabolic_module, modules.dellOrso.m$module)
+
+# Melt tables
+df.modules.primary <- melt(tab.modules.primary)
+colnames(df.modules.primary) <- c("KEGG_module", "Scorpius_module", "frequency")
+df.modules.primary$KEGG_module <- unfactor(df.modules.primary$KEGG_module)
+
+df.modules.deMicheli <- melt(tab.modules.deMicheli)
+colnames(df.modules.deMicheli) <- c("KEGG_module", "Scorpius_module", "frequency")
+df.modules.deMicheli$KEGG_module <- unfactor(df.modules.deMicheli$KEGG_module)
+
+df.modules.dellOrso <- melt(tab.modules.dellOrso)
+colnames(df.modules.dellOrso) <- c("KEGG_module", "Scorpius_module", "frequency")
+df.modules.dellOrso$KEGG_module <- unfactor(df.modules.dellOrso$KEGG_module)
+
+# Make plots
+p.primary <- ggplot(df.modules.primary, aes(x = Scorpius_module, y = frequency)) +
+  geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG modules in different trajectory modules",
+          subtitle = "Primary dataset") +
+  theme(legend.position="right") +
+  geom_text(aes(label=ifelse(frequency>4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  
+p.deMicheli <- ggplot(df.modules.deMicheli, aes(x = Scorpius_module, y = frequency)) +
+  geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG modules in different trajectory modules",
+          subtitle = "De Micheli et al. reference dataset") +
+  theme(legend.position="right") +
+  geom_text(aes(label=ifelse(frequency>4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  
+p.dellOrso <- ggplot(df.modules.dellOrso, aes(x = Scorpius_module, y = frequency)) +
+  geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG modules in different trajectory modules",
+          subtitle = "Dell'Orso et al. referene dataset") +
+  theme(legend.position="right") +
+  geom_text(aes(label=ifelse(frequency>4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+
+pdf("./../saved/KEGG_modules_in_trajectories", width = 11, height = 5)
+p.primary
+p.deMicheli
+p.dellOrso
+dev.off()
+
+
+```
 
 
 
@@ -2235,6 +2492,38 @@ for(sample in unique(denoised.sce.m.modules$sample)) {
 
 
 
+```
+
+## 10. Ridgeline plots to inspect how the distribution of marker genes differs in the samples of primary and reference datasets
+```{r ridge-plots}
+genes.primary = c("Pax7", "Myf5", "Myod1", "Cdh15", "Tnnt3", "Hes1", "Hes6", "Notch1", "Id1", "Id2", "Id3", "Wnt7b")
+genes.deMicheli = c("Pax7", "Myf5", "Myod1", "Myog", "Cdh15", "Tnnt3", "Hes1", "Heyl", "Hes6", "Notch1", "Notch2", "Notch3", "Id1", "Id2", "Id3", "Wnt2", "Wnt10b")
+
+# De Micheli data
+sce.deMicheli.f <- denoised.sce.deMicheli[, denoised.sce.deMicheli$cell_type %in% c("d0_MuSCs_and_progenitors", "d5_MuSCs_and_progenitors")]
+
+sce.deMicheli.f$cell_type <- revalue(sce.deMicheli.f$cell_type, c("d0_MuSCs_and_progenitors" = "Day 0", "d5_MuSCs_and_progenitors" = "Day 5"))
+seurat.deMicheli <- as.Seurat(sce.deMicheli.f)
+Idents(seurat.deMicheli) <- "cell_type"
+ridge.deMicheli <- RidgePlot(seurat.deMicheli, features = genes.deMicheli, ncol = 2)
+ridge.deMicheli
+
+# Primary data
+seurat.primary <- as.Seurat(denoised.sce)
+Idents(seurat.primary) <- "sample"
+ridge.primary <- RidgePlot(seurat.primary, features = genes.primary, ncol = 2)
+ridge.primary
+
+```
+**Save ridge line plots as pdf**
+```{r ridge-plots-pdf, eval=FALSE}
+pdf("./../saved/ridge_plot_primary.pdf", width = 10, height = 25)
+ridge.primary
+dev.off()
+
+pdf("./../saved/ridge_plot_deMicheli.pdf", width = 10, height = 25)
+ridge.deMicheli
+dev.off()
 ```
 
 

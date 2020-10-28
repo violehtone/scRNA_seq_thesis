@@ -34,7 +34,6 @@ The data sets are available in NCBI GEO:
 library(scater)
 library(scran)
 library(SingleCellExperiment)
-library(DropletUtils)
 library(Seurat)
 library(dplyr)
 library(ggplot2)
