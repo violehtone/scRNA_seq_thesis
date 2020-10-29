@@ -43,6 +43,7 @@ library(ggpubr)
 library(grid)
 library(gridExtra)
 library(plyr)
+library(stringr)
 ```
 
 
@@ -1995,30 +1996,28 @@ if(!exists("df_mouse_modules")) {
   df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
 }
 
-# Create a new sce object
+# Create a new sce object and initialize the module variable
 denoised.sce.m <- denoised.sce
-rowData(denoised.sce.m)$module <- NA
+rowData(denoised.sce.m)$module <- ""
 
-# Add module information for each gene
+# Add module information to the rowData of sce object
 for(i in 1:nrow(df.mouse.modules)) {
-  geneNames <- df.mouse.modules[i,]$geneName
-  geneNameList <- unlist(lapply(strsplit(geneNames, split = ",")[[1]], trimws))
-  if(sum(rownames(rowData(denoised.sce.m)) %in% geneNameList) > 0) {
-    rowData(denoised.sce.m)[rownames(rowData(denoised.sce.m)) %in% geneNameList, ]$module <- df.mouse.modules[i,]$module
-  }else{
-    print(paste(geneNameList, " not in genes of primary data"))
-  }
+  # Split the gene names into a list
+  genes <- unlist(lapply(strsplit(df.mouse.modules[i,]$geneName, split = ",")[[1]], trimws))
+  useful_genes <- genes[genes %in% rownames(denoised.sce.m)]
+  for(gene in useful_genes) {
+    if(rowData(denoised.sce.m)[gene, ]$module == "") {
+      # If no module found, set a new module
+      rowData(denoised.sce.m)[gene, ]$module <- df.mouse.modules[i,]$module
+    }else{
+      # If module information already available for the gene, extend the list
+      existing_module <- rowData(denoised.sce.m)[gene, ]$module
+      rowData(denoised.sce.m)[gene, ]$module <- paste(existing_module, df.mouse.modules[i,]$module, sep = ", ")
+      }
+    }
 }
 
-# Inspect the unique modules
-unique(rowData(denoised.sce.m)$module)
-length(unique(rowData(denoised.sce.m)$module)) - 1 
-
-# Inspect number of genes with module associated
-length(rownames(denoised.sce.m)[!is.na(rowData(denoised.sce.m)$module)])
-
-# Remove genes that don't have a metabolic module linked
-genes.to.use <- rownames(denoised.sce.m)[!is.na(rowData(denoised.sce.m)$module)]
+genes.to.use <- rownames(denoised.sce.m)[rowData(denoised.sce.m)$module != ""]
 denoised.sce.m <- denoised.sce.m[rownames(denoised.sce.m) %in% genes.to.use, ]
 
 # Save sce object
@@ -2141,24 +2140,29 @@ if(!exists("df_mouse_modules")) {
   df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
 }
 
-# Create a new sce object
-denoised.sce.deMicheli.m <- denoised.sce.deMicheli
-rowData(denoised.sce.deMicheli.m)$module <- NA
+# Create a new sce object and initialize the module variable
+denoised.sce.deMicheli.m <- denoised.sce
+rowData(denoised.sce.deMicheli.m)$module <- ""
 
-# Add module information for each gene
+# Add module information to the rowData of sce object
 for(i in 1:nrow(df.mouse.modules)) {
-  geneNames <- df.mouse.modules[i,]$geneName
-  geneNameList <- unlist(lapply(strsplit(geneNames, split = ",")[[1]], trimws))
-  if(sum(rownames(denoised.sce.deMicheli.m) %in% geneNameList) > 0) {
-    rowData(denoised.sce.deMicheli.m)[rownames(rowData(denoised.sce.deMicheli.m)) %in% geneNameList, ]$module <- df.mouse.modules[i,]$module
-  }else{
-    print(paste(geneNameList, " not in genes of deMicheli data"))
-  }
+  # Split the gene names into a list
+  genes <- unlist(lapply(strsplit(df.mouse.modules[i,]$geneName, split = ",")[[1]], trimws))
+  useful_genes <- genes[genes %in% rownames(denoised.sce.deMicheli.m)]
+  for(gene in useful_genes) {
+    if(rowData(denoised.sce.deMicheli.m)[gene, ]$module == "") {
+      # If no module found, set a new module
+      rowData(denoised.sce.deMicheli.m)[gene, ]$module <- df.mouse.modules[i,]$module
+    }else{
+      # If module information already available for the gene, extend the list
+      existing_module <- rowData(denoised.sce.deMicheli.m)[gene, ]$module
+      rowData(denoised.sce.deMicheli.m)[gene, ]$module <- paste(existing_module, df.mouse.modules[i,]$module, sep = ", ")
+      }
+    }
 }
 
-# Remove genes that don't have a metabolic module linked
-metabolic.genes.deMicheli <- rownames(denoised.sce.deMicheli.m)[!is.na(rowData(denoised.sce.deMicheli.m)$module)]
-denoised.sce.deMicheli.m <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% metabolic.genes.deMicheli, ]
+genes.to.use <- rownames(denoised.sce.deMicheli.m)[rowData(denoised.sce.deMicheli.m)$module != ""]
+denoised.sce.deMicheli.m <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% genes.to.use, ]
 
 # Save sce object
 saveRDS(denoised.sce.deMicheli.m, "./../saved/denoised_sce_deMicheli_m")
@@ -2281,24 +2285,29 @@ if(!exists("df_mouse_modules")) {
   df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
 }
 
-# Create a new sce object
-denoised.sce.dellOrso.m <- denoised.sce.dellOrso
-rowData(denoised.sce.dellOrso.m)$module <- NA
+# Create a new sce object and initialize the module variable
+denoised.sce.dellOrso.m <- denoised.sce
+rowData(denoised.sce.dellOrso.m)$module <- ""
 
-# Add module information for each gene
+# Add module information to the rowData of sce object
 for(i in 1:nrow(df.mouse.modules)) {
-  geneNames <- df.mouse.modules[i,]$geneName
-  geneNameList <- unlist(lapply(strsplit(geneNames, split = ",")[[1]], trimws))
-  if(sum(rownames(denoised.sce.dellOrso.m) %in% geneNameList) > 0) {
-    rowData(denoised.sce.dellOrso.m)[rownames(rowData(denoised.sce.dellOrso.m)) %in% geneNameList, ]$module <- df.mouse.modules[i,]$module
-  }else{
-    print(paste(geneNameList, " not in genes of dellOrso data"))
-  }
+  # Split the gene names into a list
+  genes <- unlist(lapply(strsplit(df.mouse.modules[i,]$geneName, split = ",")[[1]], trimws))
+  useful_genes <- genes[genes %in% rownames(denoised.sce.dellOrso.m)]
+  for(gene in useful_genes) {
+    if(rowData(denoised.sce.dellOrso.m)[gene, ]$module == "") {
+      # If no module found, set a new module
+      rowData(denoised.sce.dellOrso.m)[gene, ]$module <- df.mouse.modules[i,]$module
+    }else{
+      # If module information already available for the gene, extend the list
+      existing_module <- rowData(denoised.sce.dellOrso.m)[gene, ]$module
+      rowData(denoised.sce.dellOrso.m)[gene, ]$module <- paste(existing_module, df.mouse.modules[i,]$module, sep = ", ")
+      }
+    }
 }
 
-# Remove genes that don't have a metabolic module linked
-metabolic.genes.dellOrso <- rownames(denoised.sce.dellOrso.m)[!is.na(rowData(denoised.sce.dellOrso.m)$module)]
-denoised.sce.dellOrso.m <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% metabolic.genes.dellOrso, ]
+genes.to.use <- rownames(denoised.sce.dellOrso.m)[rowData(denoised.sce.dellOrso.m)$module != ""]
+denoised.sce.dellOrso.m <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% genes.to.use, ]
 
 # Save sce object
 saveRDS(denoised.sce.dellOrso.m, "./../saved/denoised_sce_dellOrso_m")
@@ -2437,27 +2446,32 @@ df.modules.dellOrso <- melt(tab.modules.dellOrso)
 colnames(df.modules.dellOrso) <- c("KEGG_module", "Scorpius_module", "frequency")
 df.modules.dellOrso$KEGG_module <- unfactor(df.modules.dellOrso$KEGG_module)
 
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.modules.primary.separated <- distinct(as.data.frame(separate_rows(df.modules.primary, KEGG_module, sep = ", ")))
+df.modules.deMicheli.separated <- distinct(as.data.frame(separate_rows(df.modules.deMicheli, KEGG_module, sep = ", ")))
+df.modules.dellOrso.separated <- distinct(as.data.frame(separate_rows(df.modules.dellOrso, KEGG_module, sep = ", ")))
+
 # Make plots
-p.primary <- ggplot(df.modules.primary, aes(x = Scorpius_module, y = frequency)) +
+p.primary <- ggplot(df.modules.primary.separated, aes(x = Scorpius_module, y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "Primary dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
-p.deMicheli <- ggplot(df.modules.deMicheli, aes(x = Scorpius_module, y = frequency)) +
+p.deMicheli <- ggplot(df.modules.deMicheli.separated, aes(x = Scorpius_module, y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "De Micheli et al. reference dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
-p.dellOrso <- ggplot(df.modules.dellOrso, aes(x = Scorpius_module, y = frequency)) +
+p.dellOrso <- ggplot(df.modules.dellOrso.separated, aes(x = Scorpius_module, y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "Dell'Orso et al. referene dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
 
 ```
 **Save plots as pdf**
@@ -2468,7 +2482,6 @@ p.deMicheli
 p.dellOrso
 dev.off()
 ```
-
 
 
 ## 9. Highly expressed modules (quick & dirty)
