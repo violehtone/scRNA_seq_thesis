@@ -44,6 +44,7 @@ library(grid)
 library(gridExtra)
 library(plyr)
 library(stringr)
+library(ggrepel)
 ```
 
 
@@ -2491,21 +2492,21 @@ p.primary <- ggplot(df.modules.primary.separated, aes(x = as.factor(Scorpius_mod
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "Primary dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
 p.deMicheli <- ggplot(df.modules.deMicheli.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "De Micheli et al. reference dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
 p.dellOrso <- ggplot(df.modules.dellOrso.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "Dell'Orso et al. referene dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
 
 ```
 
@@ -2636,21 +2637,21 @@ p.primary <- ggplot(df.pathways.primary.separated, aes(x = as.factor(Scorpius_mo
   ggtitle("Frequency of KEGG pathways in different trajectory modules",
           subtitle = "Primary dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>=4, KEGG_pathway, "")), position = position_jitter(width=1, height = 1))
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_pathway, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
 p.deMicheli <- ggplot(df.pathways.deMicheli.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
   geom_bar(aes(fill = KEGG_pathway), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG pathways in different trajectory modules",
           subtitle = "De Micheli et al. reference dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>=4, KEGG_pathway, "")), position = position_jitter(width=1, height = 1))
+  geom_label_repel(aes(label=ifelse(frequency>=10, KEGG_pathway, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
 p.dellOrso <- ggplot(df.pathways.dellOrso.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
-  geom_bar(aes(fill = KEGG_pathway), stat = "identity", position = position_dodge(1)) +
+  geom_bar(aes(fill = as.factor(KEGG_pathway)), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG pathways in different trajectory modules",
           subtitle = "Dell'Orso et al. referene dataset") +
   theme(legend.position="right") +
-  geom_text(aes(label=ifelse(frequency>=4, KEGG_pathway, "")), position = position_jitter(width=1, height = 1))
+  geom_label_repel(aes(label=ifelse(frequency>=6, KEGG_pathway, "")), position = position_dodge(width=0.9), vjust=-0.5)
 
 ```
 
