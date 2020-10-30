@@ -269,6 +269,11 @@ p.tsne.cc
 p.umap
 p.umap.cc
 dev.off()
+
+png("./../saved/primary_data_umap_and_tsne.plots.png", width = 1600, height = 900)
+gridExtra::grid.arrange(p.umap, p.umap.cc, p.tsne, p.tsne.cc, ncol = 2)
+dev.off()
+
 ```
 
 
@@ -1965,62 +1970,84 @@ write.csv(best.seg10, file = "./../saved/segment_10_genes.csv")
 
 ### 8.1 Mapping of KEGG metabolic modules and mouse genes
 **Map genes to metabolic modules**
+  - Entry = set of genes
+  - Each entry maps to multiple different genes
+  - Each entry maps to multiple different modules
+  - Each entry maps to multiple different pathways
+  => Genes and modules have many-to-many relationship
+  => Modules and pathways have many-to-many relationship
+  => Genes and pathways have many-to-many relationship
+
 ```{r kegg-modules}
-# Fetch the modules for mouse
+# Fetch all the modules (and KEGG entries) for mouse
 mouse.org.id <- "T01002"
 mouse.modules <- keggLink(target = "module", source = mouse.org.id)
 
-# Create a dataframe for storing the gene names and associated modules
-df.mouse.modules <- data.frame(entry = names(mouse.modules),
-                               module = unname(mouse.modules),
-                               geneName = NA)
+# Build a dataframe to store module, gene, and pathway information for each KEGG entry
+df.kegg.entries <- data.frame(entry = names(mouse.modules),
+                              module = NA,
+                              genes = NA,
+                              pathway = NA,
+                              module_info = NA,
+                              pathway_info = NA)
 
-# Loop over all 1282 rows and add the gene names to the dataframe
-for (i in 1:nrow(df.mouse.modules)) {
-  entry <- df.mouse.modules[i,]$entry
+# remove duplicate rows from data
+df.kegg.entries <- distinct(df.kegg.entries)
+
+# For each KEGG entry, fetch the information with keggGet()
+for (i in 1:nrow(df.kegg.entries)) {
+  print(i)
+  entry <- df.kegg.entries[i,]$entry
   query <- keggGet(entry)
-  geneName <- query[[1]]$NAME
-  df.mouse.modules[i,]$geneName <- geneName
+  genes <- query[[1]]$NAME
+  module <- paste(names(query[[1]]$MODULE), collapse = ", ")
+  pathway <- paste(names(query[[1]]$PATHWAY), collapse = ", ")
+  module_info <- paste(unlist(query[[1]]$MODULE), collapse = ", ")
+  pathway_info <- paste(unlist(query[[1]]$PATHWAY), collapse = ", ")
+  df.kegg.entries[i,]$genes <- genes
+  df.kegg.entries[i,]$module <- module
+  df.kegg.entries[i,]$pathway <- pathway
+  df.kegg.entries[i,]$module_info <- module_info
+  df.kegg.entries[i,]$pathway_info <- pathway_info
 }
 
-#saveRDS(df.mouse.modules, file = "./../saved/df_mouse_modules")
-
+# Save objects
+saveRDS(df.kegg.entries, file = "./../saved/df_kegg_entries")
+write.csv(df.kegg.entries, file = "./../saved/df_kegg_entries.csv")
 ```
 
 
 ### 8.2 Primary data
 **Create a new sce with only metabolic genes**
-```{r add-module-information-to-primary-data, eval=FALSE}
+```{r add-KEGG-information-to-primary-data, eval=FALSE}
 # Load mouse modules if it doesn't exist
-if(!exists("df_mouse_modules")) {
-  df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
+if(!exists("df.kegg.entries")) {
+  df.kegg.entries <- readRDS("./../saved/df_kegg_entries")
 }
 
-# Create a new sce object and initialize the module variable
 denoised.sce.m <- denoised.sce
 rowData(denoised.sce.m)$module <- ""
+rowData(denoised.sce.m)$pathway <- ""
+rowData(denoised.sce.m)$module_info <- ""
+rowData(denoised.sce.m)$pathway_info <- ""
 
-# Add module information to the rowData of sce object
-for(i in 1:nrow(df.mouse.modules)) {
+for(i in 1:nrow(df.kegg.entries)) {
+  print(i)
   # Split the gene names into a list
-  genes <- unlist(lapply(strsplit(df.mouse.modules[i,]$geneName, split = ",")[[1]], trimws))
+  genes <- unlist(lapply(strsplit(df.kegg.entries[i,]$genes, split = ",")[[1]], trimws))
   useful_genes <- genes[genes %in% rownames(denoised.sce.m)]
   for(gene in useful_genes) {
-    if(rowData(denoised.sce.m)[gene, ]$module == "") {
-      # If no module found, set a new module
-      rowData(denoised.sce.m)[gene, ]$module <- df.mouse.modules[i,]$module
-    }else{
-      # If module information already available for the gene, extend the list
-      existing_module <- rowData(denoised.sce.m)[gene, ]$module
-      rowData(denoised.sce.m)[gene, ]$module <- paste(existing_module, df.mouse.modules[i,]$module, sep = ", ")
-      }
-    }
+    rowData(denoised.sce.m)[gene, ]$module <- df.kegg.entries[i,]$module
+    rowData(denoised.sce.m)[gene, ]$pathway <- df.kegg.entries[i,]$pathway
+    rowData(denoised.sce.m)[gene, ]$module_info <- df.kegg.entries[i,]$module_info
+    rowData(denoised.sce.m)[gene, ]$pathway_info <- df.kegg.entries[i,]$pathway_info
+  }
 }
 
 genes.to.use <- rownames(denoised.sce.m)[rowData(denoised.sce.m)$module != ""]
 denoised.sce.m <- denoised.sce.m[rownames(denoised.sce.m) %in% genes.to.use, ]
 
-# Save sce object
+# Save sce object containing only metabolic genes and module/pathway information stored on rowData
 saveRDS(denoised.sce.m, "./../saved/denoised_sce_m")
 ```
 
@@ -2134,37 +2161,35 @@ write.csv(as.data.frame(modules.primary.m), file = "./../saved/modules_primary_m
 
 ### 8.3 De Micheli dataset
 **Create a new sce with only metabolic genes**
-```{r add-module-information-to-deMicheli-data, eval=FALSE}
+```{r add-KEGG-information-to-deMicheli-data, eval=FALSE}
 # Load mouse modules if it doesn't exist
-if(!exists("df_mouse_modules")) {
-  df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
+if(!exists("df.kegg.entries")) {
+  df.kegg.entries <- readRDS("./../saved/df_kegg_entries")
 }
 
-# Create a new sce object and initialize the module variable
-denoised.sce.deMicheli.m <- denoised.sce
+denoised.sce.deMicheli.m <- denoised.sce.deMicheli
 rowData(denoised.sce.deMicheli.m)$module <- ""
+rowData(denoised.sce.deMicheli.m)$pathway <- ""
+rowData(denoised.sce.deMicheli.m)$module_info <- ""
+rowData(denoised.sce.deMicheli.m)$pathway_info <- ""
 
-# Add module information to the rowData of sce object
-for(i in 1:nrow(df.mouse.modules)) {
+for(i in 1:nrow(df.kegg.entries)) {
+  print(i)
   # Split the gene names into a list
-  genes <- unlist(lapply(strsplit(df.mouse.modules[i,]$geneName, split = ",")[[1]], trimws))
+  genes <- unlist(lapply(strsplit(df.kegg.entries[i,]$genes, split = ",")[[1]], trimws))
   useful_genes <- genes[genes %in% rownames(denoised.sce.deMicheli.m)]
   for(gene in useful_genes) {
-    if(rowData(denoised.sce.deMicheli.m)[gene, ]$module == "") {
-      # If no module found, set a new module
-      rowData(denoised.sce.deMicheli.m)[gene, ]$module <- df.mouse.modules[i,]$module
-    }else{
-      # If module information already available for the gene, extend the list
-      existing_module <- rowData(denoised.sce.deMicheli.m)[gene, ]$module
-      rowData(denoised.sce.deMicheli.m)[gene, ]$module <- paste(existing_module, df.mouse.modules[i,]$module, sep = ", ")
-      }
-    }
+    rowData(denoised.sce.deMicheli.m)[gene, ]$module <- df.kegg.entries[i,]$module
+    rowData(denoised.sce.deMicheli.m)[gene, ]$pathway <- df.kegg.entries[i,]$pathway
+    rowData(denoised.sce.deMicheli.m)[gene, ]$module_info <- df.kegg.entries[i,]$module_info
+    rowData(denoised.sce.deMicheli.m)[gene, ]$pathway_info <- df.kegg.entries[i,]$pathway_info
+  }
 }
 
 genes.to.use <- rownames(denoised.sce.deMicheli.m)[rowData(denoised.sce.deMicheli.m)$module != ""]
 denoised.sce.deMicheli.m <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% genes.to.use, ]
 
-# Save sce object
+# Save sce object containing only metabolic genes and module/pathway information stored on rowData
 saveRDS(denoised.sce.deMicheli.m, "./../saved/denoised_sce_deMicheli_m")
 ```
 
@@ -2279,39 +2304,38 @@ write.csv(as.data.frame(modules.deMicheli.m), file = "./../saved/modules_deMiche
 
 ### 8.4 Dell'Orso dataset
 **Create a new sce with only metabolic genes**
-```{r add-module-information-to-dellOrso-data, eval=FALSE}
+```{r add-KEGG-information-to-dellOrso-data, eval=FALSE}
 # Load mouse modules if it doesn't exist
-if(!exists("df_mouse_modules")) {
-  df.mouse.modules <- readRDS("./../saved/df_mouse_modules")
+if(!exists("df.kegg.entries")) {
+  df.kegg.entries <- readRDS("./../saved/df_kegg_entries")
 }
 
-# Create a new sce object and initialize the module variable
-denoised.sce.dellOrso.m <- denoised.sce
+denoised.sce.dellOrso.m <- denoised.sce.dellOrso
 rowData(denoised.sce.dellOrso.m)$module <- ""
+rowData(denoised.sce.dellOrso.m)$pathway <- ""
+rowData(denoised.sce.dellOrso.m)$module_info <- ""
+rowData(denoised.sce.dellOrso.m)$pathway_info <- ""
 
-# Add module information to the rowData of sce object
-for(i in 1:nrow(df.mouse.modules)) {
+for(i in 1:nrow(df.kegg.entries)) {
+  print(i)
   # Split the gene names into a list
-  genes <- unlist(lapply(strsplit(df.mouse.modules[i,]$geneName, split = ",")[[1]], trimws))
+  genes <- unlist(lapply(strsplit(df.kegg.entries[i,]$genes, split = ",")[[1]], trimws))
   useful_genes <- genes[genes %in% rownames(denoised.sce.dellOrso.m)]
   for(gene in useful_genes) {
-    if(rowData(denoised.sce.dellOrso.m)[gene, ]$module == "") {
-      # If no module found, set a new module
-      rowData(denoised.sce.dellOrso.m)[gene, ]$module <- df.mouse.modules[i,]$module
-    }else{
-      # If module information already available for the gene, extend the list
-      existing_module <- rowData(denoised.sce.dellOrso.m)[gene, ]$module
-      rowData(denoised.sce.dellOrso.m)[gene, ]$module <- paste(existing_module, df.mouse.modules[i,]$module, sep = ", ")
-      }
-    }
+    rowData(denoised.sce.dellOrso.m)[gene, ]$module <- df.kegg.entries[i,]$module
+    rowData(denoised.sce.dellOrso.m)[gene, ]$pathway <- df.kegg.entries[i,]$pathway
+    rowData(denoised.sce.dellOrso.m)[gene, ]$module_info <- df.kegg.entries[i,]$module_info
+    rowData(denoised.sce.dellOrso.m)[gene, ]$pathway_info <- df.kegg.entries[i,]$pathway_info
+  }
 }
 
 genes.to.use <- rownames(denoised.sce.dellOrso.m)[rowData(denoised.sce.dellOrso.m)$module != ""]
 denoised.sce.dellOrso.m <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% genes.to.use, ]
 
-# Save sce object
+# Save sce object containing only metabolic genes and module/pathway information stored on rowData
 saveRDS(denoised.sce.dellOrso.m, "./../saved/denoised_sce_dellOrso_m")
 ```
+
 
 
 **Shortcut: gimp and modules of dellOrso data with metabolic genes**
@@ -2421,12 +2445,13 @@ write.csv(as.data.frame(modules.dellOrso.m), file = "./../saved/modules_dellOrso
 
 ```
 
+
 ### 8.6 Inspection of metabolic modules
 ```{r}
 # Load modules objects with kegg modules
-modules.primary.m  <- readRDS("./../saved/modules_primary_m_kegg_modules")
-modules.deMicheli.m  <- readRDS("./../saved/modules_deMicheli_m_kegg_modules")
-modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m_kegg_modules")
+if(!exists("modules.primary.m")){modules.primary.m <- readRDS("./../saved/modules_primary_m_kegg_modules")}
+if(!exists("modules.deMicheli.m")){modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m_kegg_modules")}
+if(!exists("modules.dellOrso.m")){modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m_kegg_modules")}
 
 # Create count tables
 tab.modules.primary <- table(modules.primary.m$metabolic_module, modules.primary.m$module)
@@ -2451,22 +2476,31 @@ df.modules.primary.separated <- distinct(as.data.frame(separate_rows(df.modules.
 df.modules.deMicheli.separated <- distinct(as.data.frame(separate_rows(df.modules.deMicheli, KEGG_module, sep = ", ")))
 df.modules.dellOrso.separated <- distinct(as.data.frame(separate_rows(df.modules.dellOrso, KEGG_module, sep = ", ")))
 
+# Save all relevant KEGG modules in all datasets
+all.kegg.modules <- df.modules.primary.separated$KEGG_module %>% 
+  union(df.modules.deMicheli.separated$KEGG_module) %>% 
+  union(df.modules.dellOrso.separated$KEGG_module) %>% 
+  unique()
+
+saveRDS(all.kegg.modules, file = "./../saved/all_kegg_modules")
+
+
 # Make plots
-p.primary <- ggplot(df.modules.primary.separated, aes(x = Scorpius_module, y = frequency)) +
+p.primary <- ggplot(df.modules.primary.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "Primary dataset") +
   theme(legend.position="right") +
   geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
-p.deMicheli <- ggplot(df.modules.deMicheli.separated, aes(x = Scorpius_module, y = frequency)) +
+p.deMicheli <- ggplot(df.modules.deMicheli.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "De Micheli et al. reference dataset") +
   theme(legend.position="right") +
   geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
   
-p.dellOrso <- ggplot(df.modules.dellOrso.separated, aes(x = Scorpius_module, y = frequency)) +
+p.dellOrso <- ggplot(df.modules.dellOrso.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
   geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
   ggtitle("Frequency of KEGG modules in different trajectory modules",
           subtitle = "Dell'Orso et al. referene dataset") +
@@ -2474,6 +2508,8 @@ p.dellOrso <- ggplot(df.modules.dellOrso.separated, aes(x = Scorpius_module, y =
   geom_text(aes(label=ifelse(frequency>=4, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
 
 ```
+
+
 **Save plots as pdf**
 ```{r kegg-module-plots-as-pdf, eval=FALSE}
 pdf("./../saved/KEGG_modules_in_trajectories", width = 11, height = 5)
@@ -2484,29 +2520,149 @@ dev.off()
 ```
 
 
-## 9. Highly expressed modules (quick & dirty)
-### 9.1 Primary data
-```{r DE-modules-primary-data}
-# Convert genes <-> modules
-denoised.sce.m.modules <- denoised.sce.m
-rownames(denoised.sce.m.modules) <- rowData(denoised.sce.m)$module
+### 8.7 Inspection of metabolic pathways
+#### 8.8 Create mapping objects between genes, Scorpius modules, and metabolic pathways
+```{r}
+if(!exists("modules.primary.m")){modules.primary.m <- readRDS("./../saved/modules_primary_m_kegg_modules")}
+if(!exists("modules.deMicheli.m")){modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m_kegg_modules")}
+if(!exists("modules.dellOrso.m")){modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m_kegg_modules")}
 
-# Find marker modules between samples
-marker.modules.primary <- findMarkers(denoised.sce.m.modules, groups = denoised.sce.m.modules$sample, pval.type = "any", direction = "up", lfc = 1)
+###############
+# primary data
+###############
+rowData.primary <- rowData(denoised.sce.m)
+genes.primary <- rownames(rowdata.primary) %in% colnames(expr_sel.primary.m)
+rowData.primary.f <- rowData.primary[genes.primary, ]
 
-for(sample in unique(denoised.sce.m.modules$sample)) {
-  markers <- marker.modules.primary[[sample]]
-  markers.interesting <- markers[markers$p.value < .05, ]
-  # Print out the marker genes
-  print(markers.interesting)
-  # Get marker effects and plot on a heatmap
-  logFCs <- getMarkerEffects(markers.interesting)
-  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = paste(sample, " marker modules"), fontsize_row = 5)
-}
+# Create mapping between genes and pathways
+pathway.mapping.primary <- data.frame(pathway = factor(rowData.primary.f$pathway))
+rownames(pathway.mapping.primary) <- rownames(rowData.primary.f)
+
+# Order genes
+pathway.mapping.primary <- pathway.mapping.primary[modules.primary.m$feature, , drop = FALSE]
+
+# Add pathway information to modules object
+modules.primary.m$pathway <- pathway.mapping.primary$pathway
+
+# Arrange rows
+modules.primary.m <- arrange(modules.primary.m,
+                             as.character(modules.primary.m$module),
+                             as.character(modules.primary.m$metabolic_module))
+
+saveRDS(modules.primary.m, file = "./../saved/modules_primary_m_pathway")
+
+#########################
+# De Micheli et al. data
+#########################
+rowData.deMicheli <- rowData(denoised.sce.deMicheli.m)
+genes.deMicheli <- rownames(rowData.deMicheli) %in% colnames(expr_sel.deMicheli.m)
+rowData.deMicheli.f <- rowData.deMicheli[genes.deMicheli, ]
+
+# Create mapping between genes and pathways
+pathway.mapping.deMicheli <- data.frame(pathway = factor(rowData.deMicheli.f$pathway))
+rownames(pathway.mapping.deMicheli) <- rownames(rowData.deMicheli.f)
+
+# Order genes
+pathway.mapping.deMicheli <- pathway.mapping.deMicheli[modules.deMicheli.m$feature, , drop = FALSE]
+
+# Add pathway information to modules object
+modules.deMicheli.m$pathway <- pathway.mapping.deMicheli$pathway
+
+# Arrange rows
+modules.deMicheli.m <- arrange(modules.deMicheli.m,
+                             as.character(modules.deMicheli.m$module),
+                             as.character(modules.deMicheli.m$metabolic_module))
+
+saveRDS(modules.deMicheli.m, file = "./../saved/modules_deMicheli_m_pathway")
 
 
+#########################
+# Dell'Orso et al. data
+#########################
+rowData.dellOrso <- rowData(denoised.sce.dellOrso.m)
+genes.dellOrso <- rownames(rowData.dellOrso) %in% colnames(expr_sel.deMicheli.m)
+rowData.dellOrso.f <- rowData.dellOrso[genes.dellOrso, ]
+
+# Create mapping between genes and pathways
+pathway.mapping.dellOrso <- data.frame(pathway = factor(rowData.dellOrso.f$pathway))
+rownames(pathway.mapping.dellOrso) <- rownames(rowData.dellOrso.f)
+
+# Order genes
+pathway.mapping.dellOrso <- pathway.mapping.dellOrso[modules.dellOrso.m$feature, , drop = FALSE]
+
+# Add pathway information to modules object
+modules.dellOrso.m$pathway <- pathway.mapping.dellOrso$pathway
+
+# Arrange rows
+modules.dellOrso.m <- arrange(modules.dellOrso.m,
+                             as.character(modules.dellOrso.m$module),
+                             as.character(modules.dellOrso.m$metabolic_module))
+
+saveRDS(modules.dellOrso.m, file = "./../saved/modules_dellOrso_m_pathway")
+```
+
+
+```{r}
+if(!exists("modules.primary.m")){modules.primary.m <- readRDS("./../saved/modules_primary_m_pathway")}
+if(!exists("modules.deMicheli.m")){modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m_pathway")}
+if(!exists("modules.dellOrso.m")){modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m_pathway")}
+
+# Create count tables
+tab.pathways.primary <- table(modules.primary.m$pathway, modules.primary.m$module)
+tab.pathways.deMicheli <- table(modules.deMicheli.m$pathway, modules.deMicheli.m$module)
+tab.pathways.dellOrso <- table(modules.dellOrso.m$pathway, modules.dellOrso.m$module)
+
+# Melt tables
+df.pathways.primary <- melt(tab.pathways.primary)
+colnames(df.pathways.primary) <- c("KEGG_pathway", "Scorpius_module", "frequency")
+df.pathways.primary$KEGG_pathway <- unfactor(df.pathways.primary$KEGG_pathway)
+
+df.pathways.deMicheli <- melt(tab.pathways.deMicheli)
+colnames(df.pathways.deMicheli) <- c("KEGG_pathway", "Scorpius_module", "frequency")
+df.pathways.deMicheli$KEGG_pathway <- unfactor(df.pathways.deMicheli$KEGG_pathway)
+
+df.pathways.dellOrso <- melt(tab.pathways.dellOrso)
+colnames(df.pathways.dellOrso) <- c("KEGG_pathway", "Scorpius_module", "frequency")
+df.pathways.dellOrso$KEGG_pathway <- unfactor(df.pathways.dellOrso$KEGG_pathway)
+
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.pathways.primary.separated <- distinct(as.data.frame(separate_rows(df.pathways.primary, KEGG_pathway, sep = ", ")))
+df.pathways.deMicheli.separated <- distinct(as.data.frame(separate_rows(df.pathways.deMicheli, KEGG_pathway, sep = ", ")))
+df.pathways.dellOrso.separated <- distinct(as.data.frame(separate_rows(df.pathways.dellOrso, KEGG_pathway, sep = ", ")))
+
+# Make plots
+p.primary <- ggplot(df.pathways.primary.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_pathway), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG pathways in different trajectory modules",
+          subtitle = "Primary dataset") +
+  theme(legend.position="right") +
+  geom_text(aes(label=ifelse(frequency>=4, KEGG_pathway, "")), position = position_jitter(width=1, height = 1))
+  
+p.deMicheli <- ggplot(df.pathways.deMicheli.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_pathway), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG pathways in different trajectory modules",
+          subtitle = "De Micheli et al. reference dataset") +
+  theme(legend.position="right") +
+  geom_text(aes(label=ifelse(frequency>=4, KEGG_pathway, "")), position = position_jitter(width=1, height = 1))
+  
+p.dellOrso <- ggplot(df.pathways.dellOrso.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_pathway), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG pathways in different trajectory modules",
+          subtitle = "Dell'Orso et al. referene dataset") +
+  theme(legend.position="right") +
+  geom_text(aes(label=ifelse(frequency>=4, KEGG_pathway, "")), position = position_jitter(width=1, height = 1))
 
 ```
+
+**Save plots as pdf**
+```{r kegg-module-plots-as-pdf, eval=FALSE}
+pdf("./../saved/KEGG_pathways_in_trajectories", width = 11, height = 5)
+p.primary
+p.deMicheli
+p.dellOrso
+dev.off()
+```
+
 
 ## 10. Ridgeline plots to inspect how the distribution of marker genes differs in the samples of primary and reference datasets
 ```{r ridge-plots}
@@ -2529,6 +2685,8 @@ ridge.primary <- RidgePlot(seurat.primary, features = genes.primary, ncol = 2)
 ridge.primary
 
 ```
+
+
 **Save ridge line plots as pdf**
 ```{r ridge-plots-pdf, eval=FALSE}
 pdf("./../saved/ridge_plot_primary.pdf", width = 10, height = 25)
