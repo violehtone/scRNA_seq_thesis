@@ -1,0 +1,926 @@
+---
+title: "Trajectory_inference"
+author: "Ville Lehtonen"
+date: "11/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set working dir to the source file location
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+
+# Trajectory inference
+Here, we perform trajectory inference using Scorpius (https://github.com/rcannood/SCORPIUS)
+
+## 1. Load packages and data
+### 1.1 Load packages
+```{r load-packages, message=FALSE}
+library(org.Mm.eg.db)
+library(dplyr)
+library(scater)
+library(SCORPIUS)
+library(SingleCellExperiment)
+library(scran)
+library(ggplot2)
+library(gridExtra)
+library(stats)
+library(RColorBrewer)
+```
+
+### 1.2 Load pre-calculated data
+**Single Cell Experiments**
+```{r load-objects}
+# Load pre-processed sce objects
+denoised.sce <- readRDS("./../saved/denoised_sce_clust")
+denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
+denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
+
+# Create separate cc corrected objects
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+denoised.sce.deMicheli.cc <- as(altExp(denoised.sce.deMicheli, "CC_corrected"), "SingleCellExperiment")
+denoised.sce.dellOrso.cc <- as(altExp(denoised.sce.dellOrso, "CC_corrected"), "SingleCellExperiment")
+```
+
+
+**Cell cycle genes (From Seurat pipeline) - These files are generated while running the data preprocessing script**
+```{r cc-genes-seurat}
+# Load G2/M- and S- phase marker genes
+g2m.genes.mouse <- readRDS("./../saved/cc_g2m_genes_mouse")
+s.genes.mouse <- readRDS("./../saved/cc_gs_genes_mouse")
+
+# Combine genes into a single set of cc genes
+cc.genes.seurat <- c(g2m.genes.mouse, s.genes.mouse)
+```
+
+
+**Cell cycle genes (from OSCA pipeline)**
+```{r cc-genes-osca-shortcut}
+cc.genes.osca <- readRDS("./../saved/cc_genes_osca")
+
+# Create new datasets where the cell cycle genes have been removed
+denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.osca, ]
+denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!rownames(denoised.sce.dellOrso) %in% cc.genes.osca, ]
+denoised.sce.cc.genes <- denoised.sce[!rownames(denoised.sce) %in% cc.genes.osca, ]
+```
+
+
+**Get cell cycle genes from annotation db (optional)**
+```{r cc-genes-osca, eval=FALSE}
+# Use Buettner et al. (2015) mouse data with known cell cycle phases as a reference
+sce.ref <- BuettnerESCData()
+
+# Find genes present in both our datasets and Buettner data and that are cell cycle related
+cycle.anno <- unique(select(org.Mm.eg.db, keytype="GOALL", keys="GO:0007049", 
+                            columns="SYMBOL")[,"SYMBOL"])
+
+cc.genes.osca <- Reduce(intersect,
+                        list(as.character(rowData(sce.ref)$AssociatedGeneName),    
+                             rownames(denoised.sce),
+                             rownames(denoised.sce.deMicheli),
+                             rownames(denoised.sce.deMicheli),
+                             cycle.anno))
+
+saveRDS(cc.genes.osca, "./../saved/cc_genes_osca")
+```
+
+
+**Inspect the cell cycle genes from OSCA and Seurat pipelines**
+```{r cc-genes-comparison}
+# Inspect the cc related gene sets
+length(cc.genes.seurat)
+length(cc.genes.osca)
+
+# Inspect the intersection of the two gene sets
+intersect(cc.genes.osca, cc.genes.seurat)
+```
+
+
+## 2. Perform trajectory inference
+### 2.1 Primary data
+**Create a custom color palette for the trajectory plots**
+```{r custom-color-palette}
+# Custom colors
+colpalette.primary <- colpal <- RColorBrewer::brewer.pal(5, "Set1")
+names(colpalette.primary) <- c("cap50", "cap50_r16h", "cap50_r4h", "cap50_r8h", "control")
+colpalette.primary["cap50_r8h"] <- "#FFFF33" # set purple -> yellow
+```
+
+
+#### 2.1.1 Trajectory inference with all genes
+```{r primary-data-traj-inference}
+# Create expression and sample objects
+expression.primary <- as.matrix(t(logcounts(denoised.sce)))
+group_name.primary <- as.factor(denoised.sce$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary <- reduce_dimensionality(expression.primary, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.primary <- infer_trajectory(space.primary)
+traj.primary <- reverse_trajectory(traj.primary)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary, 
+                     progression_group = group_name.primary,
+                     progression_group_palette = colpalette.primary,
+                     path = traj.primary$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "Primary dataset: All genes (ndim = 2) - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+
+**Expression of marker genes**
+```{r primary-data-traj-inference-marker-genes}
+# Abundance of some marker genes
+prog.groups <- list(cdh15 = expression.primary[, "Cdh15"],
+                    tnnt1 = expression.primary[, "Tnnt1"],
+                    tnnt3 = expression.primary[, "Tnnt3"])
+
+# Make plot for each marker gene
+marker.gene.plots <- list()
+for(gene in names(prog.groups)) {
+  p <- draw_trajectory_plot(space = space.primary, 
+                            progression_group = prog.groups[[gene]],
+                            point_size = 1,
+                            point_alpha = 0.5,
+                            path = traj.primary$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+# Plot the results
+gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1,
+                        marker.gene.plots$tnnt3, ncol = 3)
+```
+
+
+#### 2.1.2 Trajectory inference without OSCA cc genes
+```{r primary-data-cc-genes-traj-inference}
+# Create expression and sample objects
+expression.primary.cc.genes <- as.matrix(t(logcounts(denoised.sce.cc.genes)))
+group_name.primary.cc.genes <- as.factor(denoised.sce.cc.genes$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.cc.genes <- reduce_dimensionality(expression.primary.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.primary.cc.genes <- infer_trajectory(space.primary.cc.genes)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.cc.genes, 
+                     progression_group = group_name.primary.cc.genes,
+                     progression_group_palette = colpalette.primary,
+                     path = traj.primary.cc.genes$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "Primary dataset: All genes except OSCA cc genes (ndim = 2) - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+
+#### 2.1.3 Trajectory inference with cc corrected data
+```{r primary-data-cc-traj-inference}
+# Create expression and sample objects
+expression.primary.cc <- as.matrix(t(assay(denoised.sce.cc, "scaled_logcounts")))
+group_name.primary.cc <- as.factor(denoised.sce.cc$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.cc <- reduce_dimensionality(expression.primary.cc, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.primary.cc <- infer_trajectory(space.primary.cc)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.cc, 
+                     progression_group = group_name.primary.cc,
+                     progression_group_palette = colpalette.primary,
+                     path = traj.primary.cc$path,
+                     point_size = 1,
+                     point_alpha = 0.4,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 16))
+``` 
+
+
+**Expression of marker genes**
+```{r primary-data-cc-traj-inference-marker-genes}
+# Marker genes
+prog.groups <- list(cdh15 = expression.primary.cc[, "Cdh15"],
+                    tnnt1 = expression.primary.cc[, "Tnnt1"],
+                    tnnt2 = expression.primary.cc[, "Tnnt2"],
+                    tnnt3 = expression.primary.cc[, "Tnnt3"],
+                    pax7 = expression.primary.cc[, "Pax7"],
+                    hes1 = expression.primary.cc[, "Hes1"],
+                    myf5 = expression.primary.cc[, "Myf5"],
+                    myod = expression.primary.cc[, "Myod1"],
+                    ccne1 = expression.primary.cc[, "Ccne1"],
+                    eifs = expression.primary.cc[, "Eif1"],
+                    ccnd1 = expression.primary.cc[, "Ccnd1"],
+                    ccnd2 = expression.primary.cc[, "Ccnd2"],
+                    myog = expression.primary.cc[, "Myog"],
+                    cdkn1a = expression.primary.cc[, "Cdkn1a"],
+                    gas1 = expression.primary.cc[, "Gas1"])
+
+# Make plot for each gene
+marker.gene.plots <- list()
+for(gene in names(prog.groups)) {
+  p <- draw_trajectory_plot(space = space.primary.cc, 
+                            progression_group = prog.groups[[gene]],
+                            progression_group_palette = colpalette.primary.cc.markers,
+                            point_size = 0.5,
+                            point_alpha = 0.5,
+                            path = traj.primary.cc$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+# Plot the marker genes
+gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
+                        marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
+                        marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
+                        ncol = 5)
+```
+
+
+#### 2.1.4 Trajectory inference with cc corrected data but only control, cap50, and cap50_r16h samples
+```{r primary-data-cc-traj-inference-subset-of-samples}
+# Create a sce object from the CC corrected alternative experiment
+denoised.sce.cc.f <- denoised.sce.cc[, denoised.sce.cc$sample %in% c("control", "cap50", "cap50_r16h")]
+
+# Create expression and sample objects
+expression.primary.cc.f <- as.matrix(t(assay(denoised.sce.cc.f, "scaled_logcounts")))
+group_name.primary.cc.f <- as.factor(denoised.sce.cc.f$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.cc.f <- reduce_dimensionality(expression.primary.cc.f, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.primary.cc.f <- infer_trajectory(space.primary.cc.f)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.cc.f, 
+                     progression_group = group_name.primary.cc.f,
+                     progression_group_palette = colpalette.primary,
+                     path = traj.primary.cc.f$path,
+                     point_size = 1,
+                     point_alpha = 0.4,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Filtered primary dataset (cc corrected): HVGs (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 16))
+```
+
+**Expression of marker genes**
+```{r primary-data-cc-traj-inference-subset-of-samples-marker-genes}
+# Abundance of some marker genes
+prog.groups <- list(cdh15 = expression.primary.cc.f[, "Cdh15"],
+                    tnnt1 = expression.primary.cc.f[, "Tnnt1"],
+                    tnnt3 = expression.primary.cc.f[, "Tnnt3"])
+
+# Make plot for each marker gene
+marker.gene.plots <- list()
+for(gene in names(prog.groups)) {
+  p <- draw_trajectory_plot(space = space.primary.cc.f, 
+                            progression_group = prog.groups[[gene]],
+                            point_size = 1,
+                            point_alpha = 0.5,
+                            path = traj.primary.cc.f$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+# Plot the results
+gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1,
+                        marker.gene.plots$tnnt3, ncol = 3)
+```
+
+
+### 2.2 De Micheli et al. (2020) reference data
+#### 2.2.1 Trajectory inference with all genes
+```{r deMicheli-traj-inference}
+# Create expression and sample objects
+expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
+group_name.deMicheli <- as.factor(denoised.sce.deMicheli$cell_type)
+
+# Trajectory building
+set.seed(123)
+space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.deMicheli <- infer_trajectory(space.deMicheli)
+traj.deMicheli <- reverse_trajectory(traj.deMicheli)
+
+# Plot trajectory by cell types
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = group_name.deMicheli,
+                     path = traj.deMicheli$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset: All genes (ndim = 2) - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+
+**Expression of cell cycle phases**
+```{r deMicheli-traj-inference-cc-phases}
+# Get progression group (cc phases)
+cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli$Phase)
+
+# Plot trajectory by cc phases
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = cc.phases.deMicheli,
+                     path = traj.deMicheli$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset: All genes (ndim = 2) - Cell cycle phases") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+
+**Expression of marker genes**
+```{r deMicheli-traj-inference-marker-genes}
+# Abundance of some marker genes
+prog.groups <- list(cdk1 =  expression.deMicheli[, "Cdk1"],
+                    pax7 = expression.deMicheli[, "Pax7"],
+                    myog = expression.deMicheli[, "Myog"],
+                    myod = expression.deMicheli[, "Myod1"],
+                    btg2 = expression.deMicheli[, "Btg2"],
+                    cdc20 = expression.deMicheli[, "Cdc20"],
+                    cdkn1c = expression.deMicheli[, "Cdkn1c"])
+
+# Make plot for each marker gene
+marker.gene.plots <- list()
+for(gene in names(prog.groups)) {
+  p <- draw_trajectory_plot(space = space.deMicheli, 
+                            progression_group = prog.groups[[gene]],
+                            point_size = 1,
+                            point_alpha = 0.5,
+                            path = traj.deMicheli$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+# Plot the results
+gridExtra::grid.arrange(marker.gene.plots$cdk1, marker.gene.plots$pax7,
+                        marker.gene.plots$myog, marker.gene.plots$myod,
+                        marker.gene.plots$btg2, marker.gene.plots$cdc20,
+                        marker.gene.plots$cdkn1c, ncol = 3)
+```
+
+
+#### 2.2.2 Trajectory inference without Seurat cc genes
+```{r deMicheli-traj-inference-cc-genes}
+# Create expression and sample objects
+expression.deMicheli.cc.genes <- as.matrix(t(logcounts(denoised.sce.deMicheli.cc.genes)))
+group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_type)
+
+# Trajectory building
+set.seed(123)
+space.deMicheli.cc.genes <- reduce_dimensionality(expression.deMicheli.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
+
+# Plot trajectory
+draw_trajectory_plot(space = space.deMicheli.cc.genes, 
+                     progression_group = group_name.deMicheli.cc.genes,
+                     path = traj.deMicheli.cc.genes$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset:  All genes except cell cycle marker genes\n (from Seurat workflow) (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+
+```
+
+
+#### 2.2.3 Trajectory inference without OSCA cc genes
+```{r deMicheli-traj-inference-cc-genes}
+# Remove cell cycle genes from the data
+denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.osca, ]
+
+# Create expression and sample objects
+expression.deMicheli.cc.genes <- as.matrix(t(logcounts(denoised.sce.deMicheli.cc.genes)))
+group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_type)
+
+# Trajectory building
+set.seed(123)
+space.deMicheli.cc.genes <- reduce_dimensionality(expression.deMicheli.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.deMicheli.cc.genes <- infer_trajectory(space.deMicheli.cc.genes)
+
+# Plot trajectory
+draw_trajectory_plot(space = space.deMicheli.cc.genes, 
+                     progression_group = group_name.deMicheli.cc.genes,
+                     path = traj.deMicheli.cc.genes$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset:  All genes except cell cycle marker genes\n (from OSCA workflow) (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+
+
+#### 2.2.4 Trajectory inference with cc corrected data
+```{r deMicheli-traj-inference-cc}
+# Create expression and sample objects
+expression.deMicheli.cc <- as.matrix(t(assay(denoised.sce.deMicheli.cc, "scaled_logcounts")))
+group_name.deMicheli.cc <- as.factor(denoised.sce.deMicheli.cc$cell_type)
+
+# Trajectory building
+set.seed(123)
+space.deMicheli.cc <- reduce_dimensionality(expression.deMicheli.cc, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.deMicheli.cc <- infer_trajectory(space.deMicheli.cc)
+
+# Plot trajectory
+draw_trajectory_plot(space = space.deMicheli.cc, 
+                     progression_group = group_name.deMicheli.cc,
+                     path = traj.deMicheli.cc$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset (cc corrected): HVGs (ndim = 2) - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+**Expression of cell cycle phases**
+```{r deMicheli-traj-inference-cc-phases}
+# Get cc phases
+cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli.cc$Phase)
+
+# Plot trajectory by cell cycle phases
+draw_trajectory_plot(space = space.deMicheli.cc, 
+                     progression_group = cc.phases.deMicheli,
+                     path = traj.deMicheli.cc$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset (cc corrected): HVGs (ndim = 2) - Cell cycle phase") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+
+### 2.3 Dell'Orso et al. (2019) reference data
+#### 2.3.1 Trajectory inference with all genes
+```{r dellOrso-traj-inference}
+# Create expression and sample objects
+expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
+group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
+
+# Trajectory inference
+set.seed(123)
+space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.dellOrso <- infer_trajectory(space.dellOrso)
+
+# Reverse trajectory
+traj.dellOrso <- reverse_trajectory(traj.dellOrso)
+
+# plot by cell type
+draw_trajectory_plot(space = space.dellOrso, 
+                     progression_group = group_name.dellOrso,
+                     path = traj.dellOrso$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset: All genes, ndim = 2 - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title = element_text(size = 16))
+```
+
+**Cell cycle phases**
+```{r dellOrso-traj-inference-cc-phases}
+# Get cc phases
+cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso$Phase)
+
+# Plot by cc phases
+draw_trajectory_plot(space = space.dellOrso, 
+                     progression_group = cc.phases.dellOrso,
+                     path = traj.dellOrso$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset: All genes, ndim = 2 - Cell cycle phases") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title = element_text(size = 16))
+```
+
+**Marker genes**
+```{r}
+# Abundance of some marker genes
+prog.groups <- list(pax7 = expression.dellOrso[, "Pax7"],
+                    hes1 = expression.dellOrso[, "Hes1"],
+                    myf5 = expression.dellOrso[, "Myf5"],
+                    myod = expression.dellOrso[, "Myod1"],
+                    ccne1 = expression.dellOrso[, "Ccne1"],
+                    eifs = expression.dellOrso[, "Eif1"],
+                    ccnd1 = expression.dellOrso[, "Ccnd1"],
+                    ccnd2 = expression.dellOrso[, "Ccnd2"],
+                    myog = expression.dellOrso[, "Myog"],
+                    tnnt2 = expression.dellOrso[, "Tnnt2"],
+                    cdkn1a = expression.dellOrso[, "Cdkn1a"],
+                    cdkn1b = expression.dellOrso[, "Cdkn1b"],
+                    gas1 = expression.dellOrso[, "Gas1"])
+
+# Make plot for each marker gene
+marker.gene.plots <- list()
+for(gene in names(prog.groups)) {
+  p <- draw_trajectory_plot(space = space.dellOrso, 
+                            progression_group = prog.groups[[gene]],
+                            point_size = 1,
+                            point_alpha = 0.5,
+                            path = traj.dellOrso$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+# Plot the results
+gridExtra::grid.arrange(marker.gene.plots$pax7, marker.gene.plots$hes1,
+                        marker.gene.plots$myf5, marker.gene.plots$myod,
+                        marker.gene.plots$ccne1, marker.gene.plots$eifs,
+                        marker.gene.plots$ccnd1, marker.gene.plots$ccnd2,
+                        marker.gene.plots$myog, marker.gene.plots$tnnt2,
+                        marker.gene.plots$cdkn1a, marker.gene.plots$cdkn1b,
+                        marker.gene.plots$gas1, ncol = 5)
+```
+
+
+#### 2.3.2 Trajectory inference without OSCA cc genes
+```{r dellOrso-traj-inference-cc-genes}
+# Create expression and sample objects
+expression.dellOrso.cc.genes <- as.matrix(t(logcounts(denoised.sce.dellOrso.cc.genes)))
+group_name.dellOrso.cc.genes <- as.factor(denoised.sce.dellOrso.cc.genes$cell_type)
+
+# Trajectory inference
+set.seed(123)
+space.dellOrso.cc.genes <- reduce_dimensionality(expression.dellOrso.cc.genes, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.dellOrso.cc.genes <- infer_trajectory(space.dellOrso.cc.genes)
+
+# plot trajectory
+draw_trajectory_plot(space = space.dellOrso.cc.genes, 
+                     progression_group = group_name.dellOrso.cc.genes,
+                     path = traj.dellOrso.cc.genes$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset: All genes except OSCA cell cycle marker genes (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title = element_text(size = 16))
+```
+
+
+#### 2.3.3 Trajectory inference with cc corrected data
+```{r dellOrso-traj-inference-cc}
+# Create expression and sample objects
+expression.dellOrso.cc <- as.matrix(t(assay(denoised.sce.dellOrso.cc, "scaled_logcounts")))
+group_name.dellOrso.cc <- as.factor(denoised.sce.dellOrso.cc$cell_type)
+
+# Trajectory building
+set.seed(123)
+space.dellOrso.cc <- reduce_dimensionality(expression.dellOrso.cc, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.dellOrso.cc <- infer_trajectory(space.dellOrso.cc)
+
+# Plot trajectory
+draw_trajectory_plot(space = space.dellOrso.cc, 
+                     progression_group = group_name.dellOrso.cc,
+                     path = traj.dellOrso.cc$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset (cc corrected): HVGs (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title = element_text(size = 16))
+```
+
+**Plot trajectory by cell cycle phases**
+```{r dellOrso-traj-inference-cc-phase}
+# Get cell cycle phases
+cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso.cc$Phase)
+
+# Plot trajectory by cell cycle phases
+draw_trajectory_plot(space = space.dellOrso.cc, 
+                     progression_group = cc.phases.dellOrso,
+                     path = traj.dellOrso.cc$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset (cc corrected): HVGs (ndim = 2) - Cell cycle phases") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title = element_text(size = 16))
+
+```
+
+
+#### 2.3.4 Trajectory inference without primary myoblasts
+```{r dellOrso-traj-inference-without-primary-mb}
+# Remove PMs from the dellOrso data
+denoised.sce.dellOrso.f <- denoised.sce.dellOrso[, denoised.sce.dellOrso$cell_type != "Primary_MB"]
+
+# Create expression and sample objects
+expression.dellOrso.f <- as.matrix(t(logcounts(denoised.sce.dellOrso.f)))
+group_name.dellOrso.f <- as.factor(denoised.sce.dellOrso.f$cell_type)
+
+# Trajectory inference
+set.seed(123)
+space.dellOrso.f <- reduce_dimensionality(expression.dellOrso.f, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.dellOrso.f <- infer_trajectory(space.dellOrso.f)
+
+# plot trajectory
+draw_trajectory_plot(space = space.dellOrso.f, 
+                     progression_group = group_name.dellOrso.f,
+                     path = traj.dellOrso.f$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset: Without PMs, All genes (ndim = 2)") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 10),
+        axis.title = element_text(size = 16))
+```
+
+
+
+
+
+## 3. Identifying candidate marker genes
+### 3.1 Primary data
+#### 3.1.1 Load pre-calculated gene importance objects
+```{r load-rimary-data-gimp-modules}
+# Load gimp and modules objects
+gimp <- readRDS("./../saved/gimp")
+modules <- readRDS("./../saved/modules")
+
+gimp$qvalue <- p.adjust(p = gimp$pvalue, method = "BH")
+gene_sel <- gimp$gene[gimp$qvalue < .05]
+expr_sel <- scale_quantile(expression.primary[, gene_sel])
+```
+
+#### 3.1.2 Calculate gene importances
+```{r primary-data-gimp-modules, eval=FALSE}
+# Identify candidate marker genes
+gimp <- gene_importances(x = expression.primary,
+                         time = traj.primary$time,
+                         num_permutations = 10,
+                         num_threads = 8)
+
+gimp$qvalue <- p.adjust(p = gimp$pvalue, method = "BH")
+gene_sel <- gimp$gene[gimp$qvalue < .05]
+expr_sel <- scale_quantile(expression.primary[, gene_sel])
+
+# Group genes to modules
+modules <- extract_modules(expr_sel,
+                           time = traj.primary$time,
+                           verbose = FALSE)
+
+#saveRDS(modules, file = "./../saved/modules")
+#saveRDS(gimp, file = "./../saved/gimp")
+```
+
+#### 3.1.3 Visualization of gene importances (in pdf format)
+```{r primary-data-gimp-modules-visualization, eval=FALSE}
+# Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_primary_data.pdf")
+draw_trajectory_heatmap(expr_sel, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+
+# Visualize modules
+pdf("./../saved/modules_heatmap_primary_data.pdf")
+draw_trajectory_heatmap(expr_sel, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary,
+                        modules = modules,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+```
+
+
+### 3.2 De Micheli et al. (2020) reference data
+#### 3.2.1 Load pre-calculated gene importance objects
+```{r load-marker-genes-deMicheli}
+# Load gimp and modules objects
+gimp.deMicheli <- readRDS("./../saved/gimp_deMicheli")
+modules.deMicheli <- readRDS("./../saved/modules_deMicheli")
+
+gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
+gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
+expr_sel.deMicheli <- scale_quantile(expression.deMicheli[, gene_sel.deMicheli])
+```
+
+#### 3.2.2 Calculate gene importances
+```{r marker-genes-deMicheli, eval=FALSE}
+# Identify candidate marker genes
+gimp.deMicheli <- gene_importances(x = expression.deMicheli,
+                                   time = traj.deMicheli$time,
+                                   num_permutations = 10,
+                                   num_threads = 8)
+
+gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
+gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
+expr_sel.deMicheli <- scale_quantile(expression.deMicheli[, gene_sel.deMicheli])
+
+# Group genes to modules
+modules.deMicheli <- extract_modules(expr_sel.deMicheli,
+                                     time = traj.deMicheli$time,
+                                     verbose = FALSE)
+
+#saveRDS(modules.deMicheli, file = "./../saved/modules_deMicheli")
+#saveRDS(gimp.deMicheli, file = "./../saved/gimp_deMicheli")
+```
+
+#### 3.2.3 Visualization of gene importances (in pdf format)
+```{r DeMicheli-gimp-modules-visualization, eval=FALSE}
+# Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_deMicheli.pdf")
+draw_trajectory_heatmap(expr_sel.deMicheli, 
+                        time = traj.deMicheli$time,
+                        progression_group = group_name.deMicheli,
+                        show_labels_row = TRUE,
+                        fontsize_row = 2)
+dev.off()
+
+# Visualize modules
+pdf("./../saved/modules_heatmap_deMicheli.pdf")
+draw_trajectory_heatmap(expr_sel.deMicheli, 
+                        time = traj.deMicheli$time,
+                        progression_group = group_name.deMicheli,
+                        modules = modules.deMicheli,
+                        show_labels_row = TRUE,
+                        fontsize_row = 3)
+dev.off()
+```
+
+
+
+### 3.3 Dell'Orso et al. (2019) reference data
+#### 3.3.1 Load pre-calculated gene importance objects
+```{r load-marker-genes-dellOrso}
+# Load gimp and modules objects
+## All cells
+gimp.dellOrso <- readRDS("./../saved/gimp_dellOrso")
+modules.dellOrso <- readRDS("./../saved/modules_dellOrso")
+
+gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrso$pvalue))
+gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
+expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
+
+## Without primary myoblasts
+gimp.dellOrso.f <- readRDS("./../saved/gimp_dellOrso_f")
+modules.dellOrso.f <- readRDS("./../saved/modules_dellOrso_f")
+
+gimp.dellOrso.f$qvalue <- p.adjust(gimp.dellOrso.f$pvalue, "BH", length(gimp.dellOrso.f$pvalue))
+gene_sel.dellOrso.f <- gimp.dellOrso.f$gene[gimp.dellOrso.f$qvalue < .05]
+expr_sel.dellOrso.f <- scale_quantile(expression.dellOrso.f[, gene_sel.dellOrso.f])
+```
+
+
+#### 3.2.2 Calculate gene importances: All cells
+```{r marker-genes-dellOrso, eval=FALSE}
+# Identify candidate marker genes
+gimp.dellOrso <- gene_importances(x = expression.dellOrso,
+                                  time = traj.dellOrso$time,
+                                  num_permutations = 10,
+                                  num_threads = 8)
+
+gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrso$pvalue))
+gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
+expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
+
+# Group genes to modules
+modules.dellOrso <- extract_modules(expr_sel.dellOrso,
+                                     time = traj.dellOrso$time,
+                                     verbose = FALSE)
+
+#saveRDS(modules.dellOrso, file = "./../saved/modules_dellOrso")
+#saveRDS(gimp.dellOrso, file = "./../saved/gimp_dellOrso")
+```
+
+#### 3.2.3 Visualization of gene importances: All cells (in pdf format)
+```{r DellOrso-gimp-modules-visualization, eval=FALSE}
+# Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_dellOrso.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso, 
+                        time = traj.dellOrso$time,
+                        progression_group = group_name.dellOrso,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+
+# Visualize modules
+pdf("./../saved/modules_heatmap_dellOrso.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso, 
+                        time = traj.dellOrso$time,
+                        progression_group = group_name.dellOrso,
+                        modules = modules.dellOrso,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+```
+
+
+#### 3.2.4 Calculate gene importances: Without primary myoblasts
+```{r marker-genes-dellOrso-without-PMs, eval=FALSE}
+# Identify candidate marker genes
+gimp.dellOrso.f <- gene_importances(x = expression.dellOrso.f,
+                                    time = traj.dellOrso.f$time,
+                                    num_permutations = 10,
+                                    num_threads = 8)
+
+gimp.dellOrso.f$qvalue <- p.adjust(gimp.dellOrso.f$pvalue, "BH", length(gimp.dellOrso.f$pvalue))
+gene_sel.dellOrso.f <- gimp.dellOrso.f$gene[gimp.dellOrso.f$qvalue < .05]
+expr_sel.dellOrso.f <- scale_quantile(expression.dellOrso.f[, gene_sel.dellOrso.f])
+
+# Group genes to modules
+modules.dellOrso.f <- extract_modules(expr_sel.dellOrso.f,
+                                      time = traj.dellOrso.f$time,
+                                      verbose = FALSE)
+
+#saveRDS(modules.dellOrso.f, file = "./../saved/modules_dellOrso_f")
+#saveRDS(gimp.dellOrso.f, file = "./../saved/gimp_dellOrso_f")
+```
+
+#### 3.2.5 Visualization of gene importances: Without PMs (in pdf format)
+```{r DellOrso-without-PMs-gimp-modules-visualization, eval=FALSE}
+# Visualize expression of selected genes
+pdf("./../saved/gimp_heatmap_dellOrso_f.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso.f, 
+                        time = traj.dellOrso.f$time,
+                        progression_group = group_name.dellOrso.f,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+
+# Visualize modules
+pdf("./../saved/modules_heatmap_dellOrso_f.pdf")
+draw_trajectory_heatmap(expr_sel.dellOrso.f, 
+                        time = traj.dellOrso.f$time,
+                        progression_group = group_name.dellOrso.f,
+                        modules = modules.dellOrso.f,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+```

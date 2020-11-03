@@ -11,9 +11,6 @@ knitr::opts_chunk$set(echo = TRUE)
 # Set working dir to the source file location
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
-# Trajectory inference
-SCORPIUS (https://github.com/rcannood/SCORPIUS) will be used for performing the trajectory inference as it is designed for inferring linear developmental trajectories from scRNA-seq data
-
 
 ## 1. Load packages and data
 ### Load packages

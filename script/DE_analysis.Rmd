@@ -1,0 +1,78 @@
+---
+title: "DE_analysis"
+author: "Ville Lehtonen"
+date: "11/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set working dir to the source file location
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+
+# Marker gene detection
+Here, we perform marker gene detection to identify differentially expressed (DE) genes between samples in the datasets
+
+## 1. Load packages and data
+### 1.1 Load packages
+```{r load-packages, message=FALSE}
+library(SingleCellExperiment)
+library(scran)
+library(pheatmap)
+```
+
+### 1.2 Load pre-calculated data
+**Single Cell Experiments**
+```{r load-objects}
+# Load pre-processed sce objects
+denoised.sce <- readRDS("./../saved/denoised_sce_clust")
+denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
+
+# Generate the CC corrected data
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+```
+
+## 1. Primary data marker genes
+### 1.1 Uncorrected dataset
+```{r de-genes-primary-data}
+markers.primary <- findMarkers(denoised.sce, 
+                               groups = denoised.sce$sample,
+                               pval.type = "some",
+                               direction = "up",
+                               lfc = 1)
+
+for(sample in unique(denoised.sce$sample)) {
+  markers <- markers.primary[[sample]]
+  markers.interesting <- markers[markers$p.value <= .05, ]
+  # Print out the marker genes
+  print(markers.interesting)
+  # Get marker effects and plot on a heatmap
+  logFCs <- getMarkerEffects(markers.interesting)
+  pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
+}
+```
+
+
+### 1.2 Cell cycle corrected dataset
+```{r de-genes-primary-data-cc-corrected}
+markers.primary.cc <- findMarkers(denoised.sce.cc, 
+                               groups = denoised.sce.cc$sample,
+                               assay.type = "scaled_logcounts",
+                               pval.type = "some",
+                               direction = "up",
+                               lfc = 1)
+
+for(sample in unique(denoised.sce$sample)) {
+  markers <- markers.primary.cc[[sample]]
+  markers.interesting <- markers[markers$p.value < .05, ]
+  # Print out the marker genes
+  print(markers.interesting)
+  # Get marker effects and plot on a heatmap
+  logFCs <- getMarkerEffects(markers.interesting)
+  pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
+}
+```
+
+

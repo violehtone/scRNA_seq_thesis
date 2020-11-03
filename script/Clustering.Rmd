@@ -1,0 +1,289 @@
+---
+title: "Clustering"
+author: "Ville Lehtonen"
+date: "11/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set working dir to the source file location
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+
+# Clustering
+Here, we perform clustering of our primary datasets (uncorrected and cell cycle corrected datasets). The aim is to see if cells from same samples cluster together and form distinct communities and whether the correction of cell cycle effect affects this clustering.
+
+## 1. Load packages and data
+### 1.1 Load packages
+```{r load-packages, message=FALSE}
+library(SingleCellExperiment)
+library(scran)
+library(igraph)
+library(scater)
+library(ggplot2)
+library(pheatmap)
+library(fossil)
+library(cluster)
+```
+
+### 1.2 Load pre-calculated data
+**The clusters are calculated using Puhti supercomputer and results are loaded in the code chunk below to speed up the process**
+```{r primary-data-clustering-shortcut}
+# Load primary dataset
+denoised.sce <- readRDS("./../saved/denoised_sce_clust")
+
+# Load cluster assignments and SNN graphs
+snng <- readRDS("./../saved/snng")
+snng.cc <- readRDS("./../saved/snng_cc")
+clust <- readRDS("./../saved/clust")
+clust.cc <- readRDS("./../saved/clust_cc")
+
+# Make the cc corrected data a separate object
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+denoised.sce.cc$cluster.cc <- factor(clust.cc)
+reducedDim(denoised.sce.cc, "UMAP_cc") <- reducedDim(denoised.sce, "UMAP_cc")
+reducedDim(denoised.sce.cc, "TSNE_cc") <- reducedDim(denoised.sce, "TSNE_cc")
+reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
+```
+
+
+## 2. Perform clustering (optional)
+**Perform clustering (in case no pre-calculated files are available)**
+```{r primary-data-clustering, eval=FALSE}
+# Load data
+denoised.sce <- readRDS("./../saved/denoised_sce")
+
+# Get # of reduced dimensions for uncorrected & cc-corrected datasets
+dimensions <- ncol(reducedDim(denoised.sce, "PCA"))
+dimensions.cc <- ncol(reducedDim(denoised.sce, "PCA_cc"))
+dimensions
+dimensions.cc
+
+# Build SNN graph with k=180
+snng <- buildSNNGraph(denoised.sce, k = 180, use.dimred = "PCA") 
+
+denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+reducedDim(denoised.sce.cc, "PCA_cc") <- reducedDim(denoised.sce, "PCA_cc")
+snng.cc <- buildSNNGraph(denoised.sce.cc, k = 180, use.dimred = "PCA_cc")
+
+# Perform clustering and assign cluster labels
+clust <- igraph::cluster_walktrap(snng)$membership
+clust.cc <- igraph::cluster_walktrap(snng.cc)$membership
+table(clust)
+table(clust.cc)
+denoised.sce$cluster <- factor(clust)
+denoised.sce$cluster.cc <- factor(clust.cc)
+
+# Run UMAP, t-SNE, and force-directed layout
+## Uncorrected dataset
+set.seed(123)
+reducedDim(denoised.sce, "force") <- igraph::layout_with_fr(snng)
+denoised.sce <- runUMAP(denoised.sce, dimred = "PCA", n_dimred = dimensions)
+denoised.sce <- runTSNE(denoised.sce, dimred = "PCA", n_dimred = dimensions)
+## Cc corrected data
+reducedDim(denoised.sce, "force_cc") <- igraph::layout_with_fr(snng.cc)
+denoised.sce <- runTSNE(denoised.sce, altexp = "CC_corrected", exprs_values = "scaled_logcounts", dimred = "PCA_cc", name = "TSNE_cc")
+denoised.sce.cc <- runUMAP(denoised.sce.cc, exprs_values = "scaled_logcounts", dimred = "PCA_cc", name = "UMAP_cc", n_neighbors = 180)
+
+# Set reduced dims to cc corrected experiment and vice versa
+reducedDim(denoised.sce, "UMAP_cc") <- reducedDim(denoised.sce.cc, "UMAP_cc")
+reducedDim(denoised.sce.cc, "TSNE_cc") <- reducedDim(denoised.sce, "TSNE_cc")
+reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
+
+# Save sce file
+#saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
+```
+
+
+## 3. Visualizing clustering results: Force-directed layout, t-SNE, and UMAP plots
+```{r primary-data-clustering-plots, message=FALSE, warning=FALSE}
+# force directed layout plots
+p.force <- plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force") + ggtitle("Primary data: force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+p.force.cc <- plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force_cc") + ggtitle("Primary data (cc corrected): force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
+
+## uncorrected
+p.force <- plotReducedDim(denoised.sce, 
+                          colour_by = "sample",
+                          text_by = "cluster",
+                          dimred = "force",
+                          point_alpha = 0.4,
+                          point_size = 1) +
+  ggtitle("Force-directed layout to visualize variation \nin single cell transcriptomes",
+          subtitle = "Force-directed layout of primary data:\nNumber of nearest neighbours (k): 180,\ncells coloured by sample groups and clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+## cc corrected
+p.force.cc <- plotReducedDim(denoised.sce.cc, 
+                             colour_by = "sample",
+                             text_by = "cluster.cc",
+                             dimred = "force_cc",
+                             point_alpha = 0.4,
+                             point_size = 1) +
+  ggtitle("Force-directed layout to visualize variation \nin single cell transcriptomes",
+          subtitle = "Force-directed layout of cell cycle corrected primary data:\nNumber of nearest neighbours (k): 180, cells coloured by\nsample groups and clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+p.force
+p.force.cc
+
+# t-SNE plots
+## Uncorrected
+p.tsne <- plotReducedDim(denoised.sce, 
+                         colour_by = "sample",
+                         text_by = "cluster",
+                         dimred = "TSNE",
+                         point_alpha = 0.4,
+                         point_size = 1) +
+  ggtitle("t-SNE projection to visualize variation \nin single cell transcriptomes",
+          subtitle = "t-SNE plot of primary data: Number of nearest neighbours (k): 180,\ncells coloured by sample groups and clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+## cc corrected
+p.tsne.cc <- plotReducedDim(denoised.sce.cc, 
+                            colour_by = "sample",
+                            text_by = "cluster.cc",
+                            dimred = "TSNE_cc",
+                            point_alpha = 0.4,
+                            point_size = 1) +
+  ggtitle("t-SNE projection to visualize variation \nin single cell transcriptomes after cell\ncycle correction",
+          subtitle = "t-SNE plot of cell cycle corrected primary data: Number of\nnearest neighbours (k): 180, cells coloured by sample groups\nand clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+p.tsne
+p.tsne.cc
+
+# UMAP plots
+## Uncorrected
+p.umap <- plotReducedDim(denoised.sce, 
+                         colour_by = "sample",
+                         text_by = "cluster",
+                         dimred = "UMAP",
+                         point_alpha = 0.4,
+                         point_size = 1) +
+  ggtitle("UMAP projection to visualize variation \nin single cell transcriptomes",
+          subtitle = "UMAP plot of primary data: Number of nearest neighbours (k): 180,\ncells coloured by sample groups and clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+
+## CC-corrected
+p.umap.cc <- plotReducedDim(denoised.sce.cc, 
+                            colour_by = "sample",
+                            text_by = "cluster.cc",
+                            dimred = "UMAP_cc",
+                            point_alpha = 0.4,
+                            point_size = 1) +
+  ggtitle("UMAP projection to visualize variation \nin single cell transcriptomes after cell\ncycle correction",
+          subtitle = "UMAP plot of cell cycle corrected primary data: Number of\nnearest neighbours (k): 180, cells coloured by sample groups\nand clusters (1-5) shown in the plot") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 12),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+
+p.umap
+p.umap.cc
+```
+
+
+**Save UMAP and t-SNE plots in a pdf file**
+```{r umap-tsne-into-pdf, eval=FALSE}
+pdf("./../saved/primary_data_umap_and_tsne_plots.pdf", width = 7, height = 7)
+p.tsne
+p.tsne.cc
+p.umap
+p.umap.cc
+dev.off()
+```
+
+
+
+## 4. Clustering comparison
+**Compare the uncorrected and cell cycle corrected clustering results by adjusted rand index (ARI) and graph modularity**
+```{r primary-data-clustering-comparison}
+# Calculate modularities of the graphs
+mod <- modularity(snng, clust)
+mod.cc <- modularity(snng.cc, clust.cc)
+mod
+mod.cc
+
+# Calculate adjusted Rand index
+ari <- adj.rand.index(clust, clust.cc)
+ari
+```
+
+
+**Calculate the modularity of each cluster and visualize the results**
+```{r plot-modularities}
+# Plot the modularities of clusters
+ratio <- clusterModularity(snng, clust, as.ratio = TRUE)
+ratio.cc <- clusterModularity(snng.cc, clust.cc, as.ratio = TRUE)
+
+pheatmap(log2(ratio + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data, k = 180")
+pheatmap(log2(ratio.cc + 1), cluster_cols = FALSE, cluster_rows = FALSE, color=colorRampPalette(c("white", "blue"))(100), main = "Primary data (cc corrected), k = 180")
+```
+
+
+**Silhouette analysis: (Optional due to being computationally a heavy operation)**
+```{r silhouette-analysis, eval=FALSE}
+# Perform silhouette analysis
+dist.data <- dist(reducedDim(denoised.sce, "PCA"))
+dist.data.cc <- dist(reducedDim(denoised.sce, "PCA_cc"))
+sil <- silhouette(clust, dist = dist.data)
+sil.cc <- silhouette(clust.cc, dist = dist.data.cc)
+plot(sil, main = "Primary data: silhouette plot")
+plot(sil, main = "Primary data (cc corrected): silhouette plot")
+
+# Silhouette with subset of cells
+denoised.sce.f <- denoised.sce[, seq(1, 21808, by = 80)]
+denoised.sce.f.cc <- denoised.sce[, seq(1, 21808, by = 80)]
+clust.f <- clust[seq(1, 21808, by = 80)]
+clust.f.cc <- clust.cc[seq(1, 21808, by = 80)]
+dist.data.f <- dist(reducedDim(denoised.sce.f, "PCA"))
+dist.data.f.cc <- dist(reducedDim(denoised.sce.f.cc, "PCA"))
+sil.f <- silhouette(clust.f, dist = dist.data.f)
+sil.f.cc <- silhouette(clust.f.cc, dist = dist.data.f.cc)
+
+plot(sil.f, main = "Subset of primary data: silhouette plot")
+plot(sil.f.cc, main = "Subset of primary data (cc corrected): silhouette plot")
+
+# Plot a heatmap of the differences in clustering between original data and cc-corrected data
+tab <- table(clust, clust.cc)
+pheatmap(log10(tab+10), main = "Original data vs. CC corrected (k=180)", color=viridis::viridis(100))
+```
+
+
+

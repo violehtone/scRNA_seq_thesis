@@ -1,0 +1,693 @@
+---
+title: "Cell_annotations"
+author: "Ville Lehtonen"
+date: "11/3/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+# Set working dir to the source file location
+setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
+```
+
+# Cell annotations
+This script uses SingleR (https://github.com/LTLA/SingleR) to perform the mapping of primary data cells into the reference data cell types
+
+## 1. Load packages and data
+### 1.1 Load packages
+```{r load-packages, message=FALSE}
+library(SCORPIUS)
+library(SingleR)
+library(SingleCellExperiment)
+library(reshape)
+library(scater)
+library(scran)
+library(data.table)
+library(gridExtra)
+```
+
+### 1.2 Load pre-calculated data
+**Single Cell Experiments**
+```{r load-objects}
+# Load pre-processed sce objects
+denoised.sce <- readRDS("./../saved/denoised_sce_clust")
+denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
+denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
+```
+
+**Cell cycle genes (from OSCA pipeline)**
+```{r cc-genes-osca-shortcut}
+# Get OSCA cell cycle genes
+cc.genes.osca <- readRDS("./../saved/cc_genes_osca")
+
+# Create new datasets where the cell cycle genes have been removed
+denoised.sce.cc.genes <- denoised.sce[!rownames(denoised.sce) %in% cc.genes.osca, ]
+denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.osca, ]
+denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!rownames(denoised.sce.dellOrso) %in% cc.genes.osca, ]
+```
+
+
+## 2. Prediction of cell types from De Micheli et al. (2020) dataset
+### 2.1 All genes
+#### 2.1.1 Cell annotations
+**Load pre-calculated predictions (if available)**
+```{r load-deMicheli-cell-type-predictions}
+# Load pre-saved prediction objects
+pred.deMicheli <- readRDS("./../saved/pred_deMicheli")
+
+# Assign cell types to primary data
+denoised.sce$cell_type_deMicheli <- pred.deMicheli$pruned.labels
+```
+
+**Perform cell annotation using SingleR (optional)**
+```{r deMicheli-cell-type-predictions, eval=FALSE}
+pred.deMicheli <- SingleR(test = denoised.sce,
+                          assay.type.test = "logcounts",
+                          ref = denoised.sce.deMicheli,
+                          labels = denoised.sce.deMicheli$cell_type)
+
+# Assign cell types to primary data
+denoised.sce$cell_type_deMicheli <- pred.deMicheli$pruned.labels
+
+#saveRDS(pred.deMicheli, file = "./../saved/pred_deMicheli")
+```
+
+#### 2.1.2 Diagnostic plots (pdf documents)
+```{r deMicheli-annotation-diagnostic-plots, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/deMicheli_score_heatmap.pdf", width = 30, height = 50)
+plotScoreHeatmap(pred.deMicheli, 
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
+dev.off()
+
+to.remove <- pruneScores(pred.deMicheli, min.diff.next=0.1)
+table(Label=pred.deMicheli$labels, Removed=to.remove)
+
+
+# Delta distribution
+pdf("./../saved/deMicheli_score_distribution.pdf", width = 20, height = 15)
+plotScoreDistribution(results = pred.deMicheli, show = "delta.med")
+dev.off()
+
+# Get marker genes
+all.markers.deMicheli <- metadata(pred.deMicheli)$de.genes
+
+# Write markers for each sample into a csv file
+all.markers.deMicheli.df <- data.table("d0_mature_skeletal_muscle" = unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
+                                       "d0_MuSCs_and_progenitors" = unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+                                       "d5_mature_skeletal_muscle" = unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
+                                       "d5_MuSCs_and_progenitors" = unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+                                       "d7_mature_skeletal_muscle" = unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
+                                       "d7_MuSCs_and_progenitors" = unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)))
+write.csv(all.markers.deMicheli.df, file ="./../saved/all_markers_deMicheli.csv")
+
+# Examine the expression of the marker genes for each label in the test dataset
+pdf("./../saved/heatmap_deMicheli_d0_muscle.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d0_musc.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d5_muscle.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d5_musc.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d7_muscle.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_d7_musc.pdf")
+plotHeatmap(denoised.sce,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+```
+
+### 2.2 Without cell cycle genes
+#### 2.2.1 Cell annotations without cc genes
+**Load pre-calculated predictions (if available)**
+```{r load-deMicheli-cell-type-predictions-cc-genes}
+pred.deMicheli.cc.genes <- readRDS("./../saved/pred_deMicheli_cc_genes")
+
+# Assign cell types to primary data
+denoised.sce.cc.genes$cell_type_deMicheli <- pred.deMicheli.cc.genes$pruned.labels
+```
+
+**Perform cell annotation using SingleR (optional)**
+```{r deMicheli-cell-type-predictions-cc-genes, eval=FALSE}
+pred.deMicheli.cc.genes <- SingleR(test = denoised.sce.cc.genes,
+                                   assay.type.test = "logcounts",
+                                   ref = denoised.sce.deMicheli.cc.genes,
+                                   labels = denoised.sce.deMicheli.cc.genes$cell_type)
+
+# Assign cell types to primary data
+denoised.sce.cc.genes$cell_type_deMicheli <- pred.deMicheli.cc.genes$pruned.labels
+
+#saveRDS(pred.deMicheli.cc.genes, file = "./../saved/pred_deMicheli_cc_genes")
+```
+
+
+#### 2.2.2 Diagnostic plots without cc genes (pdf documents)
+```{r deMicheli-annotation-diagnostic-plots-cc-genes, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/deMicheli_cc_genes_score_heatmap.pdf", width = 30, height = 50)
+plotScoreHeatmap(pred.deMicheli.cc.genes, 
+                 annotation_col = as.data.frame(colData(denoised.sce.cc.genes)[, "sample", drop = FALSE]), width = 10)
+dev.off()
+
+to.remove <- pruneScores(pred.deMicheli.cc.genes, min.diff.next=0.1)
+table(Label=pred.deMicheli.cc.genes$labels, Removed=to.remove)
+
+
+# Delta distribution
+pdf("./../saved/deMicheli_cc_genes_score_distribution.pdf", width = 20, height = 15)
+plotScoreDistribution(results = pred.deMicheli.cc.genes, show = "delta.med")
+dev.off()
+
+# Get marker genes
+all.markers.deMicheli <- metadata(pred.deMicheli.cc.genes)$de.genes
+
+# Examine the expression of the marker genes for each label in the test dataset
+pdf("./../saved/heatmap_deMicheli_cc_genes_d0_muscle.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_cc_genes_d0_musc.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_cc_genes_d5_muscle.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_cc_genes_d5_musc.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_cc_genes_d7_muscle.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
+            fontsize_row = 2)
+dev.off()
+pdf("./../saved/heatmap_deMicheli_cc_genes_d7_musc.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
+            fontsize_row = 2)
+dev.off()
+```
+
+
+### 2.3 Refined cell mapping based on smaller segments on the trajectory
+#### 2.3.1 All cell types
+##### 2.3.1.1 Cell annotations with all cell types
+```{r deMicheli-traj-inference-segments}
+# Trajectory building
+expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
+set.seed(123)
+space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.deMicheli <- infer_trajectory(space.deMicheli)
+
+# Sort cells based on their progression
+ordered <- sort(traj.deMicheli$time, decreasing = FALSE)
+
+# Split cells into 10 segments based on their pseudo time value
+n = 10
+ordered_chunks = chunk(ordered, n.chunks = 10, shuffle = FALSE)
+
+# Label cells by their segment
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[1]])] <- "segment_1"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[2]])] <- "segment_2"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[3]])] <- "segment_3"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[4]])] <- "segment_4"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[5]])] <- "segment_5"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[6]])] <- "segment_6"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[7]])] <- "segment_7"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[8]])] <- "segment_8"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[9]])] <- "segment_9"
+denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[10]])] <- "segment_10"
+segment.deMicheli <- as.factor(denoised.sce.deMicheli$segment)
+
+# Draw trajectory plot
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = segment.deMicheli,
+                     path = traj.deMicheli$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset: All genes (ndim = 2) - Segments") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+# Predict segments of primary data cells
+pred.segments <- SingleR(test = denoised.sce,
+                         assay.type.test = "logcounts",
+                         ref = denoised.sce.deMicheli,
+                         labels = denoised.sce.deMicheli$segment)
+
+#saveRDS(pred.segments, file = "./../saved/pred_segments")
+
+# Inspect the predictions
+table(denoised.sce$sample, pred.segments$pruned.labels)
+```
+
+##### 2.3.1.2 Diagnostic plots with all cell types grouped into segments (pdf documents)
+```{r deMicheli-annotation-diagnostic-plots-segments-all-cells}
+# Visualize the score matrix
+pdf("./../saved/deMicheli_segments_score_heatmap.pdf", width = 30, height = 50)
+plotScoreHeatmap(pred.segments, 
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
+dev.off()
+
+to.remove <- pruneScores(pred.segments, min.diff.next=0.1)
+table(Label=pred.segments$labels, Removed=to.remove)
+
+# Delta distribution
+pdf("./../saved/deMicheli_segments_score_distribution.pdf", width = 20, height = 15)
+plotScoreDistribution(results = pred.segments, show = "delta.med")
+dev.off()
+```
+
+
+#### 2.3.2 D5 MuSCs and progenitors only
+##### 2.3.2.1 Cell annotations with D5 MuSCs & progenitors
+```{r deMicheli-traj-inference-segments-d5}
+# Sort cells by their pseudo time value
+ordered <- sort(traj.deMicheli$time, decreasing = FALSE)
+
+# Subset only D5 samples
+d5.muscs <- names(ordered) %in% colnames(denoised.sce.deMicheli[, denoised.sce.deMicheli$cell_type == "d5_MuSCs_and_progenitors"])
+ordered.d5 <- ordered[d5.muscs]
+
+# Split cells into 10 segments based on their pseudo time value
+n = 10
+ordered_chunks.d5 = chunk(ordered.d5, n.chunks = 10, shuffle = FALSE)
+
+# Inspect min / max values of each segment
+df.values <- data.frame(segment = c(1:10),
+                        min_pseudo_time_value = c(min(ordered_chunks.d5[[1]]),
+                                min(ordered_chunks.d5[[2]]),
+                                min(ordered_chunks.d5[[3]]),
+                                min(ordered_chunks.d5[[4]]),
+                                min(ordered_chunks.d5[[5]]),
+                                min(ordered_chunks.d5[[6]]),
+                                min(ordered_chunks.d5[[7]]),
+                                min(ordered_chunks.d5[[8]]),
+                                min(ordered_chunks.d5[[9]]),
+                                min(ordered_chunks.d5[[10]])),
+                        max_pseudo_time_value = c(max(ordered_chunks.d5[[1]]),
+                                max(ordered_chunks.d5[[2]]),
+                                max(ordered_chunks.d5[[3]]),
+                                max(ordered_chunks.d5[[4]]),
+                                max(ordered_chunks.d5[[5]]),
+                                max(ordered_chunks.d5[[6]]),
+                                max(ordered_chunks.d5[[7]]),
+                                max(ordered_chunks.d5[[8]]),
+                                max(ordered_chunks.d5[[9]]),
+                                max(ordered_chunks.d5[[10]])))
+df.values
+
+# Label cells by their segment
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[1]])] <- "segment_1"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[2]])] <- "segment_2"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[3]])] <- "segment_3"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[4]])] <- "segment_4"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[5]])] <- "segment_5"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[6]])] <- "segment_6"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[7]])] <- "segment_7"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[8]])] <- "segment_8"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[9]])] <- "segment_9"
+denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[10]])] <- "segment_10"
+
+# Replace NA values with "non d5 samples"
+denoised.sce.deMicheli$segment.d5 <- replace_na(denoised.sce.deMicheli$segment.d5, "non_d5_musc_sample")
+
+# Factorize the segments
+segment.deMicheli.d5 <- as.factor(denoised.sce.deMicheli$segment.d5)
+
+# Draw trajectory plot
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = segment.deMicheli.d5,
+                     path = traj.deMicheli$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. dataset (Day 5 MuSCs & progenitors): All genes (ndim = 2) - Segments") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+# Predict segments of primary data cells
+pred.segments.d5 <- SingleR(test = denoised.sce,
+                            assay.type.test = "logcounts",
+                            ref = denoised.sce.deMicheli,
+                            labels = denoised.sce.deMicheli$segment.d5)
+
+#saveRDS(pred.segments.d5, file = "./../saved/pred_segments_d5")
+
+# Inspect the predictions
+table(denoised.sce$sample, pred.segments.d5$pruned.labels)
+```
+
+
+##### 2.3.2.2 Diagnostic plots with D5 MuSCs & progenitors (pdf documents)
+```{r deMicheli-annotation-diagnostic-plots-d5-MuSCS, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/deMicheli_segments_d5_MuSCs_score_heatmap.pdf", width = 30, height = 50)
+plotScoreHeatmap(pred.segments.d5, 
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
+dev.off()
+
+to.remove <- pruneScores(pred.segments.d5, min.diff.next=0.1)
+table(Label=pred.segments.d5$labels, Removed=to.remove)
+
+# Delta distribution
+pdf("./../saved/deMicheli_segments_d5_MuSCs_score_distribution.pdf", width = 20, height = 15)
+plotScoreDistribution(results = pred.segments.d5, show = "delta.med")
+dev.off()
+```
+
+
+##### 2.3.2.3 Visualization of segment 10 on trajectory
+```{r seg10-visualization-on-trajectory}
+# Group cells by segment 10 vs. all other cells
+primary.data.cells <- denoised.sce.deMicheli$segment.d5 == "segment_10"
+other.cells <- !primary.data.cells
+denoised.sce.deMicheli$primary.cells[primary.data.cells] <- "primary_data_cells"
+denoised.sce.deMicheli$primary.cells[other.cells] <- "other_cell_types"
+
+# Define progression group
+prog.group <- as.factor(denoised.sce.deMicheli$primary.cells)
+
+# Define a custom color palette (black / green)
+colpalette <- c('primary_data_cells' ="#009900",
+                'other_cell_types' = "#404040")
+
+# Draw trajectory plot
+draw_trajectory_plot(space = space.deMicheli, 
+                     progression_group = prog.group,
+                     progression_group_palette = colpalette,
+                     path = traj.deMicheli$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = FALSE) +
+  ggtitle("Trajectory inference",
+          subtitle = "De Micheli et al. trajectory: Primary data cells shown on trajectory") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+```
+
+##### 2.3.2.4 Gene importances for Day 5 MuSCs
+**Load pre-calculated gene importance objects (calculated in Trajectory_inference.Rmd script)**
+```{r load-marker-genes-deMicheli}
+# Load gimp and modules objects
+gimp.deMicheli <- readRDS("./../saved/gimp_deMicheli")
+modules.deMicheli <- readRDS("./../saved/modules_deMicheli")
+
+gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
+gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
+expr_sel.deMicheli <- scale_quantile(expression.deMicheli[, gene_sel.deMicheli])
+```
+
+```{r deMicheli-d5-muscs-gimp-modules-heatmap, eval=FALSE}
+# Identify candidate marker genes from the Day 5 sample
+group_name.deMicheli.d5 <- as.factor(denoised.sce.deMicheli$segment.d5)
+  
+pdf("./../saved/modules_heatmap_deMicheli_d5_segments.pdf")
+draw_trajectory_heatmap(expr_sel.deMicheli, 
+                        time = traj.deMicheli$time,
+                        progression_group = group_name.deMicheli.d5,
+                        modules = modules.deMicheli,
+                        show_labels_row = TRUE,
+                        fontsize_row = 1)
+dev.off()
+```
+
+
+## 3. Prediction of cell types from Dell'Orso et al. (2019) dataset
+### 3.1 All genes
+#### 3.1.1 Cell annotations
+**Load pre-calculated predictions (if available)**
+```{r load-dellOrso-cell-type-predictions}
+# Load pre-saved prediction objects
+pred.dellOrso <- readRDS("./../saved/pred_dellOrso")
+
+# Assign cell types to primary data
+denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
+```
+
+**Perform cell annotation using SingleR (optional)**
+```{r dellOrso-cell-type-predictions, eval=FALSE}
+pred.dellOrso <- SingleR(test = denoised.sce,
+                         assay.type.test = "logcounts",
+                         ref = denoised.sce.dellOrso,
+                         labels = denoised.sce.dellOrso$cell_type)
+
+# Assign cell types to primary data
+denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
+
+#saveRDS(pred.dellOrso, file = "./../saved/pred_dellOrso")
+```
+
+
+#### 3.2.1 Diagnostic plots (pdf documents)
+```{r dellOrso-annotation-diagnostic-plots, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/dellOrso_score_heatmap.pdf")
+plotScoreHeatmap(pred.dellOrso, 
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
+dev.off()
+
+# Delta distribution
+pdf("./../saved/dellOrso_score_distribution.pdf")
+plotScoreDistribution(pred.dellOrso, show = "delta.med")
+dev.off()
+
+# Get marker genes
+all.markers.dellOrso <- metadata(pred.dellOrso)$de.genes
+
+# Examine the expression of the marker genes for each label in the test dataset
+pdf("./../saved/heatmap_dellOrso_homeostatic_muscs.pdf")
+plotHeatmap(denoised.sce, 
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+            fontsize_row = 2)
+dev.off()
+
+
+pdf("./../saved/heatmap_dellOrso_inj_60h_muscs.pdf")
+plotHeatmap(denoised.sce, 
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+            fontsize_row = 2)
+dev.off()
+
+pdf("./../saved/heatmap_dellOrso_primary_mb.pdf")
+plotHeatmap(denoised.sce, 
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$Primary_MB)),
+            fontsize_row = 2)
+dev.off()
+```
+
+### 3.2 Without cell cycle genes
+#### 3.2.1 Cell annotations without cc genes
+**Load pre-calculated predictions (if available)**
+```{r load-deMicheli-cell-type-predictions-cc-genes}
+pred.dellOrso.cc.genes <- readRDS("./../saved/pred_dellOrso_cc_genes")
+
+# Assign cell types to primary data
+denoised.sce.cc.genes$cell_type_dellOrso <- pred.dellOrso.cc.genes$pruned.labels
+```
+
+
+**Perform cell annotation using SingleR (optional)**
+```{r deMicheli-cell-type-predictions-cc-genes, eval=FALSE}
+pred.dellOrso.cc.genes <- SingleR(test = denoised.sce.cc.genes,
+                                  assay.type.test = "logcounts",
+                                  ref = denoised.sce.dellOrso.cc.genes,
+                                  labels = denoised.sce.dellOrso.cc.genes$cell_type)
+
+# Assign cell types to primary data
+denoised.sce.cc.genes$cell_type_dellOrso <- pred.dellOrso.cc.genes$pruned.labels
+
+#saveRDS(pred.dellOrso.cc.genes, file = "./../saved/pred_dellOrso_cc_genes")
+```
+
+
+#### 3.2.2 Diagnostic plots without cc genes (pdf documents)
+```{r dellOrso-annotation-diagnostic-plots-cc-genes, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/dellOrso_cc_genes_score_heatmap.pdf", width = 30, height = 50)
+plotScoreHeatmap(pred.dellOrso.cc.genes, 
+                 annotation_col = as.data.frame(colData(denoised.sce.cc.genes)[, "sample", drop = FALSE]), width = 10)
+dev.off()
+
+to.remove <- pruneScores(pred.dellOrso.cc.genes, min.diff.next=0.1)
+table(Label=pred.dellOrso.cc.genes$labels, Removed=to.remove)
+
+# Delta distribution
+pdf("./../saved/dellOrso_cc_genes_score_distribution.pdf", width = 20, height = 15)
+plotScoreDistribution(results = pred.dellOrso.cc.genes, show = "delta.med")
+dev.off()
+
+# Get marker genes
+all.markers.dellOrso <- metadata(pred.dellOrso.cc.genes)$de.genes
+
+# Examine the expression of the marker genes for each label in the test dataset
+pdf("./../saved/heatmap_dellOrso_cc_genes_homeostatic_muscs.pdf")
+plotHeatmap(denoised.sce.cc.genes, 
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+            fontsize_row = 2)
+dev.off()
+
+
+pdf("./../saved/heatmap_dellOrso_cc_genes_inj_60h_muscs.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+            fontsize_row = 2)
+dev.off()
+
+pdf("./../saved/heatmap_dellOrso_cc_genes_primary_mb.pdf")
+plotHeatmap(denoised.sce.cc.genes,
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$Primary_MB)),
+            fontsize_row = 2)
+dev.off()
+```
+
+
+
+## 4. Prediction of De Micheli cell types from Dell'Orso cell types and vice versa
+### 4.1 Cell annotations
+**Load pre-calculated predictions (if available)**
+```{r load-reference-dataset-predictions}
+# Dell'Orso as reference (de Micheli as test)
+pred.reference <- readRDS("./../saved/pred_reference")
+
+# De Micheli as reference (Dell'Orso as test)
+pred.reference2 <- readRDS("./../saved/pred_reference2")
+```
+
+**Perform cell annotation using SingleR (optional)**
+```{r cell-type-reference-datasets, eval=FALSE}
+# Dell'Orso as reference
+pred.reference <- SingleR(test = denoised.sce.deMicheli,
+                          assay.type.test = "logcounts",
+                          ref = denoised.sce.dellOrso,
+                          labels = denoised.sce.dellOrso$cell_type)
+#saveRDS(pred.reference, file = "./../saved/pred_reference")
+
+# De Micheli as reference
+pred.reference2 <- SingleR(test = denoised.sce.dellOrso,
+                          assay.type.test = "logcounts",
+                          ref = denoised.sce.deMicheli,
+                          labels = denoised.sce.deMicheli$cell_type)
+#saveRDS(pred.reference2, file = "./../saved/pred_reference2")
+```
+
+### 4.2 Visualization of predictions
+```{r cell-type-reference-datasets-inspection}
+# Dell'Orso as reference:
+table(pred.reference$pruned.labels)
+(table(pred.reference$pruned.labels, denoised.sce.deMicheli$cell_type))
+
+# DeMicheli as reference
+table(pred.reference2$pruned.labels)
+table(pred.reference2$pruned.labels, denoised.sce.dellOrso$cell_type)
+```
+
+
+## 5. Visualization of cell annotation results
+### 5.1 All genes
+```{r cell-mapping-visualization}
+# Inspection of predictions
+table(pred.deMicheli$pruned.labels)
+table(pred.dellOrso$labels)
+tab.deMicheli <- t(table(pred.deMicheli$pruned.labels, denoised.sce$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+tab.dellOrso <- t(table(pred.dellOrso$pruned.labels, denoised.sce$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+tab.deMicheli
+tab.dellOrso
+
+## 'melt' tables
+df.deMicheli <- melt(t(tab.deMicheli))
+colnames(df.deMicheli) <- c("cell_type", "sample", "count")
+df.dellOrso <- melt(t(tab.dellOrso))
+colnames(df.dellOrso) <- c("cell_type", "sample", "count")
+
+# Add missing cell types
+df.deMicheli.missing.rows <- data.frame("cell_type" = c(rep("d0_MuSCs_and_progenitors", 5), rep("d0_mature_skeletal_muscle", 5), rep("d7_mature_skeletal_muscle", 5)),
+                                        "sample" = rep(c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"), 3),
+                                        "count" = rep(0, 15))
+df.dellOrso.missing.rows <- data.frame("cell_type" = rep("homeostatic_MuSCs", 5),
+                                       "sample" = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"),
+                                       "count" = rep(0, 5))
+
+df.deMicheli <- rbind(df.deMicheli, df.deMicheli.missing.rows)
+df.dellOrso <- rbind(df.dellOrso, df.dellOrso.missing.rows)
+
+# De Micheli balloon plot
+balloon.deMicheli <- ggballoonplot(df.deMicheli, x = "sample", y = "cell_type", size = "count",
+              fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("De Micheli et al. reference dataset")
+
+# Dell Orso balloon plot
+balloon.dellOrso <- ggballoonplot(df.dellOrso, x = "sample", y = "cell_type", size = "count",
+              fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("Dell'Orso et al. reference dataset")
+
+gridExtra::grid.arrange(balloon.deMicheli, balloon.dellOrso, ncol = 2,      top = textGrob("Mapping of primary data cells to reference datasest shown in a balloon plot",gp=gpar(fontsize=20)))
+```
+
+
+### 5.2 Without cell cycle genes
+```{r inspect-cell-types-cc-genes}
+table(pred.deMicheli.cc.genes$pruned.labels)
+table(pred.dellOrso.cc.genes$labels)
+
+tab.deMicheli.cc.genes <- t(table(pred.deMicheli.cc.genes$pruned.labels, denoised.sce.cc.genes$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+
+tab.dellOrso.cc.genes <- t(table(pred.dellOrso.cc.genes$pruned.labels, denoised.sce.cc.genes$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+
+tab.deMicheli.cc.genes
+tab.dellOrso.cc.genes
+```
+
+
