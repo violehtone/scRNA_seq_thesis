@@ -26,6 +26,11 @@ library(scater)
 library(scran)
 library(data.table)
 library(gridExtra)
+library(BBmisc)
+library(tidyr)
+library(ggpubr)
+library(ggplot2)
+library(grid)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -236,6 +241,7 @@ set.seed(123)
 space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
 set.seed(123)
 traj.deMicheli <- infer_trajectory(space.deMicheli)
+traj.deMicheli <- reverse_trajectory(traj.deMicheli)
 
 # Sort cells based on their progression
 ordered <- sort(traj.deMicheli$time, decreasing = FALSE)
@@ -362,7 +368,7 @@ draw_trajectory_plot(space = space.deMicheli,
                      path = traj.deMicheli$path,
                      point_size = 1,
                      point_alpha = 0.5,
-                     contour = TRUE) +
+                     contour = FALSE) +
   ggtitle("Trajectory inference",
           subtitle = "De Micheli et al. dataset (Day 5 MuSCs & progenitors): All genes (ndim = 2) - Segments") +
   theme(plot.title = element_text(size = 20, face = "bold"),
@@ -526,7 +532,7 @@ dev.off()
 ### 3.2 Without cell cycle genes
 #### 3.2.1 Cell annotations without cc genes
 **Load pre-calculated predictions (if available)**
-```{r load-deMicheli-cell-type-predictions-cc-genes}
+```{r load-dellOrso-cell-type-predictions-cc-genes}
 pred.dellOrso.cc.genes <- readRDS("./../saved/pred_dellOrso_cc_genes")
 
 # Assign cell types to primary data
@@ -535,7 +541,7 @@ denoised.sce.cc.genes$cell_type_dellOrso <- pred.dellOrso.cc.genes$pruned.labels
 
 
 **Perform cell annotation using SingleR (optional)**
-```{r deMicheli-cell-type-predictions-cc-genes, eval=FALSE}
+```{r dellOrso-cell-type-predictions-cc-genes, eval=FALSE}
 pred.dellOrso.cc.genes <- SingleR(test = denoised.sce.cc.genes,
                                   assay.type.test = "logcounts",
                                   ref = denoised.sce.dellOrso.cc.genes,
@@ -665,15 +671,16 @@ df.dellOrso <- rbind(df.dellOrso, df.dellOrso.missing.rows)
 balloon.deMicheli <- ggballoonplot(df.deMicheli, x = "sample", y = "cell_type", size = "count",
               fill = "count", ggtheme = theme_bw()) +
   scale_fill_viridis_c(option = "C") +
-  ggtitle("De Micheli et al. reference dataset")
+  ggtitle("De Micheli et al. reference dataset: Mapping of primary data cells shown in a balloonplot")
 
 # Dell Orso balloon plot
 balloon.dellOrso <- ggballoonplot(df.dellOrso, x = "sample", y = "cell_type", size = "count",
               fill = "count", ggtheme = theme_bw()) +
   scale_fill_viridis_c(option = "C") +
-  ggtitle("Dell'Orso et al. reference dataset")
+  ggtitle("Dell'Orso et al. reference dataset: Mapping of primary data cells shown in a balloonplot")
 
-gridExtra::grid.arrange(balloon.deMicheli, balloon.dellOrso, ncol = 2,      top = textGrob("Mapping of primary data cells to reference datasest shown in a balloon plot",gp=gpar(fontsize=20)))
+balloon.deMicheli
+balloon.dellOrso
 ```
 
 

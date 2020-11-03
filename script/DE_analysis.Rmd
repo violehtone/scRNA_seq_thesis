@@ -22,6 +22,7 @@ library(SingleCellExperiment)
 library(scran)
 library(pheatmap)
 library(Seurat)
+library(plyr)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -78,7 +79,7 @@ for(sample in unique(denoised.sce$sample)) {
 
 
 ## 2. Ridgeline plots to inspect how the distribution of marker genes differs in the samples of primary and reference datasets
-```{r ridge-plots}
+```{r ridge-plots, message=FALSE, warning=FALSE}
 genes.primary = c("Pax7", "Myf5", "Myod1", "Cdh15", "Tnnt3", "Hes1", "Hes6", "Notch1", "Id1", "Id2", "Id3", "Wnt7b")
 genes.deMicheli = c("Pax7", "Myf5", "Myod1", "Myog", "Cdh15", "Tnnt3", "Hes1", "Heyl", "Hes6", "Notch1", "Notch2", "Notch3", "Id1", "Id2", "Id3", "Wnt2", "Wnt10b")
 
@@ -89,13 +90,11 @@ sce.deMicheli.f$cell_type <- revalue(sce.deMicheli.f$cell_type, c("d0_MuSCs_and_
 seurat.deMicheli <- as.Seurat(sce.deMicheli.f)
 Idents(seurat.deMicheli) <- "cell_type"
 ridge.deMicheli <- RidgePlot(seurat.deMicheli, features = genes.deMicheli, ncol = 2)
-ridge.deMicheli
 
 # Primary data
 seurat.primary <- as.Seurat(denoised.sce)
 Idents(seurat.primary) <- "sample"
 ridge.primary <- RidgePlot(seurat.primary, features = genes.primary, ncol = 2)
-ridge.primary
 ```
 
 **Save ridge line plots as pdf**
