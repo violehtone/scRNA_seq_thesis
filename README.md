@@ -1,12 +1,20 @@
 # single cell RNA-seq data analysis pipeline for thesis @ Katajisto Lab
 
 ## Introduction
-The data_preprocessing.Rmd script (in the script folder) is used for performing the data pre-processing of 3 scRNA-seq data sets.
+This analysis pipeline is used to process and analyze three scRNA-seq datasets.
+ - **Data_preprocessing**: Perform data loading, QC, normalization, feature selection, data correction, and dimensionality reduction for the datasets
+ - **Clustering**: Perform clustering on the primary dataset (uncorrected & cell cycle corrected)
+ - **DE analysis**: Find marker genes from the primary datasets
+ - **Trajectory_inference**: Perform trajectory inference and calculate gene importances for all datasets
+ - **Cell_annotations**: Perform mapping of primary data cells onto the cell types of reference datasets
+ - **Metabolic_pathways**: Identify differential metabolic modules / pathways along the trajectories
 
- - One dataset is primary data and the other two are used as reference datasets.
+### Data
+Three datasets are used in the pipeline of which one is our primary data and two other are used as reference datasets
+
  - Reference data sets:
-    - De Micheli et al. (2020): GSE143435 data set
-    - Dell'Orso et al. (2019): GSE126834 data set
+    - De Micheli et al. (2020): GEO GSE143435
+    - Dell'Orso et al. (2019): GEO GSE126834
 
 The reference data sets are available in NCBI GEO:
   - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE126834
@@ -18,7 +26,13 @@ The primary data set is not publicly available.
 ```
  -- script
     |_ data_preprocessing.Rmd
+    |_ Clustering.Rmd
+    |_ DE_analysis.Rmd
+    |_ Trajectory_inference.Rmd
+    |_ Cell_annotations.Rmd
+    |_ Metabolic_pathways.Rmd
  -- saved
+    |_ <all saved objects are stored in this folder>
  -- results
  -- data
     |_ filtered_feature_bc_matrix
