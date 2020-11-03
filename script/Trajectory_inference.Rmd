@@ -352,7 +352,7 @@ draw_trajectory_plot(space = space.deMicheli,
 
 
 **Expression of cell cycle phases**
-```{r deMicheli-traj-inference-cc-phases}
+```{r deMicheli-traj-inference-phases}
 # Get progression group (cc phases)
 cc.phases.deMicheli <- as.factor(denoised.sce.deMicheli$Phase)
 
@@ -405,7 +405,7 @@ gridExtra::grid.arrange(marker.gene.plots$cdk1, marker.gene.plots$pax7,
 
 
 #### 2.2.2 Trajectory inference without Seurat cc genes
-```{r deMicheli-traj-inference-cc-genes}
+```{r deMicheli-traj-inference-cc-genes-Seurat}
 # Create expression and sample objects
 expression.deMicheli.cc.genes <- as.matrix(t(logcounts(denoised.sce.deMicheli.cc.genes)))
 group_name.deMicheli.cc.genes <- as.factor(denoised.sce.deMicheli.cc.genes$cell_type)
@@ -434,7 +434,7 @@ draw_trajectory_plot(space = space.deMicheli.cc.genes,
 
 
 #### 2.2.3 Trajectory inference without OSCA cc genes
-```{r deMicheli-traj-inference-cc-genes}
+```{r deMicheli-traj-inference-cc-genes-OSCA}
 # Remove cell cycle genes from the data
 denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.osca, ]
 
@@ -522,8 +522,6 @@ set.seed(123)
 space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
 set.seed(123)
 traj.dellOrso <- infer_trajectory(space.dellOrso)
-
-# Reverse trajectory
 traj.dellOrso <- reverse_trajectory(traj.dellOrso)
 
 # plot by cell type
@@ -558,7 +556,7 @@ draw_trajectory_plot(space = space.dellOrso,
 ```
 
 **Marker genes**
-```{r}
+```{r dellOrso-traj-inference-marker-genes}
 # Abundance of some marker genes
 prog.groups <- list(pax7 = expression.dellOrso[, "Pax7"],
                     hes1 = expression.dellOrso[, "Hes1"],
@@ -651,7 +649,7 @@ draw_trajectory_plot(space = space.dellOrso.cc,
 ```
 
 **Plot trajectory by cell cycle phases**
-```{r dellOrso-traj-inference-cc-phase}
+```{r dellOrso-traj-inference-cc-corrected-phases}
 # Get cell cycle phases
 cc.phases.dellOrso <- as.factor(denoised.sce.dellOrso.cc$Phase)
 
@@ -699,13 +697,10 @@ draw_trajectory_plot(space = space.dellOrso.f,
 ```
 
 
-
-
-
 ## 3. Identifying candidate marker genes
 ### 3.1 Primary data
 #### 3.1.1 Load pre-calculated gene importance objects
-```{r load-rimary-data-gimp-modules}
+```{r load-primary-data-gimp-modules}
 # Load gimp and modules objects
 gimp <- readRDS("./../saved/gimp")
 modules <- readRDS("./../saved/modules")

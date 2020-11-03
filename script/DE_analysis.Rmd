@@ -21,6 +21,7 @@ Here, we perform marker gene detection to identify differentially expressed (DE)
 library(SingleCellExperiment)
 library(scran)
 library(pheatmap)
+library(Seurat)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -73,6 +74,39 @@ for(sample in unique(denoised.sce$sample)) {
   logFCs <- getMarkerEffects(markers.interesting)
   pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
 }
+```
+
+
+## 2. Ridgeline plots to inspect how the distribution of marker genes differs in the samples of primary and reference datasets
+```{r ridge-plots}
+genes.primary = c("Pax7", "Myf5", "Myod1", "Cdh15", "Tnnt3", "Hes1", "Hes6", "Notch1", "Id1", "Id2", "Id3", "Wnt7b")
+genes.deMicheli = c("Pax7", "Myf5", "Myod1", "Myog", "Cdh15", "Tnnt3", "Hes1", "Heyl", "Hes6", "Notch1", "Notch2", "Notch3", "Id1", "Id2", "Id3", "Wnt2", "Wnt10b")
+
+# De Micheli data
+sce.deMicheli.f <- denoised.sce.deMicheli[, denoised.sce.deMicheli$cell_type %in% c("d0_MuSCs_and_progenitors", "d5_MuSCs_and_progenitors")]
+
+sce.deMicheli.f$cell_type <- revalue(sce.deMicheli.f$cell_type, c("d0_MuSCs_and_progenitors" = "Day 0", "d5_MuSCs_and_progenitors" = "Day 5"))
+seurat.deMicheli <- as.Seurat(sce.deMicheli.f)
+Idents(seurat.deMicheli) <- "cell_type"
+ridge.deMicheli <- RidgePlot(seurat.deMicheli, features = genes.deMicheli, ncol = 2)
+ridge.deMicheli
+
+# Primary data
+seurat.primary <- as.Seurat(denoised.sce)
+Idents(seurat.primary) <- "sample"
+ridge.primary <- RidgePlot(seurat.primary, features = genes.primary, ncol = 2)
+ridge.primary
+```
+
+**Save ridge line plots as pdf**
+```{r ridge-plots-pdf, eval=FALSE}
+pdf("./../saved/ridge_plot_primary.pdf", width = 10, height = 25)
+ridge.primary
+dev.off()
+
+pdf("./../saved/ridge_plot_deMicheli.pdf", width = 10, height = 25)
+ridge.deMicheli
+dev.off()
 ```
 
 
