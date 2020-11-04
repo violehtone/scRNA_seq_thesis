@@ -59,11 +59,25 @@ denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 denoised.sce.m <- readRDS("./../saved/denoised_sce_m")
 denoised.sce.deMicheli.m <- readRDS("./../saved/denoised_sce_deMicheli_m")
 denoised.sce.dellOrso.m <- readRDS("./../saved/denoised_sce_dellOrso_m")
+
+# Define group names for trajectories
+group_name.primary.m <- as.factor(denoised.sce.m$sample)
+group_name.deMicheli.m <- as.factor(denoised.sce.deMicheli.m$cell_type)
+group_name.dellOrso.m <- as.factor(denoised.sce.dellOrso.m$cell_type)
 ```
 
-### 1.2 Build trajectories for datasets
+**Trajectories**
+```{r load-pre-calculated-trajectories}
+# Load pre-calculated trajectory objects
+traj.primary <- readRDS("./../saved/traj_primary")
+traj.deMicheli <- readRDS("./../saved/traj_deMicheli")
+traj.dellOrso <- readRDS("./../saved/traj_dellOrso")
+```
+
+
+### 1.2 Build trajectories for datasets (Optional)
 #### 1.2.1 Primary data
-```{r trajectory-primary-data}
+```{r trajectory-primary-data, eval=FALSE}
 # Create expression and sample objects
 expression.primary <- as.matrix(t(logcounts(denoised.sce)))
 group_name.primary <- as.factor(denoised.sce$sample)
@@ -77,7 +91,7 @@ traj.primary <- reverse_trajectory(traj.primary)
 ```
 
 #### 1.2.2 De Micheli data
-```{r trajectory-deMicheli}
+```{r trajectory-deMicheli, eval=FALSE}
 # Create expression and sample objects
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
 group_name.deMicheli <- as.factor(denoised.sce.deMicheli$cell_type)
@@ -91,7 +105,7 @@ traj.deMicheli <- reverse_trajectory(traj.deMicheli)
 ```
 
 #### 1.2.3 Dell'Orso data
-```{r trajectory-dellOrso}
+```{r trajectory-dellOrso, eval=FALSE}
 # Create expression and sample objects
 expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
 group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
@@ -105,16 +119,16 @@ traj.dellOrso <- reverse_trajectory(traj.dellOrso)
 ```
 
 
-### 2. Mapping of KEGG modules & pathways to the datasets
+## 2. Mapping of KEGG modules & pathways to the datasets
 
-#### 2.1 Fetch KEGG modules & pathway information
-##### 2.1.2 Fetch KEGG information from pre-computed files
+### 2.1 Fetch KEGG modules & pathway information
+#### 2.1.2 Fetch KEGG information from pre-computed files
 ```{r load-fetched-KEGG-information}
 # Fetch KEGG entries information
 df.kegg.entries <- readRDS("./../saved/df_kegg_entries")
 ```
 
-##### 2.1.2 Fetch information from KEGG (optional)
+#### 2.1.2 Fetch information from KEGG (optional)
 ```{r fetch-kegg-information, eval=FALSE, message=FALSE}
 # Fetch all the modules (and KEGG entries) for mouse
 mouse.org.id <- "T01002"
@@ -161,8 +175,8 @@ saveRDS(df.kegg.entries, file = "./../saved/df_kegg_entries")
 ```
 
 
-#### 2.2 Add KEGG modules & pathway information to the datasets (Optional)
-##### 2.2.1 Primary data
+### 2.2 Add KEGG modules & pathway information to the datasets (Optional)
+#### 2.2.1 Primary data
 ```{r add-KEGG-information-to-primary-data, eval=FALSE, message=FALSE}
 # Load mouse modules if it doesn't exist
 if(!exists("df.kegg.entries")) {
@@ -195,7 +209,7 @@ denoised.sce.m <- denoised.sce.m[rownames(denoised.sce.m) %in% genes.to.use, ]
 #saveRDS(denoised.sce.m, "./../saved/denoised_sce_m")
 ```
 
-##### 2.2.2 De Micheli et al. (2020) reference data
+#### 2.2.2 De Micheli et al. (2020) reference data
 ```{r add-KEGG-information-to-deMicheli-data, eval=FALSE, message=FALSE}
 # Load mouse modules if it doesn't exist
 if(!exists("df.kegg.entries")) {
@@ -229,7 +243,7 @@ denoised.sce.deMicheli.m <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMic
 ```
 
 
-##### 2.2.3 Dell'Orso et al. (2019) reference data
+#### 2.2.3 Dell'Orso et al. (2019) reference data
 ```{r add-KEGG-information-to-dellOrso-data, eval=FALSE, message=FALSE}
 # Load mouse modules if it doesn't exist
 if(!exists("df.kegg.entries")) {
@@ -263,9 +277,9 @@ denoised.sce.dellOrso.m <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrs
 ```
 
 
-### 3. Gene importances using only metabolic genes
-##### 3.1 Primary data
-###### 3.1.1 Load gene importances
+## 3. Gene importances using only metabolic genes
+#### 3.1 Primary data
+##### 3.1.1 Load gene importances
 ```{r load-gimp-primary-metabolic-genes}
 # Load gimp & modules
 gimp.primary.m <- readRDS("./../saved/gimp_primary_m")
@@ -273,11 +287,13 @@ modules.primary.m <- readRDS("./../saved/modules_primary_m")
 
 gimp.primary.m$qvalue <- p.adjust(p = gimp.primary.m$pvalue, method = "BH")
 gene_sel.primary.m <- gimp.primary.m$gene[gimp.primary.m$qvalue < .05]
+
+if(!exists("expression.primary.m")) {expression.primary.m <- as.matrix(t(logcounts(denoised.sce.m)))}
 expr_sel.primary.m <- scale_quantile(expression.primary.m[, gene_sel.primary.m])
 ```
 
 
-###### 3.1.2 Compute gene importances (optional)
+#### 3.1.2 Compute gene importances (optional)
 ```{r gimp-modules-primary-metabolic-genes, eval=FALSE}
 # Read trajectory from a file (if not defined)
 if(!exists("traj.primary")) {
@@ -307,21 +323,79 @@ modules.primary.m <- extract_modules(expr_sel.primary.m,
 #saveRDS(modules.primary.m, "./../saved/modules_primary_m")
 ```
 
-###### 3.1.3 Visualization of gene importances
+#### 3.1.3 Visualization of gene importances
+```{r primary-data-gimp-modules-metabolic-genes, eval=FALSE}
+# Get rowdata (incl. KEGG modules for each gene) for the metabolic genes
+rowdata.primary <- rowData(denoised.sce.m)
+genes.f <- rownames(rowdata.primary) %in% colnames(expr_sel.primary.m)
+rowdata.primary.f <- rowdata.primary[genes.f, ]
 
-##### 3.2 De Micheli et al. (2020) reference data
-###### 3.2.1 Load gene importances
+# Create an annotation row df
+ann_row <- data.frame(metabolic_module = factor(rowdata.primary.f$module))
+rownames(ann_row) <- rownames(rowdata.primary.f)
+
+# Order genes to same order as in modules object
+ann_row <- ann_row[modules.primary.m$feature, ,drop=FALSE]
+
+# Add metabolic module information to the modules object
+modules.primary.m$metabolic_module <- ann_row$metabolic_module
+
+# Arrange modules object by module and by metabolic_module
+modules.primary.m.kegg <- arrange(modules.primary.m,
+                                  as.character(modules.primary.m$module),
+                                  as.character(modules.primary.m$metabolic_module))
+
+# save modules object
+saveRDS(modules.primary.m.kegg, file = "./../saved/modules_primary_m_kegg")
+
+# Create annotation row color palette (43 colors)
+ann_colors <- colorRampPalette(grDevices::rainbow(length(unique(ann_row$metabolic_module))))
+ann_colors <- ann_colors(length(unique(ann_row$metabolic_module)))
+names(ann_colors) <- unique(ann_row$metabolic_module)
+ann_colors <- list(metabolic_module = ann_colors)
+
+# Gimp
+pdf("./../saved/gimp_heatmap_primary_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.primary.m, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary.m,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5)
+dev.off()
+
+
+# Modules
+pdf("./../saved/modules_heatmap_primary_metabolic_genes.pdf")
+draw_trajectory_heatmap(expr_sel.primary.m, 
+                        time = traj.primary$time,
+                        progression_group = group_name.primary.m,
+                        modules = modules.primary.m.kegg,
+                        show_labels_row = TRUE,
+                        annotation_row = ann_row,
+                        #annotation_colors = ann_colors,
+                        fontsize_row = 5,
+                        fontsize = 4)
+dev.off()
+
+# Save modules object as csv
+write.csv(as.data.frame(modules.primary.m.kegg), file = "./../saved/modules_primary_m_kegg.csv")
+```
+
+### 3.2 De Micheli et al. (2020) reference data
+#### 3.2.1 Load gene importances
 ```{r load-gimp-deMicheli-metabolic-genes}
 # Load gimp & modules
-gimp.deMicheli.m <- readRDS("./../saved/gimp_primary_m")
-modules.deMicheli.m <- readRDS("./../saved/modules_primary_m")
+gimp.deMicheli.m <- readRDS("./../saved/gimp_deMicheli_m")
+modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m")
 
 gimp.deMicheli.m$qvalue <- p.adjust(p = gimp.deMicheli.m$pvalue, method = "BH")
 gene_sel.deMicheli.m <- gimp.deMicheli.m$gene[gimp.deMicheli.m$qvalue < .05]
+
+if(!exists("expression.deMicheli.m")) {expression.deMicheli.m <- as.matrix(t(logcounts(denoised.sce.deMicheli.m)))}
 expr_sel.deMicheli.m <- scale_quantile(expression.deMicheli.m[, gene_sel.deMicheli.m])
 ```
 
-###### 3.2.2 Compute gene importances (optional)
+#### 3.2.2 Compute gene importances (optional)
 ```{r gimp-modules-deMicheli-metabolic-genes, eval=FALSE}
 # Read trajectory from a file (if not defined)
 if(!exists("traj.deMicheli")) {
@@ -353,7 +427,7 @@ modules.deMicheli.m <- extract_modules(expr_sel.deMicheli.m,
 ```
 
 
-###### 3.2.3 Visualization of gene importances (pdf format)
+##### 3.2.3 Visualization of gene importances (pdf format)
 ```{r deMicheli-gimp-modules-metabolic-genes, eval=FALSE}
 # Get rowdata (incl. KEGG modules for each gene) for the metabolic genes
 rowdata.deMicheli <- rowData(denoised.sce.deMicheli.m)
@@ -371,12 +445,12 @@ ann_row_deMicheli <- ann_row_deMicheli[modules.deMicheli.m$feature, ,drop=FALSE]
 modules.deMicheli.m$metabolic_module <- ann_row_deMicheli$metabolic_module
 
 # Arrange modules object by module and by metabolic_module
-modules.deMicheli.m <- arrange(modules.deMicheli.m,
-                             as.character(modules.deMicheli.m$module),
-                             as.character(modules.deMicheli.m$metabolic_module))
+modules.deMicheli.m.kegg <- arrange(modules.deMicheli.m,
+                                    as.character(modules.deMicheli.m$module),
+                                    as.character(modules.deMicheli.m$metabolic_module))
 
 # save modules object
-saveRDS(modules.deMicheli.m, file = "./../saved/modules_deMicheli_m_kegg_modules")
+saveRDS(modules.deMicheli.m.kegg, file = "./../saved/modules_deMicheli_m_kegg")
 
 # Gimp
 pdf("./../saved/gimp_heatmap_deMicheli_metabolic_genes.pdf")
@@ -393,7 +467,7 @@ pdf("./../saved/modules_heatmap_deMicheli_metabolic_genes.pdf")
 draw_trajectory_heatmap(expr_sel.deMicheli.m, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli.m,
-                        modules = modules.deMicheli.m,
+                        modules = modules.deMicheli.m.kegg,
                         annotation_row = ann_row_deMicheli,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
@@ -401,12 +475,12 @@ draw_trajectory_heatmap(expr_sel.deMicheli.m,
 dev.off()
 
 # Save modules object as csv
-write.csv(as.data.frame(modules.deMicheli.m), file = "./../saved/modules_deMicheli_m.csv")
+write.csv(as.data.frame(modules.deMicheli.m.kegg), file = "./../saved/modules_deMicheli_m_kegg.csv")
 ```
 
 
-##### 3.3 Dell'Orso et al. (2019) reference data
-###### 3.3.1 Load gene importances
+### 3.3 Dell'Orso et al. (2019) reference data
+#### 3.3.1 Load gene importances
 ```{r load-gimp-dellOrso-metabolic-genes}
 # Read gimp & modules from a file
 gimp.dellOrso.m <- readRDS("./../saved/gimp_dellOrso_m")
@@ -415,11 +489,13 @@ modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m")
 # Create expression and sample objects
 gimp.dellOrso.m$qvalue <- p.adjust(p = gimp.dellOrso.m$pvalue, method = "BH")
 gene_sel.dellOrso.m <- gimp.dellOrso.m$gene[gimp.dellOrso.m$qvalue < .05]
+
+if(!exists("expression.dellOrso.m")) {expression.dellOrso.m <- as.matrix(t(logcounts(denoised.sce.dellOrso.m)))}
 expr_sel.dellOrso.m <- scale_quantile(expression.dellOrso.m[, gene_sel.dellOrso.m])
 ```
 
 
-###### 3.3.2 Compute gene importances (optional)
+#### 3.3.2 Compute gene importances (optional)
 ```{r gimp-modules-dellOrso-metabolic-genes, eval=FALSE}
 # Read trajectory from a file (if not defined)
 if(!exists("traj.dellOrso")) {
@@ -451,7 +527,7 @@ modules.dellOrso.m <- extract_modules(expr_sel.dellOrso.m,
 ```
 
 
-###### 3.3.3 Visualization of gene importances
+#### 3.3.3 Visualization of gene importances
 ```{r dellOrso-gimp-modules-metabolic-genes, eval=FALSE}
 # Get rowdata (incl. KEGG modules for each gene) for the metabolic genes
 rowdata.dellOrso <- rowData(denoised.sce.dellOrso.m)
@@ -469,12 +545,12 @@ ann_row_dellOrso <- ann_row_dellOrso[modules.dellOrso.m$feature, ,drop=FALSE]
 modules.dellOrso.m$metabolic_module <- ann_row_dellOrso$metabolic_module
 
 # Arrange modules object by module and by metabolic_module
-modules.dellOrso.m <- arrange(modules.dellOrso.m,
-                              as.character(modules.dellOrso.m$module),
-                              as.character(modules.dellOrso.m$metabolic_module))
+modules.dellOrso.m.kegg <- arrange(modules.dellOrso.m,
+                                   as.character(modules.dellOrso.m$module),
+                                   as.character(modules.dellOrso.m$metabolic_module))
 
 # save modules object
-saveRDS(modules.dellOrso.m, file = "./../saved/modules_dellOrso_m_kegg_modules")
+saveRDS(modules.dellOrso.m.kegg, file = "./../saved/modules_dellOrso_m_kegg")
 
 # Gimp
 pdf("./../saved/gimp_heatmap_dellOrso_metabolic_genes.pdf")
@@ -499,27 +575,298 @@ draw_trajectory_heatmap(expr_sel.dellOrso.m,
 dev.off()
 
 # Save modules object as csv
-write.csv(as.data.frame(modules.dellOrso.m), file = "./../saved/modules_dellOrso_m.csv")
+write.csv(as.data.frame(modules.dellOrso.m.kegg), file = "./../saved/modules_dellOrso_m_kegg.csv")
 ```
 
-### 4. Visualization (barplots) of metabolic modules & pathways vs. Scorpius modules
-#### 4.1 Modules
-##### 4.1.1 Primary data
-##### 4.1.2 De Micheli et al. (2020) reference data
-##### 4.1.3 Dell'Orso et al. (2019) reference data
+## 4. Visualization (barplots) of metabolic modules & pathways vs. Scorpius modules
+### 4.1 Modules
+#### 4.1.1 Primary data
+```{r primary-data-kegg-module-visualization, message=FALSE, warning=FALSE}
+# Load kegg modules object (if not defined)
+if(!exists("modules.primary.m.kegg")){modules.primary.m.kegg <- readRDS("./../saved/modules_primary_m_kegg_modules_kegg")}
 
-#### 4.2 Pathways
-##### 4.2.1 Primary data
-##### 4.2.2 De Micheli et al. (2020) reference data
-##### 4.2.3 Dell'Orso et al. (2019) reference data
+# Create contingency table
+tab.modules.primary <- table(modules.primary.m.kegg$metabolic_module, modules.primary.m.kegg$module)
 
-### 5. SingleR annotation using only metabolic genes
-#### 5.1 De Micheli predictions (metabolic genes)
-#### 5.1.1 All cell types
-#### 5.1.2 Without mature skeletal muscle
+# Melt table
+df.modules.primary <- melt(tab.modules.primary)
+colnames(df.modules.primary) <- c("KEGG_module", "Scorpius_module", "frequency")
+df.modules.primary$KEGG_module <- unfactor(df.modules.primary$KEGG_module)
 
-### 5.2 Dell'Orso predictions (metabolic genes)
-#### 5.2.1 All cell types
-#### 5.2.2 Without Primary Myoblasts (PMs)
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.modules.primary.separated <- distinct(as.data.frame(separate_rows(df.modules.primary, KEGG_module, sep = ", ")))
+
+# Plot metabolic modules vs. Scorpius modules
+p.primary <- ggplot(df.modules.primary.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG modules in different trajectory modules",
+          subtitle = "Primary dataset") +
+  theme(legend.position="right") +
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+
+p.primary
+
+```
+
+#### 4.1.2 De Micheli et al. (2020) reference data
+```{r deMicheli-data-kegg-module-visualization, message=FALSE, warning=FALSE}
+# Load kegg modules object (if not defined)
+if(!exists("modules.deMicheli.m.kegg")){modules.deMicheli.m.kegg <- readRDS("./../saved/modules_deMicheli_m_kegg")}
+
+# Create contingency table
+tab.modules.deMicheli <- table(modules.deMicheli.m.kegg$metabolic_module, modules.deMicheli.m.kegg$module)
+
+# Melt table
+df.modules.deMicheli <- melt(tab.modules.deMicheli)
+colnames(df.modules.deMicheli) <- c("KEGG_module", "Scorpius_module", "frequency")
+df.modules.deMicheli$KEGG_module <- unfactor(df.modules.deMicheli$KEGG_module)
+
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.modules.deMicheli.separated <- distinct(as.data.frame(separate_rows(df.modules.deMicheli, KEGG_module, sep = ", ")))
+
+# Plot metabolic modules vs. Scorpius modules
+p.deMicheli <- ggplot(df.modules.deMicheli.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG modules in different trajectory modules",
+          subtitle = "De Micheli et al. reference dataset") +
+  theme(legend.position="right") +
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+
+p.deMicheli
+```
+
+
+#### 4.1.3 Dell'Orso et al. (2019) reference data
+```{r dellOrso-data-kegg-module-visualization, message=FALSE, warning=FALSE}
+# Load kegg modules object (if not defined)
+if(!exists("modules.dellOrso.m.kegg")){modules.dellOrso.m.kegg <- readRDS("./../saved/modules_dellOrso_m_kegg")}
+
+# Create contingency table
+tab.modules.dellOrso <- table(modules.dellOrso.m.kegg$metabolic_module, modules.dellOrso.m.kegg$module)
+
+# Melt table
+df.modules.dellOrso <- melt(tab.modules.dellOrso)
+colnames(df.modules.dellOrso) <- c("KEGG_module", "Scorpius_module", "frequency")
+df.modules.dellOrso$KEGG_module <- unfactor(df.modules.dellOrso$KEGG_module)
+
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.modules.dellOrso.separated <- distinct(as.data.frame(separate_rows(df.modules.dellOrso, KEGG_module, sep = ", ")))
+
+# Plot metabolic modules vs. Scorpius modules
+p.dellOrso <- ggplot(df.modules.dellOrso.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_module), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG modules in different trajectory modules",
+          subtitle = "Dell'Orso et al. referene dataset") +
+  theme(legend.position="right") +
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_module, "")), position = position_dodge(width=0.9), vjust=-0.5)
+
+p.dellOrso
+```
+
+**Save plots as pdf**
+```{r kegg-module-plots-as-pdf, eval=FALSE}
+pdf("./../saved/KEGG_modules_in_trajectories", width = 11, height = 5)
+p.primary
+p.deMicheli
+p.dellOrso
+dev.off()
+```
+
+### 4.2 Pathways
+#### 4.2.1 Create mapping between genes,modules, and pathways
+```{r mapping-pathways}
+# Load scorpius modules objects (if needed)
+if(!exists("modules.primary.m.kegg")){modules.primary.m.kegg <- readRDS("./../saved/modules_primary_m_kegg_modules_kegg")}
+if(!exists("modules.deMicheli.m.kegg")){modules.deMicheli.m.kegg <- readRDS("./../saved/modules_deMicheli_m_kegg")}
+if(!exists("modules.dellOrso.m.kegg")){modules.dellOrso.m.kegg <- readRDS("./../saved/modules_dellOrso_m_kegg")}
+
+###############
+# primary data
+###############
+rowData.primary <- rowData(denoised.sce.m)
+genes.primary <- rownames(rowdata.primary) %in% colnames(expr_sel.primary.m)
+rowData.primary.f <- rowData.primary[genes.primary, ]
+
+# Create mapping between genes and pathways
+pathway.mapping.primary <- data.frame(pathway = factor(rowData.primary.f$pathway))
+rownames(pathway.mapping.primary) <- rownames(rowData.primary.f)
+
+# Order genes
+pathway.mapping.primary <- pathway.mapping.primary[modules.primary.m.kegg$feature, , drop = FALSE]
+
+# Add pathway information to modules object
+modules.primary.m.kegg$pathway <- pathway.mapping.primary$pathway
+
+# Arrange rows
+modules.primary.m.kegg.pathway <- arrange(modules.primary.m.kegg,
+                                           as.character(modules.primary.m.kegg$module),
+                                           as.character(modules.primary.m.kegg$metabolic_module))
+
+saveRDS(modules.primary.m.kegg.pathway, file = "./../saved/modules_primary_m_kegg_pathway")
+
+#########################
+# De Micheli et al. data
+#########################
+rowData.deMicheli <- rowData(denoised.sce.deMicheli.m)
+genes.deMicheli <- rownames(rowData.deMicheli) %in% colnames(expr_sel.deMicheli.m)
+rowData.deMicheli.f <- rowData.deMicheli[genes.deMicheli, ]
+
+# Create mapping between genes and pathways
+pathway.mapping.deMicheli <- data.frame(pathway = factor(rowData.deMicheli.f$pathway))
+rownames(pathway.mapping.deMicheli) <- rownames(rowData.deMicheli.f)
+
+# Order genes
+pathway.mapping.deMicheli <- pathway.mapping.deMicheli[modules.deMicheli.m.kegg$feature, , drop = FALSE]
+
+# Add pathway information to modules object
+modules.deMicheli.m.kegg$pathway <- pathway.mapping.deMicheli$pathway
+
+# Arrange rows
+modules.deMicheli.m.kegg.pathway <- arrange(modules.deMicheli.m.kegg,
+                                            as.character(modules.deMicheli.m.kegg$module),
+                                            as.character(modules.deMicheli.m.kegg$metabolic_module))
+
+saveRDS(modules.deMicheli.m.kegg.pathway, file = "./../saved/modules_deMicheli_m_kegg_pathway")
+
+#########################
+# Dell'Orso et al. data
+#########################
+rowData.dellOrso <- rowData(denoised.sce.dellOrso.m)
+genes.dellOrso <- rownames(rowData.dellOrso) %in% colnames(expr_sel.deMicheli.m)
+rowData.dellOrso.f <- rowData.dellOrso[genes.dellOrso, ]
+
+# Create mapping between genes and pathways
+pathway.mapping.dellOrso <- data.frame(pathway = factor(rowData.dellOrso.f$pathway))
+rownames(pathway.mapping.dellOrso) <- rownames(rowData.dellOrso.f)
+
+# Order genes
+pathway.mapping.dellOrso <- pathway.mapping.dellOrso[modules.dellOrso.m.kegg$feature, , drop = FALSE]
+
+# Add pathway information to modules object
+modules.dellOrso.m.kegg$pathway <- pathway.mapping.dellOrso$pathway
+
+# Arrange rows
+modules.dellOrso.m.kegg.pathway <- arrange(modules.dellOrso.m.kegg,
+                                           as.character(modules.dellOrso.m.kegg$module),
+                                           as.character(modules.dellOrso.m.kegg$metabolic_module))
+
+saveRDS(modules.dellOrso.m.kegg.pathway, file = "./../saved/modules_dellOrso_m_kegg_pathway")
+```
+
+
+#### 4.2.2 Primary data
+```{r primary-data-kegg-pathway-visualization, message=FALSE, warning=FALSE}
+# Load kegg modules object (if not defined)
+if(!exists("modules.primary.m.kegg.pathway")){modules.primary.m.kegg.pathway <- readRDS("./../saved/modules_primary_m_kegg_pathway")}
+
+# Create contingency table
+tab.pathways.primary <- table(modules.primary.m.kegg.pathway$pathway, modules.primary.m.kegg.pathway$module)
+
+# Melt table
+df.pathways.primary <- melt(tab.pathways.primary)
+colnames(df.pathways.primary) <- c("KEGG_pathway", "Scorpius_module", "frequency")
+df.pathways.primary$KEGG_pathway <- unfactor(df.pathways.primary$KEGG_pathway)
+
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.pathways.primary.separated <- distinct(as.data.frame(separate_rows(df.pathways.primary, KEGG_pathway, sep = ", ")))
+
+# Plot metabolic modules vs. Scorpius modules
+p.primary <- ggplot(df.pathways.primary.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_pathway), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG pathways in different trajectory modules",
+          subtitle = "Primary dataset") +
+  theme(legend.position="right") +
+  geom_label_repel(aes(label=ifelse(frequency>=3, KEGG_pathway, "")), position = position_dodge(width=0.9), vjust=-0.5)
+
+p.primary
+```
+
+
+#### 4.2.3 De Micheli et al. (2020) reference data
+```{r deMicheli-data-kegg-pathway-visualization, message=FALSE, warning=FALSE}
+# Load kegg modules object (if not defined)
+if(!exists("modules.deMicheli.m.kegg.pathway")){modules.deMicheli.m.kegg.pathway <- readRDS("./../saved/modules_deMicheli_m_kegg_pathway")}
+
+# Create contingency table
+tab.pathways.deMicheli <- table(modules.deMicheli.m.kegg.pathway$pathway, modules.deMicheli.m.kegg.pathway$module)
+
+# Melt table
+df.pathways.deMicheli <- melt(tab.pathways.deMicheli)
+colnames(df.pathways.deMicheli) <- c("KEGG_pathway", "Scorpius_module", "frequency")
+df.pathways.deMicheli$KEGG_pathway <- unfactor(df.pathways.deMicheli$KEGG_pathway)
+
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.pathways.deMicheli.separated <- distinct(as.data.frame(separate_rows(df.pathways.deMicheli, KEGG_pathway, sep = ", ")))
+
+# Plot metabolic modules vs. Scorpius modules
+p.deMicheli <- ggplot(df.pathways.deMicheli.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = KEGG_pathway), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG pathways in different trajectory modules",
+          subtitle = "De Micheli et al. reference dataset") +
+  theme(legend.position="right") +
+  geom_label_repel(aes(label=ifelse(frequency>=10, KEGG_pathway, "")), position = position_dodge(width=0.9), vjust=-0.5)
+
+p.deMicheli
+```
+
+
+#### 4.2.4 Dell'Orso et al. (2019) reference data
+```{r dellOrso-data-kegg-pathway-visualization, message=FALSE, warning=FALSE}
+# Load kegg modules object (if not defined)
+if(!exists("modules.dellOrso.m.kegg.pathway")){modules.dellOrso.m.kegg.pathway <- readRDS("./../saved/modules_dellOrso_m_kegg_pathway")}
+
+# Create contingency table
+tab.pathways.dellOrso <- table(modules.dellOrso.m.kegg.pathway$pathway, modules.dellOrso.m.kegg.pathway$module)
+
+# Melt table
+df.pathways.dellOrso <- melt(tab.pathways.dellOrso)
+colnames(df.pathways.dellOrso) <- c("KEGG_pathway", "Scorpius_module", "frequency")
+df.pathways.dellOrso$KEGG_pathway <- unfactor(df.pathways.dellOrso$KEGG_pathway)
+
+# Handle rows where there are multiple KEGG modules mapping to one scorpius module
+df.pathways.dellOrso.separated <- distinct(as.data.frame(separate_rows(df.pathways.dellOrso, KEGG_pathway, sep = ", ")))
+
+# Plot metabolic modules vs. Scorpius modules
+p.dellOrso <- ggplot(df.pathways.dellOrso.separated, aes(x = as.factor(Scorpius_module), y = frequency)) +
+  geom_bar(aes(fill = as.factor(KEGG_pathway)), stat = "identity", position = position_dodge(1)) +
+  ggtitle("Frequency of KEGG pathways in different trajectory modules",
+          subtitle = "Dell'Orso et al. referene dataset") +
+  theme(legend.position="right") +
+  geom_label_repel(aes(label=ifelse(frequency>=6, KEGG_pathway, "")), position = position_dodge(width=0.9), vjust=-0.5)
+
+p.dellOrso
+```
+
+**Save plots as pdf**
+```{r kegg-module-plots-as-pdf, eval=FALSE}
+pdf("./../saved/KEGG_pathways_in_trajectories", width = 11, height = 5)
+p.primary
+p.deMicheli
+p.dellOrso
+dev.off()
+```
+
+## 5. Gene importances using only metabolic genes and subset of cell types
+
+### 5.1 De Micheli et al. (2020) reference data: Without skeletal muscle
+#### 5.1.1 Load gene importances
+#### 5.1.2 Compute gene importances (optional)
+#### 5.1.3 Visualization of gene importances
+
+
+### 5.2 Dell'Orso et al. (2019) reference data: Without PMs
+#### 5.2.1 Load gene importances
+#### 5.2.2 Compute gene importances (optional)
+#### 5.2.3 Visualization of gene importances
+
+
+## 6. SingleR annotation using only metabolic genes
+### 6.1 De Micheli predictions (metabolic genes)
+### 6.1.1 All cell types
+### 6.1.2 Without mature skeletal muscle
+
+## 6.2 Dell'Orso predictions (metabolic genes)
+### 6.2.1 All cell types
+### 6.2.2 Without Primary Myoblasts (PMs)
 
 

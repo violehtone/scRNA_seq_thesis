@@ -282,7 +282,7 @@ pred.segments <- SingleR(test = denoised.sce,
                          ref = denoised.sce.deMicheli,
                          labels = denoised.sce.deMicheli$segment)
 
-#saveRDS(pred.segments, file = "./../saved/pred_segments")
+saveRDS(pred.segments, file = "./../saved/pred_segments")
 
 # Inspect the predictions
 table(denoised.sce$sample, pred.segments$pruned.labels)
