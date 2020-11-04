@@ -43,7 +43,7 @@ denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 ```
 
 **Cell cycle genes (from OSCA pipeline)**
-```{r cc-genes-osca-shortcut}
+```{r cc-genes-osca-shortcut, eval=FALSE}
 # Get OSCA cell cycle genes
 cc.genes.osca <- readRDS("./../saved/cc_genes_osca")
 
@@ -79,8 +79,22 @@ denoised.sce$cell_type_deMicheli <- pred.deMicheli$pruned.labels
 #saveRDS(pred.deMicheli, file = "./../saved/pred_deMicheli")
 ```
 
-#### 2.1.2 Diagnostic plots (pdf documents)
-```{r deMicheli-annotation-diagnostic-plots, eval=FALSE}
+#### 2.1.2 Diagnostic plots
+**Diagnostics**
+```{r deMicheli-annotation-diagnostic-plots}
+# Score heatmap
+plotScoreHeatmap(pred.deMicheli, annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
+
+# Remove low-quality cells
+to.remove <- pruneScores(pred.deMicheli, min.diff.med = 0.2)
+table(Label=pred.deMicheli$labels, Removed=to.remove)
+
+# Delta distribution
+plotScoreDistribution(results = pred.deMicheli, show = "delta.med")
+```
+
+**Pdf documents**
+```{r deMicheli-annotation-diagnostic-plots-pdf, eval=FALSE}
 # Visualize the score matrix
 pdf("./../saved/deMicheli_score_heatmap.pdf", width = 30, height = 50)
 plotScoreHeatmap(pred.deMicheli, 
@@ -150,7 +164,7 @@ dev.off()
 ### 2.2 Without cell cycle genes
 #### 2.2.1 Cell annotations without cc genes
 **Load pre-calculated predictions (if available)**
-```{r load-deMicheli-cell-type-predictions-cc-genes}
+```{r load-deMicheli-cell-type-predictions-cc-genes, eval=FALSE}
 pred.deMicheli.cc.genes <- readRDS("./../saved/pred_deMicheli_cc_genes")
 
 # Assign cell types to primary data
@@ -289,7 +303,7 @@ table(denoised.sce$sample, pred.segments$pruned.labels)
 ```
 
 ##### 2.3.1.2 Diagnostic plots with all cell types grouped into segments (pdf documents)
-```{r deMicheli-annotation-diagnostic-plots-segments-all-cells}
+```{r deMicheli-annotation-diagnostic-plots-segments-all-cells-pdf, eval=FALSE}
 # Visualize the score matrix
 pdf("./../saved/deMicheli_segments_score_heatmap.pdf", width = 30, height = 50)
 plotScoreHeatmap(pred.segments, 
@@ -490,7 +504,22 @@ denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
 
 
 #### 3.2.1 Diagnostic plots (pdf documents)
-```{r dellOrso-annotation-diagnostic-plots, eval=FALSE}
+**diagnostics**
+```{r dellOrso-annotation-diagnostic-plots}
+# Score heatmap
+plotScoreHeatmap(pred.dellOrso,  annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
+
+# Remove low-quality cells
+to.remove <- pruneScores(pred.dellOrso, min.diff.med = 0.2)
+table(Label=pred.dellOrso$labels, Removed=to.remove)
+
+# Delta distribution
+plotScoreDistribution(pred.dellOrso, show = "delta.med")
+```
+
+
+**pdf document**
+```{r dellOrso-annotation-diagnostic-plots-pdf, eval=FALSE}
 # Visualize the score matrix
 pdf("./../saved/dellOrso_score_heatmap.pdf")
 plotScoreHeatmap(pred.dellOrso, 
@@ -532,7 +561,7 @@ dev.off()
 ### 3.2 Without cell cycle genes
 #### 3.2.1 Cell annotations without cc genes
 **Load pre-calculated predictions (if available)**
-```{r load-dellOrso-cell-type-predictions-cc-genes}
+```{r load-dellOrso-cell-type-predictions-cc-genes, eval=FALSE}
 pred.dellOrso.cc.genes <- readRDS("./../saved/pred_dellOrso_cc_genes")
 
 # Assign cell types to primary data
@@ -685,7 +714,7 @@ balloon.dellOrso
 
 
 ### 5.2 Without cell cycle genes
-```{r inspect-cell-types-cc-genes}
+```{r inspect-cell-types-cc-genes, eval=FALSE}
 table(pred.deMicheli.cc.genes$pruned.labels)
 table(pred.dellOrso.cc.genes$labels)
 
