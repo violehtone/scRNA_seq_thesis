@@ -171,7 +171,7 @@ non.metabolic <- is.na(df.kegg.entries$module)
 df.kegg.entries <- df.kegg.entries[!non.metabolic, ]
 
 # Save objects
-saveRDS(df.kegg.entries, file = "./../saved/df_kegg_entries")
+#saveRDS(df.kegg.entries, file = "./../saved/df_kegg_entries")
 ```
 
 
@@ -346,7 +346,7 @@ modules.primary.m.kegg <- arrange(modules.primary.m,
                                   as.character(modules.primary.m$metabolic_module))
 
 # save modules object
-saveRDS(modules.primary.m.kegg, file = "./../saved/modules_primary_m_kegg")
+#saveRDS(modules.primary.m.kegg, file = "./../saved/modules_primary_m_kegg")
 
 # Create annotation row color palette (43 colors)
 ann_colors <- colorRampPalette(grDevices::rainbow(length(unique(ann_row$metabolic_module))))
@@ -450,7 +450,7 @@ modules.deMicheli.m.kegg <- arrange(modules.deMicheli.m,
                                     as.character(modules.deMicheli.m$metabolic_module))
 
 # save modules object
-saveRDS(modules.deMicheli.m.kegg, file = "./../saved/modules_deMicheli_m_kegg")
+#saveRDS(modules.deMicheli.m.kegg, file = "./../saved/modules_deMicheli_m_kegg")
 
 # Gimp
 pdf("./../saved/gimp_heatmap_deMicheli_metabolic_genes.pdf")
@@ -550,7 +550,7 @@ modules.dellOrso.m.kegg <- arrange(modules.dellOrso.m,
                                    as.character(modules.dellOrso.m$metabolic_module))
 
 # save modules object
-saveRDS(modules.dellOrso.m.kegg, file = "./../saved/modules_dellOrso_m_kegg")
+#saveRDS(modules.dellOrso.m.kegg, file = "./../saved/modules_dellOrso_m_kegg")
 
 # Gimp
 pdf("./../saved/gimp_heatmap_dellOrso_metabolic_genes.pdf")
@@ -583,7 +583,7 @@ write.csv(as.data.frame(modules.dellOrso.m.kegg), file = "./../saved/modules_del
 #### 4.1.1 Primary data
 ```{r primary-data-kegg-module-visualization, message=FALSE, warning=FALSE}
 # Load kegg modules object (if not defined)
-if(!exists("modules.primary.m.kegg")){modules.primary.m.kegg <- readRDS("./../saved/modules_primary_m_kegg_modules_kegg")}
+if(!exists("modules.primary.m.kegg")){modules.primary.m.kegg <- readRDS("./../saved/modules_primary_m_kegg")}
 
 # Create contingency table
 tab.modules.primary <- table(modules.primary.m.kegg$metabolic_module, modules.primary.m.kegg$module)
@@ -676,7 +676,7 @@ dev.off()
 #### 4.2.1 Create mapping between genes,modules, and pathways
 ```{r mapping-pathways}
 # Load scorpius modules objects (if needed)
-if(!exists("modules.primary.m.kegg")){modules.primary.m.kegg <- readRDS("./../saved/modules_primary_m_kegg_modules_kegg")}
+if(!exists("modules.primary.m.kegg")){modules.primary.m.kegg <- readRDS("./../saved/modules_primary_m_kegg")}
 if(!exists("modules.deMicheli.m.kegg")){modules.deMicheli.m.kegg <- readRDS("./../saved/modules_deMicheli_m_kegg")}
 if(!exists("modules.dellOrso.m.kegg")){modules.dellOrso.m.kegg <- readRDS("./../saved/modules_dellOrso_m_kegg")}
 
@@ -684,7 +684,7 @@ if(!exists("modules.dellOrso.m.kegg")){modules.dellOrso.m.kegg <- readRDS("./../
 # primary data
 ###############
 rowData.primary <- rowData(denoised.sce.m)
-genes.primary <- rownames(rowdata.primary) %in% colnames(expr_sel.primary.m)
+genes.primary <- rownames(rowData.primary) %in% colnames(expr_sel.primary.m)
 rowData.primary.f <- rowData.primary[genes.primary, ]
 
 # Create mapping between genes and pathways
@@ -702,7 +702,7 @@ modules.primary.m.kegg.pathway <- arrange(modules.primary.m.kegg,
                                            as.character(modules.primary.m.kegg$module),
                                            as.character(modules.primary.m.kegg$metabolic_module))
 
-saveRDS(modules.primary.m.kegg.pathway, file = "./../saved/modules_primary_m_kegg_pathway")
+#saveRDS(modules.primary.m.kegg.pathway, file = "./../saved/modules_primary_m_kegg_pathway")
 
 #########################
 # De Micheli et al. data
@@ -726,7 +726,7 @@ modules.deMicheli.m.kegg.pathway <- arrange(modules.deMicheli.m.kegg,
                                             as.character(modules.deMicheli.m.kegg$module),
                                             as.character(modules.deMicheli.m.kegg$metabolic_module))
 
-saveRDS(modules.deMicheli.m.kegg.pathway, file = "./../saved/modules_deMicheli_m_kegg_pathway")
+#saveRDS(modules.deMicheli.m.kegg.pathway, file = "./../saved/modules_deMicheli_m_kegg_pathway")
 
 #########################
 # Dell'Orso et al. data
@@ -750,7 +750,7 @@ modules.dellOrso.m.kegg.pathway <- arrange(modules.dellOrso.m.kegg,
                                            as.character(modules.dellOrso.m.kegg$module),
                                            as.character(modules.dellOrso.m.kegg$metabolic_module))
 
-saveRDS(modules.dellOrso.m.kegg.pathway, file = "./../saved/modules_dellOrso_m_kegg_pathway")
+#saveRDS(modules.dellOrso.m.kegg.pathway, file = "./../saved/modules_dellOrso_m_kegg_pathway")
 ```
 
 
@@ -838,7 +838,7 @@ p.dellOrso
 ```
 
 **Save plots as pdf**
-```{r kegg-module-plots-as-pdf, eval=FALSE}
+```{r kegg-pathway-plots-as-pdf, eval=FALSE}
 pdf("./../saved/KEGG_pathways_in_trajectories", width = 11, height = 5)
 p.primary
 p.deMicheli
@@ -902,7 +902,7 @@ modules.deMicheli.m.f.kegg <- arrange(modules.deMicheli.m.f,
                                     as.character(modules.deMicheli.m.f$metabolic_module))
 
 # save modules object
-saveRDS(modules.deMicheli.m.f.kegg, file = "./../saved/modules_deMicheli_m_f_kegg")
+#saveRDS(modules.deMicheli.m.f.kegg, file = "./../saved/modules_deMicheli_m_f_kegg")
 
 # Gimp
 pdf("./../saved/gimp_heatmap_deMicheli_metabolic_genes_no_muscle.pdf")
@@ -964,7 +964,7 @@ expr_sel.dellOrso.m.f <- scale_quantile(expression.dellOrso.m.f[, gene_sel.dellO
 
 
 #### 5.2.3 Visualization of gene importances
-```{r dellOrso-gimp-modules-metabolic-genes, eval=FALSE}
+```{r dellOrso-gimp-modules-metabolic-genes-no-pm, eval=FALSE}
 # Define group name and filtered trajectory
 group_name.dellOrso.m.f <- as.factor(denoised.sce.dellOrso.m.f$cell_type)
 traj.dellOrso.f.time <- traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(denoised.sce.dellOrso.m.f)]
@@ -990,7 +990,7 @@ modules.dellOrso.m.f.kegg <- arrange(modules.dellOrso.m.f,
                                    as.character(modules.dellOrso.m.f$metabolic_module))
 
 # save modules object
-saveRDS(modules.dellOrso.m.f.kegg, file = "./../saved/modules_dellOrso_m_f_kegg")
+#saveRDS(modules.dellOrso.m.f.kegg, file = "./../saved/modules_dellOrso_m_f_kegg")
 
 # Gimp
 pdf("./../saved/gimp_heatmap_dellOrso_metabolic_genes_no_PM.pdf")
@@ -1074,7 +1074,7 @@ plotScoreDistribution(results = pred.deMicheli.m.no.muscle, show = "delta.med")
 ## 6.2 Dell'Orso predictions (metabolic genes)
 ### 6.2.1 All cell types
 #### 6.2.1.1 Predictions
-```{r singleR-deMicheli-metabolic-genes}
+```{r singleR-dellOrso-metabolic-genes}
 # Load prediction objects
 pred.dellOrso.m <- readRDS("./../saved/pred_dellOrso_m")
 
@@ -1099,7 +1099,7 @@ plotScoreDistribution(results = pred.dellOrso.m, show = "delta.med")
 
 ### 6.2.2 Without Primary Myoblasts (PMs)
 #### 6.2.2.1 Predictions
-```{r singleR-deMicheli-metabolic-genes}
+```{r singleR-dellOrso-metabolic-genes-no-pm}
 # Load prediction objects
 pred.dellOrso.m.no.pm <- readRDS("./../saved/pred_dellOrso_m_no_pm")
 
@@ -1123,6 +1123,25 @@ plotScoreDistribution(results = pred.dellOrso.m.no.pm, show = "delta.med")
 
 ## 7. DE analysis of primary data metabolic genes
 ### 7.1 Marker genes: Control vs. Cap
+```{r marker-genes-metabolic-primary-data}
+markers.primary <- findMarkers(denoised.sce.m,
+                               groups = denoised.sce.m$sample,
+                               lfc = 1)
+
+control.markers <- markers.primary[["control"]]
+control.markers.interesting <- control.markers[control.markers$p.value <= 0.05, ]
+logFCs <- getMarkerEffects(control.markers.interesting)
+
+pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = "Marker genes: Control sample vs. Cap samples (metabolic genes)", fontsize_row = 12)
+```
+
 ### 7.2 Inspection of marker genes on trajectory
+```{r}
+
+#TODO
+
+
+```
+
 
 
