@@ -1136,12 +1136,63 @@ pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = "Marker genes: Co
 ```
 
 ### 7.2 Inspection of marker genes on trajectory
-```{r}
+```{r control-marker-genes-on-deMicheli-trajectory}
+# Control marker genes
+marker.genes.control <- rownames(control.markers.interesting)
 
-#TODO
+marker.gene.plots <- list()
 
+# Define de Micheli trajectory space
+expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
+set.seed(123)
+space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
 
+# Plot trajectory for each marker
+for(gene in marker.genes.control) {
+  p <- draw_trajectory_plot(space = space.deMicheli, 
+                            progression_group = expression.deMicheli[, gene],
+                            point_size = 1,
+                            point_alpha = 0.5,
+                            path = traj.deMicheli$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+gridExtra::grid.arrange(marker.gene.plots$Cth, marker.gene.plots$Taldo1, marker.gene.plots$Gclm, marker.gene.plots$Psph, marker.gene.plots$Gal, marker.gene.plots$Pgd,
+                        marker.gene.plots$Cox6a2, marker.gene.plots$Idi1, marker.gene.plots$Sat1, marker.gene.plots$Pck2, marker.gene.plots$Maoa, marker.gene.plots$Gbe1,
+                        marker.gene.plots$Eno3, marker.gene.plots$Atp6v1g1, marker.gene.plots$Hgsnat, marker.gene.plots$Atp6v0b, marker.gene.plots$Hexa, marker.gene.plots$Uap1l1,
+                        marker.gene.plots$Aldh2, ncol = 4)
 ```
 
+```{r control-marker-genes-on-dellOrso-trajectory}
+# Control marker genes
+marker.genes.control <- rownames(control.markers.interesting)
 
+marker.gene.plots <- list()
+
+# Define de Micheli trajectory space
+expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
+set.seed(123)
+space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
+
+# Plot trajectory for each marker
+for(gene in marker.genes.control) {
+  p <- draw_trajectory_plot(space = space.dellOrso, 
+                            progression_group = expression.dellOrso[, gene],
+                            point_size = 1,
+                            point_alpha = 0.5,
+                            path = traj.dellOrso$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+gridExtra::grid.arrange(marker.gene.plots$Cth, marker.gene.plots$Taldo1, marker.gene.plots$Gclm, marker.gene.plots$Psph, marker.gene.plots$Gal, marker.gene.plots$Pgd,
+                        marker.gene.plots$Cox6a2, marker.gene.plots$Idi1, marker.gene.plots$Sat1, marker.gene.plots$Pck2, marker.gene.plots$Maoa, marker.gene.plots$Gbe1,
+                        marker.gene.plots$Eno3, marker.gene.plots$Atp6v1g1, marker.gene.plots$Hgsnat, marker.gene.plots$Atp6v0b, marker.gene.plots$Hexa, marker.gene.plots$Uap1l1,
+                        marker.gene.plots$Aldh2, ncol = 4)
+```
 
