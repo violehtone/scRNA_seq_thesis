@@ -869,6 +869,7 @@ expr_sel.deMicheli.m.f <- scale_quantile(expression.deMicheli.m.f[, gene_sel.deM
 ```{r}
 
 
+
 #TODO (copy from Puhti script)
 
 
@@ -1019,6 +1020,57 @@ write.csv(as.data.frame(modules.dellOrso.m.f.kegg), file = "./../saved/modules_d
 ```
 
 
+### 5.3 Comparison of metabolic genes between the datasets
+```{r comparison-of-metabolic-genes-between-datasets}
+# Define colour palette for venn diagram
+venn.colors <- brewer.pal(3, "Pastel2")
+
+# Load metabolic genes if not defined
+if(!exists("modules.primary.m.kegg")) {modules.primary.m.kegg <- readRDS("./../saved/modules_primary_m_kegg")}
+if(!exists("modules.deMicheli.m.f.kegg")) {modules.deMicheli.m.f.kegg <- readRDS("./../saved/modules_deMicheli_m_f_kegg")}
+if(!exists("modules.dellOrso.m.f.kegg")) {modules.dellOrso.m.f.kegg <- readRDS("./../saved/modules_dellOrso_m_f_kegg")}
+
+m.genes.primary <- modules.primary.m.kegg$feature
+m.genes.deMicheli.f <- modules.deMicheli.m.f.kegg$feature
+m.genes.dellOrso.f <- modules.dellOrso.m.f.kegg$feature
+
+# Creata a Venn diagram from metabolic genes
+venn <- venn.diagram(
+  x = list(m.genes.primary, m.genes.deMicheli.f, m.genes.dellOrso.f),
+  category.names = c("Primary data" , "de Micheli " , "Dell'Orso"),
+  filename = NULL,
+  fill = venn.colors,
+  fontface = "bold",
+  lwd = 2,
+  lty = "blank",
+  cat.fontface = "bold",
+  fontfamily = "sans",
+  cat.fontfamily = "sans"
+)
+
+p.gg <- as_ggplot(venn)
+p.gg
+
+# Inspect the genes
+## Intersection (all)
+intersect(m.genes.primary, m.genes.deMicheli.f) %>%
+  intersect(m.genes.dellOrso.f)
+
+##Intersection: primary - de Micheli
+intersect(m.genes.primary, m.genes.deMicheli.f)
+
+## Intersection: primary - dell'Orso
+intersect(m.genes.primary, m.genes.dellOrso.f)
+
+## Intersection: de Micheli - Dell'Orso
+intersect(m.genes.deMicheli.f, m.genes.dellOrso.f)
+
+## Union (all)
+union(m.genes.primary, m.genes.deMicheli.f) %>% 
+  union(m.genes.dellOrso.f)
+
+```
+
 
 ## 6. SingleR annotation using only metabolic genes
 ### 6.1 De Micheli predictions (metabolic genes)
@@ -1074,7 +1126,9 @@ plotScoreDistribution(results = pred.deMicheli.m.no.muscle, show = "delta.med")
 ## 6.2 Dell'Orso predictions (metabolic genes)
 ### 6.2.1 All cell types
 #### 6.2.1.1 Predictions
-```{r singleR-dellOrso-metabolic-genes}
+
+**Load pre-calculated predictions**
+```{r load-singleR-dellOrso-metabolic-genes}
 # Load prediction objects
 pred.dellOrso.m <- readRDS("./../saved/pred_dellOrso_m")
 
@@ -1082,6 +1136,18 @@ pred.dellOrso.m <- readRDS("./../saved/pred_dellOrso_m")
 tab.dellOrso.m <- t(table(pred.dellOrso.m$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.dellOrso.m
 ```
+**Perform singleR predictions**
+```{r singleR-dellOrso-metabolic-genes}
+
+
+
+# TODO: copy from Puhti script
+
+
+
+```
+
+
 
 #### 6.2.1.2 Diagnostic plots
 ```{r dellOrso-annotation-diagnostic-plots-metabolic-genes}
@@ -1099,7 +1165,8 @@ plotScoreDistribution(results = pred.dellOrso.m, show = "delta.med")
 
 ### 6.2.2 Without Primary Myoblasts (PMs)
 #### 6.2.2.1 Predictions
-```{r singleR-dellOrso-metabolic-genes-no-pm}
+**Load pre-calculated predictions**
+```{r load-singleR-dellOrso-metabolic-genes-no-pm}
 # Load prediction objects
 pred.dellOrso.m.no.pm <- readRDS("./../saved/pred_dellOrso_m_no_pm")
 
@@ -1107,6 +1174,17 @@ pred.dellOrso.m.no.pm <- readRDS("./../saved/pred_dellOrso_m_no_pm")
 tab.dellOrso.m <- t(table(pred.dellOrso.m.no.pm$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.dellOrso.m
 ```
+**Perform singleR predictions**
+```{r singleR-dellOrso-metabolic-genes-no-pm}
+
+
+
+# TODO: copy from Puhti script
+
+
+
+```
+
 
 #### 6.2.2.2 Diagnostic plots
 ```{r dellOrso-annotation-diagnostic-plots-metabolic-genes-no-pm}
