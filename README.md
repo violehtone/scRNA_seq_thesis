@@ -13,12 +13,12 @@ This analysis pipeline is used to process and analyze three scRNA-seq datasets.
 Three datasets are used in the pipeline of which one is our primary data and two other are used as reference datasets
 
  - Reference data sets:
-    - De Micheli et al. (2020): GEO GSE143435
+    - De Micheli et al. (2020): GEO GSE143437
     - Dell'Orso et al. (2019): GEO GSE126834
 
 The reference data sets are available in NCBI GEO:
   - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE126834
-  - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE143435
+  - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE143437
 
 The primary data set is not publicly available.
 
@@ -39,13 +39,9 @@ The primary data set is not publicly available.
         |_ barcodes.tsv.gz
         |_ features.tsv.gz
         |_ matrix.mtx.gz
-    |_ GSE143435
-        |_ GSE143435_DeMicheli_D0_FACSatlas_metadata.txt
-        |_ GSE143435_DeMicheli_D0_FACSatlas_rawdata.txt
-        |_ GSE143435_DeMicheli_D5_FACSatlas_metadata.txt
-        |_ GSE143435_DeMicheli_D5_FACSatlas_rawdata.txt
-        |_ GSE143435_DeMicheli_D7_FACSatlas_metadata.txt
-        |_ GSE143435_DeMicheli_D7_FACSatlas_rawdata.txt
+    |_ GSE143437
+        |_ GSE143437_DeMicheli_MuSCatlas_rawdata.txt
+        |_ GSE143437_DeMicheli_MuSCatlas_metadata.txt
     |_ GSE126834
         |_ homeostatic_muscs_1
                 |_ barcodes.tsv

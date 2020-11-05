@@ -21,12 +21,12 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 This script is used for performing the data pre-processing of 3 scRNA-seq data sets.
 One dataset is primary data and the other two are used as reference datasets.
 Reference data sets:
-  - De Micheli et al. (2020): GSE143435 data set
+  - De Micheli et al. (2020): GSE143437 data set
   - Dell'Orso et al. (2019): GSE126834 data set
 
 The data sets are available in NCBI GEO:
   - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE126834
-  - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE143435
+  - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE143437
 
 
 ## 2. Load packages
