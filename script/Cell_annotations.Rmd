@@ -303,20 +303,17 @@ table(denoised.sce$sample, pred.segments$pruned.labels)
 ```
 
 ##### 2.3.1.2 Diagnostic plots with all cell types grouped into segments (pdf documents)
-```{r deMicheli-annotation-diagnostic-plots-segments-all-cells-pdf, eval=FALSE}
+```{r deMicheli-annotation-diagnostic-plots-segments-all-cells-pdf}
 # Visualize the score matrix
-pdf("./../saved/deMicheli_segments_score_heatmap.pdf", width = 30, height = 50)
 plotScoreHeatmap(pred.segments, 
                  annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
-dev.off()
 
-to.remove <- pruneScores(pred.segments, min.diff.next=0.1)
+# Remove low-quality cells
+to.remove <- pruneScores(pred.segments, min.diff.med = 0.2)
 table(Label=pred.segments$labels, Removed=to.remove)
 
 # Delta distribution
-pdf("./../saved/deMicheli_segments_score_distribution.pdf", width = 20, height = 15)
 plotScoreDistribution(results = pred.segments, show = "delta.med")
-dev.off()
 ```
 
 
@@ -403,20 +400,16 @@ table(denoised.sce$sample, pred.segments.d5$pruned.labels)
 
 
 ##### 2.3.2.2 Diagnostic plots with D5 MuSCs & progenitors (pdf documents)
-```{r deMicheli-annotation-diagnostic-plots-d5-MuSCS, eval=FALSE}
+```{r deMicheli-annotation-diagnostic-plots-d5-MuSCS}
 # Visualize the score matrix
-pdf("./../saved/deMicheli_segments_d5_MuSCs_score_heatmap.pdf", width = 30, height = 50)
 plotScoreHeatmap(pred.segments.d5, 
                  annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
-dev.off()
 
-to.remove <- pruneScores(pred.segments.d5, min.diff.next=0.1)
+to.remove <- pruneScores(pred.segments.d5, min.diff.med=0.2)
 table(Label=pred.segments.d5$labels, Removed=to.remove)
 
 # Delta distribution
-pdf("./../saved/deMicheli_segments_d5_MuSCs_score_distribution.pdf", width = 20, height = 15)
 plotScoreDistribution(results = pred.segments.d5, show = "delta.med")
-dev.off()
 ```
 
 
