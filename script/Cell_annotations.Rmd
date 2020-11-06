@@ -31,6 +31,7 @@ library(tidyr)
 library(ggpubr)
 library(ggplot2)
 library(grid)
+library(RColorBrewer)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -277,30 +278,41 @@ denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(order
 denoised.sce.deMicheli$segment[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks[[10]])] <- "segment_10"
 segment.deMicheli <- as.factor(denoised.sce.deMicheli$segment)
 
-# Draw trajectory plot
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = segment.deMicheli,
                      path = traj.deMicheli$path,
                      point_size = 1,
                      point_alpha = 0.5,
-                     contour = TRUE) +
+                     contour = FALSE) +
   ggtitle("Trajectory inference",
           subtitle = "De Micheli et al. dataset: All genes (ndim = 2) - Segments") +
   theme(plot.title = element_text(size = 20, face = "bold"),
         plot.subtitle = element_text(size = 14),
         axis.title = element_text(size = 16))
+```
 
-# Predict segments of primary data cells
+**Calculate singleR predictions (optional)**
+```{r singleR-annotation-segments, eval=FALSE}
 pred.segments <- SingleR(test = denoised.sce,
                          assay.type.test = "logcounts",
                          ref = denoised.sce.deMicheli,
                          labels = denoised.sce.deMicheli$segment)
 
-saveRDS(pred.segments, file = "./../saved/pred_segments")
+#saveRDS(pred.segments, file = "./../saved/pred_segments")
 
 # Inspect the predictions
-table(denoised.sce$sample, pred.segments$pruned.labels)
+table(denoised.sce$sample, pred.segments.d5$pruned.labels)
 ```
+
+**Load prediction results (if pre-saved prediction object available)**
+```{r load-singleR-annotation-segments}
+pred.segments <- readRDS("./../saved/pred_segments")
+
+# Inspect the predictions
+tab.deMicheli.d5 <- table(denoised.sce$sample, pred.segments$pruned.labels)
+```
+
+
 
 ##### 2.3.1.2 Diagnostic plots with all cell types grouped into segments (pdf documents)
 ```{r deMicheli-annotation-diagnostic-plots-segments-all-cells-pdf}
@@ -374,8 +386,14 @@ denoised.sce.deMicheli$segment.d5 <- replace_na(denoised.sce.deMicheli$segment.d
 segment.deMicheli.d5 <- as.factor(denoised.sce.deMicheli$segment.d5)
 
 # Draw trajectory plot
+colpalette.segments <- rainbow(11)
+names(colpalette.segments) <- c("segment_1", "segment_2", "segment_3", "segment_4", "segment_5", "segment_6", "segment_7", "segment_8", "segment_9", "segment_10", "non_d5_musc_sample")
+colpalette.segments["non_d5_musc_sample"] <- "#DCDCDC" # set to white
+
+
 draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = segment.deMicheli.d5,
+                     progression_group_palette = colpalette.segments,
                      path = traj.deMicheli$path,
                      point_size = 1,
                      point_alpha = 0.5,
@@ -385,8 +403,10 @@ draw_trajectory_plot(space = space.deMicheli,
   theme(plot.title = element_text(size = 20, face = "bold"),
         plot.subtitle = element_text(size = 14),
         axis.title = element_text(size = 16))
+```
 
-# Predict segments of primary data cells
+**Calculate singleR predictions (optional)**
+```{r singleR-annotation-d5-segments, eval=FALSE}
 pred.segments.d5 <- SingleR(test = denoised.sce,
                             assay.type.test = "logcounts",
                             ref = denoised.sce.deMicheli,
@@ -396,6 +416,14 @@ pred.segments.d5 <- SingleR(test = denoised.sce,
 
 # Inspect the predictions
 table(denoised.sce$sample, pred.segments.d5$pruned.labels)
+```
+
+**Load prediction results (if pre-saved prediction object available)**
+```{r load-singleR-annotation-d5-segments}
+pred.segments.d5 <- readRDS("./../saved/pred_segments_d5")
+
+# Inspect the predictions
+tab.deMicheli.d5 <- table(denoised.sce$sample, pred.segments.d5$pruned.labels)
 ```
 
 
@@ -719,4 +747,50 @@ tab.deMicheli.cc.genes
 tab.dellOrso.cc.genes
 ```
 
+### De Micheli: segments on trajectory
+```{r deMicheli-cell-mapping-visualization-with-segments}
+# Put predictions on a table
+tab.deMicheli.segments <- table(denoised.sce$sample, pred.segments$pruned.labels)[c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h"),]
+tab.deMicheli.segments.d5 <- table(denoised.sce$sample, pred.segments.d5$pruned.labels)[c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h"),]
+
+tab.deMicheli.segments
+tab.deMicheli.segments.d5
+
+# Melt tables
+df.deMicheli.s <- melt(tab.deMicheli.segments)
+colnames(df.deMicheli.s) <- c("sample", "segment", "count")
+
+df.deMicheli.s.d5 <- melt(tab.deMicheli.segments.d5)
+colnames(df.deMicheli.s.d5) <- c("sample", "segment", "count")
+
+# Add missing cell types
+df.missing.rows.segments <- data.frame("sample" = rep(c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"), 6),
+                                       "segment" = c(rep("segment_1", 5), rep("segment_2", 5),rep("segment_3", 5),rep("segment_4", 5),
+                                                     rep("segment_9", 5), rep("segment_10", 5)),
+                                       "count" = rep(0, 30))
+
+df.missing.rows.segments.d5 <- data.frame("sample" = rep(c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"), 6),
+                                       "segment" = c(rep("segment_1", 5), rep("segment_2", 5),rep("segment_3", 5),rep("segment_4", 5),
+                                                     rep("segment_5", 5), rep("segment_6", 5)),
+                                       "count" = rep(0, 30))
+
+df.deMicheli.s <- rbind(df.deMicheli.s, df.missing.rows.segments)
+df.deMicheli.s.d5 <- rbind(df.deMicheli.s.d5, df.missing.rows.segments.d5)
+
+# De Micheli balloon plot
+balloon.segments <- ggballoonplot(df.deMicheli.s, x = "sample", y = "segment", size = "count",
+              fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("De Micheli et al. reference dataset (divided into 10 segments)\n: Mapping of primary data cells shown in a balloonplot")
+
+balloon.segments.d5 <- ggballoonplot(df.deMicheli.s.d5, x = "sample", y = "segment", size = "count",
+              fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("De Micheli et al. reference dataset (D5 MuSCs divided into 10 segments)\n: Mapping of primary data cells shown in a balloonplot")
+
+
+balloon.segments
+balloon.segments.d5
+
+```
 
