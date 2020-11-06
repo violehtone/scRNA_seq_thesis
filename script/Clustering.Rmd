@@ -100,13 +100,10 @@ reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
 ## 3. Visualizing clustering results: Force-directed layout, t-SNE, and UMAP plots
 ```{r primary-data-clustering-plots, message=FALSE, warning=FALSE}
 # force directed layout plots
-p.force <- plotReducedDim(denoised.sce, colour_by = "sample", dimred = "force") + ggtitle("Primary data: force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-p.force.cc <- plotReducedDim(denoised.sce.cc, colour_by = "sample", dimred = "force_cc") + ggtitle("Primary data (cc corrected): force-directed layout (k=180)") + theme(plot.title = element_text(size = 16, face = "bold"))
-
 ## uncorrected
 p.force <- plotReducedDim(denoised.sce, 
-                          colour_by = "sample",
-                          text_by = "cluster",
+                          colour_by = "cluster",
+                          text_by = "sample",
                           dimred = "force",
                           point_alpha = 0.4,
                           point_size = 1) +
@@ -118,12 +115,12 @@ p.force <- plotReducedDim(denoised.sce,
         legend.title = element_text(size = 20, face = "bold"),
         axis.title = element_text(size = 20, face = "bold")) +
   scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
-                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
 
 ## cc corrected
 p.force.cc <- plotReducedDim(denoised.sce.cc, 
-                             colour_by = "sample",
-                             text_by = "cluster.cc",
+                             colour_by = "cluster.cc",
+                             text_by = "sample",
                              dimred = "force_cc",
                              point_alpha = 0.4,
                              point_size = 1) +
@@ -135,7 +132,7 @@ p.force.cc <- plotReducedDim(denoised.sce.cc,
         legend.title = element_text(size = 20, face = "bold"),
         axis.title = element_text(size = 20, face = "bold")) +
   scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
-                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
 
 p.force
 p.force.cc
@@ -143,8 +140,8 @@ p.force.cc
 # t-SNE plots
 ## Uncorrected
 p.tsne <- plotReducedDim(denoised.sce, 
-                         colour_by = "sample",
-                         text_by = "cluster",
+                         colour_by = "cluster",
+                         text_by = "sample",
                          dimred = "TSNE",
                          point_alpha = 0.4,
                          point_size = 1) +
@@ -156,12 +153,12 @@ p.tsne <- plotReducedDim(denoised.sce,
         legend.title = element_text(size = 20, face = "bold"),
         axis.title = element_text(size = 20, face = "bold")) +
   scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
-                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
 
 ## cc corrected
 p.tsne.cc <- plotReducedDim(denoised.sce.cc, 
-                            colour_by = "sample",
-                            text_by = "cluster.cc",
+                            colour_by = "cluster.cc",
+                            text_by = "sample",
                             dimred = "TSNE_cc",
                             point_alpha = 0.4,
                             point_size = 1) +
@@ -173,7 +170,7 @@ p.tsne.cc <- plotReducedDim(denoised.sce.cc,
         legend.title = element_text(size = 20, face = "bold"),
         axis.title = element_text(size = 20, face = "bold")) +
   scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
-                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
 
 p.tsne
 p.tsne.cc
@@ -181,8 +178,8 @@ p.tsne.cc
 # UMAP plots
 ## Uncorrected
 p.umap <- plotReducedDim(denoised.sce, 
-                         colour_by = "sample",
-                         text_by = "cluster",
+                         colour_by = "cluster",
+                         text_by = "sample",
                          dimred = "UMAP",
                          point_alpha = 0.4,
                          point_size = 1) +
@@ -194,13 +191,13 @@ p.umap <- plotReducedDim(denoised.sce,
         legend.title = element_text(size = 20, face = "bold"),
         axis.title = element_text(size = 20, face = "bold")) +
   scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
-                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
 
 
 ## CC-corrected
 p.umap.cc <- plotReducedDim(denoised.sce.cc, 
-                            colour_by = "sample",
-                            text_by = "cluster.cc",
+                            colour_by = "cluster.cc",
+                            text_by = "sample",
                             dimred = "UMAP_cc",
                             point_alpha = 0.4,
                             point_size = 1) +
@@ -212,7 +209,7 @@ p.umap.cc <- plotReducedDim(denoised.sce.cc,
         legend.title = element_text(size = 20, face = "bold"),
         axis.title = element_text(size = 20, face = "bold")) +
   scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
-                      guide = guide_legend(override.aes = list(size = 5, alpha = 1)))
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
 
 p.umap
 p.umap.cc
