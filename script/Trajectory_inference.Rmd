@@ -104,7 +104,7 @@ intersect(cc.genes.osca, cc.genes.seurat)
 **Create a custom color palette for the trajectory plots**
 ```{r custom-color-palette}
 # Custom colors
-colpalette.primary <- colpal <- RColorBrewer::brewer.pal(5, "Set1")
+colpalette.primary <- RColorBrewer::brewer.pal(5, "Set1")
 names(colpalette.primary) <- c("cap50", "cap50_r16h", "cap50_r4h", "cap50_r8h", "control")
 colpalette.primary["cap50_r8h"] <- "#FFFF33" # set purple -> yellow
 ```
@@ -178,6 +178,72 @@ gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker
                         marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
                         ncol = 5)
 ```
+
+**EXTRA: Trajectory inference with all genes (but only Control, Cap50, and Cap50_r16h groups)**
+```{r primary-data-traj-inference-filtered}
+# Create expression and sample objects
+denoised.sce.f <- denoised.sce[, denoised.sce$sample %in% c("control", "cap50", "cap50_r16h")]
+expression.primary.f <- as.matrix(t(logcounts(denoised.sce.f)))
+group_name.primary.f <- as.factor(denoised.sce.f$sample)
+
+# Trajectory inference
+set.seed(123)
+space.primary.f <- reduce_dimensionality(expression.primary.f, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.primary.f <- infer_trajectory(space.primary.f)
+traj.primary.f <- reverse_trajectory(traj.primary.f)
+
+# Plot the trajectory
+draw_trajectory_plot(space = space.primary.f, 
+                     progression_group = group_name.primary.f,
+                     path = traj.primary.f$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "Primary dataset: All genes (ndim = 2), Only control, cap50, and cap50_r16h samples - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+# Marker genes
+prog.groups <- list(cdh15 = expression.primary.f[, "Cdh15"],
+                    tnnt1 = expression.primary.f[, "Tnnt1"],
+                    tnnt2 = expression.primary.f[, "Tnnt2"],
+                    tnnt3 = expression.primary.f[, "Tnnt3"],
+                    pax7 = expression.primary.f[, "Pax7"],
+                    hes1 = expression.primary.f[, "Hes1"],
+                    myf5 = expression.primary.f[, "Myf5"],
+                    myod = expression.primary.f[, "Myod1"],
+                    ccne1 = expression.primary.f[, "Ccne1"],
+                    eifs = expression.primary.f[, "Eif1"],
+                    ccnd1 = expression.primary.f[, "Ccnd1"],
+                    ccnd2 = expression.primary.f[, "Ccnd2"],
+                    myog = expression.primary.f[, "Myog"],
+                    cdkn1a = expression.primary.f[, "Cdkn1a"],
+                    gas1 = expression.primary.f[, "Gas1"])
+
+# Make plot for each gene
+marker.gene.plots <- list()
+for(gene in names(prog.groups)) {
+  p <- draw_trajectory_plot(space = space.primary.f, 
+                            progression_group = prog.groups[[gene]],
+                            point_size = 0.5,
+                            point_alpha = 0.5,
+                            path = traj.primary.f$path,
+                            contour = FALSE) + 
+  ggtitle(paste(gene, "gene")) +
+  theme(plot.title = element_text(size = 14, face = "bold"), axis.title = element_text(size = 10))
+  marker.gene.plots[[gene]] <- p
+}
+
+# Plot the marker genes
+gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
+                        marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
+                        marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
+                        ncol = 5)
+```
+
 
 
 #### 2.1.2 Trajectory inference without OSCA cc genes
@@ -279,7 +345,7 @@ gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker
 
 
 #### 2.1.4 Trajectory inference with cc corrected data but only control, cap50, and cap50_r16h samples
-```{r primary-data-cc-traj-inference-subset-of-samples, eval=FALSE}
+```{r primary-data-cc-traj-inference-subset-of-samples}
 # Create a sce object from the CC corrected alternative experiment
 denoised.sce.cc.f <- denoised.sce.cc[, denoised.sce.cc$sample %in% c("control", "cap50", "cap50_r16h")]
 
@@ -296,7 +362,6 @@ traj.primary.cc.f <- infer_trajectory(space.primary.cc.f)
 # Plot the trajectory
 draw_trajectory_plot(space = space.primary.cc.f, 
                      progression_group = group_name.primary.cc.f,
-                     progression_group_palette = colpalette.primary,
                      path = traj.primary.cc.f$path,
                      point_size = 1,
                      point_alpha = 0.4,
@@ -310,11 +375,22 @@ draw_trajectory_plot(space = space.primary.cc.f,
 ```
 
 **Expression of marker genes**
-```{r primary-data-cc-traj-inference-subset-of-samples-marker-genes, eval=FALSE}
-# Abundance of some marker genes
+```{r primary-data-cc-traj-inference-subset-of-samples-marker-genes}
 prog.groups <- list(cdh15 = expression.primary.cc.f[, "Cdh15"],
                     tnnt1 = expression.primary.cc.f[, "Tnnt1"],
-                    tnnt3 = expression.primary.cc.f[, "Tnnt3"])
+                    tnnt2 = expression.primary.cc.f[, "Tnnt2"],
+                    tnnt3 = expression.primary.cc.f[, "Tnnt3"],
+                    pax7 = expression.primary.cc.f[, "Pax7"],
+                    hes1 = expression.primary.cc.f[, "Hes1"],
+                    myf5 = expression.primary.cc.f[, "Myf5"],
+                    myod = expression.primary.cc.f[, "Myod1"],
+                    ccne1 = expression.primary.cc.f[, "Ccne1"],
+                    eifs = expression.primary.cc.f[, "Eif1"],
+                    ccnd1 = expression.primary.cc.f[, "Ccnd1"],
+                    ccnd2 = expression.primary.cc.f[, "Ccnd2"],
+                    myog = expression.primary.cc.f[, "Myog"],
+                    cdkn1a = expression.primary.cc.f[, "Cdkn1a"],
+                    gas1 = expression.primary.cc.f[, "Gas1"])
 
 # Make plot for each marker gene
 marker.gene.plots <- list()
@@ -330,9 +406,11 @@ for(gene in names(prog.groups)) {
   marker.gene.plots[[gene]] <- p
 }
 
-# Plot the results
-gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1,
-                        marker.gene.plots$tnnt3, ncol = 3)
+# Plot the marker genes
+gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
+                        marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
+                        marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
+                        ncol = 5)
 ```
 
 
@@ -683,7 +761,7 @@ draw_trajectory_plot(space = space.dellOrso.cc,
 
 
 #### 2.3.4 Trajectory inference without primary myoblasts
-```{r dellOrso-traj-inference-without-primary-mb, eval=FALSE}
+```{r dellOrso-traj-inference-without-primary-mb}
 # Remove PMs from the dellOrso data
 denoised.sce.dellOrso.f <- denoised.sce.dellOrso[, denoised.sce.dellOrso$cell_type != "Primary_MB"]
 
