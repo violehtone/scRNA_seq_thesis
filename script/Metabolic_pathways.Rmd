@@ -18,6 +18,7 @@ Here, we inspect the different metabolic modules / pathways that cells adopt as 
 ## 1. Load packages and data
 ### 1.1 Load packages
 ```{r load-packages, message=FALSE}
+# TODO: Remove unused libraries
 library(SCORPIUS)
 library(scater)
 library(scran)
@@ -30,7 +31,6 @@ library(cluster)
 library(pheatmap)
 library(fossil)
 library(Seurat)
-library(cerebroApp)
 library(reshape)
 library(data.table)
 library(scRNAseq)
@@ -130,10 +130,26 @@ df.kegg.entries <- readRDS("./../saved/df_kegg_entries")
 ```
 
 #### 2.1.2 Fetch information from KEGG (optional)
+**Get all metabolic pathway associated KEGG modules and pathways**
+The data is available at https://www.genome.jp/dbget-bin/www_bget?pathway:mmu01100
+
+```{r module-pathway-information-from-KEGG}
+kegg.modules <- read.csv("./../saved/kegg_metabolic_modules.csv", header = FALSE)
+colnames(kegg.modules) <- c("module", "module_name")
+
+kegg.pathways <- read.csv("./../saved/kegg_metabolic_pathways.csv", header = FALSE)
+colnames(kegg.pathways) <- c("pathway", "pathway_name")
+
+```
+
+**Fetch entry, gene, module, and pathway information from KEGG**
 ```{r fetch-kegg-information, eval=FALSE, message=FALSE}
 # Fetch all the modules (and KEGG entries) for mouse
 mouse.org.id <- "T01002"
 mouse.modules <- keggLink(target = "module", source = mouse.org.id)
+
+# Filter non-metabolic-module associated entries
+mouse.modules <- mouse.modules[substring(mouse.modules, 4) %in% kegg.modules$module]
 
 # Build a dataframe to store module, gene, and pathway information for each KEGG entry
 df.kegg.entries <- data.frame(entry = names(mouse.modules),
@@ -144,35 +160,40 @@ df.kegg.entries <- data.frame(entry = names(mouse.modules),
                               pathway_info = NA)
 
 # remove duplicate rows from data
-df.kegg.entries <- distinct(df.kegg.entries)
+#df.kegg.entries <- distinct(df.kegg.entries)
 
 # For each KEGG entry, fetch the information with keggGet()
 for (i in 1:nrow(df.kegg.entries)) {
   print(i)
   entry <- df.kegg.entries[i,]$entry
   query <- keggGet(entry)
-  
-  # Check if entry is associated with metabolic pathways (mmu01100)
-  if("mmu01100" %in% names(query[[1]]$PATHWAY)) {
-    genes <- query[[1]]$NAME
-    module <- paste(names(query[[1]]$MODULE), collapse = ", ")
-    pathway <- paste(names(query[[1]]$PATHWAY), collapse = ", ")
-    module_info <- paste(unlist(query[[1]]$MODULE), collapse = ", ")
-    pathway_info <- paste(unlist(query[[1]]$PATHWAY), collapse = ", ")
-    df.kegg.entries[i,]$genes <- genes
-    df.kegg.entries[i,]$module <- module
-    df.kegg.entries[i,]$pathway <- pathway
-    df.kegg.entries[i,]$module_info <- module_info
-    df.kegg.entries[i,]$pathway_info <- pathway_info
-  }
+  genes <- query[[1]]$NAME
+  # add module IDs
+  module.list <- names(query[[1]]$MODULE)
+  module.list <- module.list[module.list %in% kegg.modules$module]
+  module <- paste(module.list, collapse = ", ")
+  # add pathway IDs
+  pathway.list <- names(query[[1]]$PATHWAY)
+  pathway.list <- pathway.list[pathway.list %in% kegg.pathways$pathway]
+  pathway <- paste(pathway.list, collapse = ", ")
+  # Add module information
+  module_info.list <- query[[1]]$MODULE
+  module_info.list <- module_info.list[names(module_info.list) %in% module.list]
+  module_info <- paste(module_info.list, collapse = ", ")
+  # Add pathway information
+  pathway_info.list <- query[[1]]$PATHWAY
+  pathway_info.list <- pathway_info.list[names(pathway_info.list) %in% pathway.list]
+  pathway_info <- paste(pathway_info.list, collapse = ", ")
+  # Update information to dataframe
+  df.kegg.entries[i,]$genes <- genes
+  df.kegg.entries[i,]$module <- module
+  df.kegg.entries[i,]$pathway <- pathway
+  df.kegg.entries[i,]$module_info <- module_info
+  df.kegg.entries[i,]$pathway_info <- pathway_info
 }
 
-# Filter out entries with no association to metabolic pathways
-non.metabolic <- is.na(df.kegg.entries$module)
-df.kegg.entries <- df.kegg.entries[!non.metabolic, ]
-
 # Save objects
-#saveRDS(df.kegg.entries, file = "./../saved/df_kegg_entries")
+saveRDS(df.kegg.entries, file = "./../saved/df_kegg_entries")
 ```
 
 
@@ -207,7 +228,7 @@ genes.to.use <- rownames(denoised.sce.m)[rowData(denoised.sce.m)$module != ""]
 denoised.sce.m <- denoised.sce.m[rownames(denoised.sce.m) %in% genes.to.use, ]
 
 # Save sce object containing only metabolic genes and module/pathway information stored on rowData
-#saveRDS(denoised.sce.m, "./../saved/denoised_sce_m")
+saveRDS(denoised.sce.m, "./../saved/denoised_sce_m")
 ```
 
 #### 2.2.2 De Micheli et al. (2020) reference data
@@ -239,8 +260,11 @@ for(i in 1:nrow(df.kegg.entries)) {
 genes.to.use <- rownames(denoised.sce.deMicheli.m)[rowData(denoised.sce.deMicheli.m)$module != ""]
 denoised.sce.deMicheli.m <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% genes.to.use, ]
 
+# Inspect number of genes
+dim(denoised.sce.deMicheli.m)
+
 # Save sce object containing only metabolic genes and module/pathway information stored on rowData
-#saveRDS(denoised.sce.deMicheli.m, "./../saved/denoised_sce_deMicheli_m")
+saveRDS(denoised.sce.deMicheli.m, "./../saved/denoised_sce_deMicheli_m")
 ```
 
 
@@ -273,8 +297,11 @@ for(i in 1:nrow(df.kegg.entries)) {
 genes.to.use <- rownames(denoised.sce.dellOrso.m)[rowData(denoised.sce.dellOrso.m)$module != ""]
 denoised.sce.dellOrso.m <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% genes.to.use, ]
 
+# Inspect number of genes
+dim(denoised.sce.dellOrso.m)
+
 # Save sce object containing only metabolic genes and module/pathway information stored on rowData
-#saveRDS(denoised.sce.dellOrso.m, "./../saved/denoised_sce_dellOrso_m")
+saveRDS(denoised.sce.dellOrso.m, "./../saved/denoised_sce_dellOrso_m")
 ```
 
 
@@ -1205,16 +1232,18 @@ plotScoreDistribution(results = pred.dellOrso.m.no.pm, show = "delta.med")
 ```{r marker-genes-metabolic-primary-data}
 markers.primary <- findMarkers(denoised.sce.m,
                                groups = denoised.sce.m$sample,
-                               lfc = 1)
+                               lfc = 0.5)
 
 control.markers <- markers.primary[["control"]]
-control.markers.interesting <- control.markers[control.markers$p.value <= 0.05, ]
+control.markers.interesting <- control.markers[control.markers$Top <= 10, ]
+#control.markers.interesting <- control.markers[control.markers$FDR <= 0.05, ]
 logFCs <- getMarkerEffects(control.markers.interesting)
 
 pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = "Marker genes: Control sample vs. Cap samples (metabolic genes)", fontsize_row = 12)
 ```
 
 ### 7.2 Inspection of marker genes on trajectory
+**De Micheli et al. trajectory**
 ```{r control-marker-genes-on-deMicheli-trajectory}
 # Control marker genes
 marker.genes.control <- rownames(control.markers.interesting)
@@ -1245,6 +1274,7 @@ gridExtra::grid.arrange(marker.gene.plots$Cth, marker.gene.plots$Taldo1, marker.
                         marker.gene.plots$Aldh2, ncol = 4)
 ```
 
+**Dell'Orso et al. trajectory**
 ```{r control-marker-genes-on-dellOrso-trajectory}
 # Control marker genes
 marker.genes.control <- rownames(control.markers.interesting)
@@ -1274,4 +1304,3 @@ gridExtra::grid.arrange(marker.gene.plots$Cth, marker.gene.plots$Taldo1, marker.
                         marker.gene.plots$Eno3, marker.gene.plots$Atp6v1g1, marker.gene.plots$Hgsnat, marker.gene.plots$Atp6v0b, marker.gene.plots$Hexa, marker.gene.plots$Uap1l1,
                         marker.gene.plots$Aldh2, ncol = 4)
 ```
-
