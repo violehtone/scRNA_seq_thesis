@@ -13,7 +13,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 # Metabolic pathways
-Here, we perform the aggregation of gene expression values into KEGG module / pathway expression and perform various types of analyses on this aggregated dataset.
+Here, we perform the aggregation of gene expression values into KEGG module / pathway expression and calculate the module / pathway importances along the trajectories.
 
 ## 1. Load packages and data
 ### 1.1 Load packages
@@ -22,6 +22,7 @@ library(SCORPIUS)
 library(SingleCellExperiment)
 library(stats)
 library(data.table)
+library(dplyr)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -55,14 +56,16 @@ sce.dellOrso.module <- readRDS("./../saved/sce_dellOrso_module")
 sce.dellOrso.pathway <- readRDS("./../saved/sce_dellOrso_pathway")
 ```
 
-**Fetch KEGG module and pathway information**
-```{r fetch-kegg-entries-for-mouse-pathways-and-modules}
-# Get the KEGG entries for modules / pathways
-mouse.org.id <- "T01002"
-mouse.modules <- keggLink(target = "module", source = mouse.org.id)
-mouse.pathways <- keggLink(target = "pathway", source = mouse.org.id)
-```
 
+**KEGG module and pathway id:name mappings**
+Data available at https://www.genome.jp/dbget-bin/www_bget?pathway:mmu01100
+```{r load-kegg-module-and-pathway-csv-files}
+kegg.modules <- read.csv("./../saved/kegg_metabolic_modules.csv", header = FALSE)
+colnames(kegg.modules) <- c("module", "module_name")
+
+kegg.pathways <- read.csv("./../saved/kegg_metabolic_pathways.csv", header = FALSE)
+colnames(kegg.pathways) <- c("pathway", "pathway_name")
+```
 
 
 ## 2. Perform aggregation of gene expression into pathway expression
@@ -307,40 +310,223 @@ saveRDS(sce.dellOrso.pathway, file = "./../saved/sce_dellOrso_pathway")
 ```
 
 
-## 3. Calculate module / pathway importances
-### 3.1 Primary data
-#### 3.1.1 - Load pre-saved objects
+## 3. Add KEGG module and pathway information to the rowData of the sce objects
+```{r add-KEGG-module-and-pathway-information-into-the-sce-objects, eval=FALSE}
+# Modify the KEGG information tables so that rownames are module/pathway IDs and the df contains only 1 column which is module / pathway name
+rownames(kegg.modules) <- kegg.modules$module
+kegg.modules <- kegg.modules[, "module_name", drop=FALSE]
+
+rownames(kegg.pathways) <- kegg.pathways$pathway
+kegg.pathways <- kegg.pathways[, "pathway_name", drop=FALSE]
+
+# Add module / pathway names to the sce objects
+###############
+## Primary data
+###############
+kegg.modules.primary <- kegg.modules[rownames(kegg.modules) %in% rownames(sce.primary.module), , drop=FALSE]
+kegg.modules.primary.sorted <- kegg.modules.primary[row.names(sce.primary.module), , drop=FALSE]
+rowData(sce.primary.module)$module_name <- kegg.modules.primary.sorted$module_name
+
+kegg.pathways.primary <- kegg.pathways[rownames(kegg.pathways) %in% rownames(sce.primary.pathway), , drop=FALSE]
+kegg.pathways.primary.sorted <- kegg.pathways.primary[row.names(sce.primary.pathway), , drop=FALSE]
+rowData(sce.primary.pathway)$pathway_name <- kegg.pathways.primary.sorted$pathway_name
+
+##################
+## De Micheli data
+##################
+kegg.modules.deMicheli <- kegg.modules[rownames(kegg.modules) %in% rownames(sce.deMicheli.module), , drop=FALSE]
+kegg.modules.deMicheli.sorted <- kegg.modules.deMicheli[row.names(sce.deMicheli.module), , drop=FALSE]
+rowData(sce.deMicheli.module)$module_name <- kegg.modules.deMicheli.sorted$module_name
+
+kegg.pathways.deMicheli <- kegg.pathways[rownames(kegg.pathways) %in% rownames(sce.deMicheli.pathway), , drop=FALSE]
+kegg.pathways.deMicheli.sorted <- kegg.pathways.deMicheli[row.names(sce.deMicheli.pathway), , drop=FALSE]
+rowData(sce.deMicheli.pathway)$pathway_name <- kegg.pathways.deMicheli.sorted$pathway_name
+
+##################
+## Dell'Orso data
+##################
+kegg.modules.dellOrso <- kegg.modules[rownames(kegg.modules) %in% rownames(sce.dellOrso.module), , drop=FALSE]
+kegg.modules.dellOrso.sorted <- kegg.modules.dellOrso[row.names(sce.dellOrso.module), , drop=FALSE]
+rowData(sce.dellOrso.module)$module_name <- kegg.modules.dellOrso.sorted$module_name
+
+kegg.pathways.dellOrso <- kegg.pathways[rownames(kegg.pathways) %in% rownames(sce.dellOrso.pathway), , drop=FALSE]
+kegg.pathways.dellOrso.sorted <- kegg.pathways.dellOrso[row.names(sce.dellOrso.pathway), , drop=FALSE]
+rowData(sce.dellOrso.pathway)$pathway_name <- kegg.pathways.dellOrso.sorted$pathway_name
+
+
+# Overwrite saved sce objects with new objects containing rowData
+saveRDS(sce.dellOrso.module, file = "./../saved/sce_dellOrso_module")
+saveRDS(sce.dellOrso.pathway, file = "./../saved/sce_dellOrso_pathway")
+saveRDS(sce.deMicheli.module, file = "./../saved/sce_deMicheli_module")
+saveRDS(sce.deMicheli.pathway, file = "./../saved/sce_deMicheli_pathway")
+saveRDS(sce.primary.module, file = "./../saved/sce_primary_module")
+saveRDS(sce.primary.pathway, file = "./../saved/sce_primary_pathway")
+
+```
+
+## 4. Calculate module / pathway importances
+### 4.1 Load pre-computed module / pathway importance objects
 ```{r load-pre-saved-module-and-pathway-importances}
-# Module
-## Define expression and group objects
+#########################
+# Primary data - modules
+#########################
+# Define expression and group objects
 expression.primary.module <- as.matrix(t(logcounts(sce.primary.module)))
 group_name.primary.module <- as.factor(sce.primary.module$sample)
 
-## Get gimp & module objects
+# Get gimp & module objects
 gimp.primary.module <- readRDS("./../saved/gimp_primary_module")
 modules.primary.module <- readRDS("./../saved/modules_primary_module")
 gimp.primary.module$qvalue <- p.adjust(p = gimp.primary.module$pvalue, method = "BH")
 gene_sel.primary.module <- gimp.primary.module$gene[gimp.primary.module$qvalue < .05]
 expr_sel.primary.module <- scale_quantile(expression.primary.module[, gene_sel.primary.module])
 
-
-# Pathway
-## Define expression and group objects
+#########################
+# Primary data - pathways
+#########################
+# Define expression and group objects
 expression.primary.pathway <- as.matrix(t(logcounts(sce.primary.pathway)))
 group_name.primary.pathway <- as.factor(sce.primary.pathway$sample)
 
-## Get gimp & module objects
+# Get gimp & module objects
 gimp.primary.pathway <- readRDS("./../saved/gimp_primary_pathway")
 modules.primary.pathway <- readRDS("./../saved/modules_primary_pathway")
 gimp.primary.pathway$qvalue <- p.adjust(p = gimp.primary.pathway$pvalue, method = "BH")
 gene_sel.primary.pathway <- gimp.primary.pathway$gene[gimp.primary.pathway$qvalue < .05]
 expr_sel.primary.pathway <- scale_quantile(expression.primary.pathway[, gene_sel.primary.pathway])
+
+###########################
+# De Micheli data - modules
+###########################
+# Define expression and group objects
+expression.deMicheli.module <- as.matrix(t(logcounts(sce.deMicheli.module)))
+group_name.deMicheli.module <- as.factor(sce.deMicheli.module$cell_type)
+
+# Get gimp & module objects
+gimp.deMicheli.module <- readRDS("./../saved/gimp_deMicheli_module")
+modules.deMicheli.module <- readRDS("./../saved/modules_deMicheli_module")
+gimp.deMicheli.module$qvalue <- p.adjust(p = gimp.deMicheli.module$pvalue, method = "BH")
+gene_sel.deMicheli.module <- gimp.deMicheli.module$gene[gimp.deMicheli.module$qvalue < .05]
+expr_sel.deMicheli.module <- scale_quantile(expression.deMicheli.module[, gene_sel.deMicheli.module])
+
+############################
+# De Micheli data - pathways
+############################
+# Define expression and group objects
+expression.deMicheli.pathway <- as.matrix(t(logcounts(sce.deMicheli.pathway)))
+group_name.deMicheli.pathway <- as.factor(sce.deMicheli.pathway$cell_type)
+
+# Get gimp & module objects
+gimp.deMicheli.pathway <- readRDS("./../saved/gimp_deMicheli_pathway")
+modules.deMicheli.pathway <- readRDS("./../saved/modules_deMicheli_pathway")
+gimp.deMicheli.pathway$qvalue <- p.adjust(p = gimp.deMicheli.pathway$pvalue, method = "BH")
+gene_sel.deMicheli.pathway <- gimp.deMicheli.pathway$gene[gimp.deMicheli.pathway$qvalue < .05]
+expr_sel.deMicheli.pathway <- scale_quantile(expression.deMicheli.pathway[, gene_sel.deMicheli.pathway])
+
+
+#############################################################
+# De Micheli data - modules (without mature skeletal muscle)
+#############################################################
+# Remove muscle cells and define expression and group objects
+muscle.cells.module <- sce.deMicheli.module$cell_type == "d0_mature_skeletal_muscle" | sce.deMicheli.module$cell_type =="d5_mature_skeletal_muscle" | sce.deMicheli.module$cell_type == "d7_mature_skeletal_muscle"
+sce.deMicheli.module.f <- sce.deMicheli.module[, !muscle.cells.module]
+
+expression.deMicheli.module.f <- as.matrix(t(logcounts(sce.deMicheli.module.f)))
+group_name.deMicheli.module.f <- as.factor(sce.deMicheli.module.f$cell_type)
+
+# Get gimp & module objects
+gimp.deMicheli.module.f <- readRDS("./../saved/gimp_deMicheli_module_no_muscle")
+modules.deMicheli.module.f <- readRDS("./../saved/modules_deMicheli_module_no_muscle")
+gimp.deMicheli.module.f$qvalue <- p.adjust(p = gimp.deMicheli.module.f$pvalue, method = "BH")
+gene_sel.deMicheli.module.f <- gimp.deMicheli.module.f$gene[gimp.deMicheli.module.f$qvalue < .05]
+expr_sel.deMicheli.module.f <- scale_quantile(expression.deMicheli.module.f[, gene_sel.deMicheli.module.f])
+
+
+##############################################################
+# De Micheli data - pathways (without mature skeletal muscle)
+#############################################################
+# Remove muscle cells and define expression and group objects
+muscle.cells.pathway <- sce.deMicheli.pathway$cell_type == "d0_mature_skeletal_muscle" | sce.deMicheli.pathway$cell_type =="d5_mature_skeletal_muscle" | sce.deMicheli.pathway$cell_type == "d7_mature_skeletal_muscle"
+sce.deMicheli.pathway.f <- sce.deMicheli.pathway[, !muscle.cells.pathway]
+
+expression.deMicheli.pathway.f <- as.matrix(t(logcounts(sce.deMicheli.pathway.f)))
+group_name.deMicheli.pathway.f <- as.factor(sce.deMicheli.pathway.f$cell_type)
+
+# Get gimp & module objects
+gimp.deMicheli.pathway.f <- readRDS("./../saved/gimp_deMicheli_pathway_no_muscle")
+modules.deMicheli.pathway.f <- readRDS("./../saved/modules_deMicheli_pathway_no_muscle")
+gimp.deMicheli.pathway.f$qvalue <- p.adjust(p = gimp.deMicheli.pathway.f$pvalue, method = "BH")
+gene_sel.deMicheli.pathway.f <- gimp.deMicheli.pathway.f$gene[gimp.deMicheli.pathway.f$qvalue < .05]
+expr_sel.deMicheli.pathway.f <- scale_quantile(expression.deMicheli.pathway.f[, gene_sel.deMicheli.pathway.f])
+
+
+###########################
+# Dell'Orso data - modules
+###########################
+# Define expression and group objects
+expression.dellOrso.module <- as.matrix(t(logcounts(sce.dellOrso.module)))
+group_name.dellOrso.module <- as.factor(sce.dellOrso.module$cell_type)
+
+# Get gimp & module objects
+gimp.dellOrso.module <- readRDS("./../saved/gimp_dellOrso_module")
+modules.dellOrso.module <- readRDS("./../saved/modules_dellOrso_module")
+gimp.dellOrso.module$qvalue <- p.adjust(p = gimp.dellOrso.module$pvalue, method = "BH")
+gene_sel.dellOrso.module <- gimp.dellOrso.module$gene[gimp.dellOrso.module$qvalue < .05]
+expr_sel.dellOrso.module <- scale_quantile(expression.dellOrso.module[, gene_sel.dellOrso.module])
+
+############################
+# Dell'Orso data - pathways
+############################
+# Define expression and group objects
+expression.dellOrso.pathway <- as.matrix(t(logcounts(sce.dellOrso.pathway)))
+group_name.dellOrso.pathway <- as.factor(sce.dellOrso.pathway$cell_type)
+
+# Get gimp & module objects
+gimp.dellOrso.pathway <- readRDS("./../saved/gimp_dellOrso_pathway")
+modules.dellOrso.pathway <- readRDS("./../saved/modules_dellOrso_pathway")
+gimp.dellOrso.pathway$qvalue <- p.adjust(p = gimp.dellOrso.pathway$pvalue, method = "BH")
+gene_sel.dellOrso.pathway <- gimp.dellOrso.pathway$gene[gimp.dellOrso.pathway$qvalue < .05]
+expr_sel.dellOrso.pathway <- scale_quantile(expression.dellOrso.pathway[, gene_sel.dellOrso.pathway])
+
+########################################
+# Dell'Orso data - modules (without PM)
+########################################
+# Remove primary myoblast cells and define expression and group objects
+primary.mbs <- sce.dellOrso.module$cell_type == "Primary_MB"
+sce.dellOrso.module.f <- sce.dellOrso.module[, !muscle.cells.module]
+expression.dellOrso.module.f <- as.matrix(t(logcounts(sce.dellOrso.module.f)))
+group_name.dellOrso.module.f <- as.factor(sce.dellOrso.module.f$cell_type)
+
+# Get gimp & module objects
+gimp.dellOrso.module.f <- readRDS("./../saved/gimp_dellOrso_module_no_pm")
+modules.dellOrso.module.f <- readRDS("./../saved/modules_dellOrso_module_no_pm")
+gimp.dellOrso.module.f$qvalue <- p.adjust(p = gimp.dellOrso.module.f$pvalue, method = "BH")
+gene_sel.dellOrso.module.f <- gimp.dellOrso.module.f$gene[gimp.dellOrso.module.f$qvalue < .05]
+expr_sel.dellOrso.module.f <- scale_quantile(expression.dellOrso.module.f[, gene_sel.dellOrso.module.f])
+
+
+#########################################
+# Dell'Orso data - pathways (without PM)
+#########################################
+# Remove primary myoblast cells and define expression and group objects
+primary.mbs <- sce.dellOrso.pathway$cell_type == "Primary_MB"
+sce.dellOrso.pathway.f <- sce.dellOrso.pathway[, !muscle.cells.pathway]
+expression.dellOrso.pathway.f <- as.matrix(t(logcounts(sce.dellOrso.pathway.f)))
+group_name.dellOrso.pathway.f <- as.factor(sce.dellOrso.pathway.f$cell_type)
+
+# Get gimp & module objects
+gimp.dellOrso.pathway.f <- readRDS("./../saved/gimp_dellOrso_pathway_no_pm")
+modules.dellOrso.pathway.f <- readRDS("./../saved/modules_dellOrso_pathway_no_pm")
+gimp.dellOrso.pathway.f$qvalue <- p.adjust(p = gimp.dellOrso.pathway.f$pvalue, method = "BH")
+gene_sel.dellOrso.pathway.f <- gimp.dellOrso.pathway.f$gene[gimp.dellOrso.pathway.f$qvalue < .05]
+expr_sel.dellOrso.pathway.f <- scale_quantile(expression.dellOrso.pathway.f[, gene_sel.dellOrso.pathway.f])
 ```
 
 
-
-#### 3.1.2 Compute Module importances (optional)
-```{r compute-primary-module-importances, eval=FASLE}
+### 4.2 Perform computation of module/pathway importances for all datasets (optional)
+**These code chunks should only be computed if no pre-computed objects are available**
+#### 4.2.1 Primary data - modules
+```{r compute-primary-module-importances, eval=FALSE}
 # Load required objects (if required)
 if(!exists("sce.primary.module")) {sce.primary.module <- readRDS("./../saved/sce_primary_module")}
 
@@ -368,251 +554,225 @@ modules.primary.module <- extract_modules(expr_sel.primary.module,
 saveRDS(modules.primary.module, file = "./../saved/modules_primary_module")
 ```
 
-#### 3.1.3 Compute pathway importances (optional)
-```{r compute-primary-pathway-importances, eval=FASLE}
-
-#TODO
-
+#### 4.2.2 Primary data - pathways
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.3 De Micheli data - modules
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.4 De Micheli data - pathways
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.5 De Micheli data - modules (without mature skeletal muscle)
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.6 De Micheli data - pathways (without mature skeletal muscle)
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.7 Dell'Orso data - modules
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.8 Dell'Orso data - pathways
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.9 Dell'Orso data - modules (without PMs)
+```{r, eval=FALSE}
+# TODO: copy from puhti script
+```
+#### 4.2.10 Dell'Orso data - pathways (without PMs)
+```{r, eval=FALSE}
+# TODO: copy from puhti script
 ```
 
-#### 3.1.4 get KEGG module / pathway information
-```{r}
-# Add 'md:' and 'path:' identifiers to the list of important modules/pathways
-important.modules.primary <- paste0("md:", colnames(expr_sel.primary.module))
-important.pathways.primary <- paste0("path:", colnames(expr_sel.primary.pathway))
 
-# Filter only unique modules / pathways with their associated KEGG entries
-mouse.modules.f <- mouse.modules[mouse.modules %in% important.modules.primary]
-mouse.modules.f <- mouse.modules.f[!duplicated(mouse.modules.f)]
-mouse.pathways.f <- mouse.pathways[mouse.pathways %in% important.pathways.primary]
-mouse.pathways.f <- mouse.pathways.f[!duplicated(mouse.pathways.f)]
+### 4.3 Visualization of module / pathway importances
+#### 4.3.1 Primary data - modules
+```{r trajectory-heatmap-primary-data-modules}
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.primary.module)[rownames(sce.primary.module) %in% colnames(expr_sel.primary.module), , drop=FALSE])
+ann.row$module_name <- as.factor(ann.row$module_name)
 
-# Query module information with KEGG entries
-df.module.info <- data.frame(module = NA, module.info = NA)
-
-for (i in 1:length(names(mouse.modules.f))) {
-  entry <- names(mouse.modules.f)[i]
-  # Get module and its corresponding name
-  query <- keggGet(entry)
-  if("mmu01100" %in% names(query[[1]]$PATHWAY)) {
-    module.id <- mouse.modules.f[[i]] %>% substring(4)
-    module.info <- query[[1]]$MODULE[names(query[[1]]$MODULE) == module.id]
-    print(paste("i", i, " entry:", entry, " module id:", module.id, " module info:", module.info))
-    
-    # Updata values to dataframe
-    df.module.info[i, ]$module <- module.id
-    df.module.info[i, ]$module.info <- module.info
-  }
-  }
-
-# Query pathway information with KEGG entries
-df.pathway.info <- data.frame(pathway = NA, pathway.info = NA)
-
-for (i in 1:length(names(mouse.pathways.f))) {
-  entry <- names(mouse.pathways.f)[i]
-  # Get pathway and its corresponding name
-  query <- keggGet(entry)
-  if("mmu01100" %in% names(query[[1]]$PATHWAY)) {
-    pathway.id <- mouse.pathways.f[[i]] %>% substring(6)
-    pathway.info <- query[[1]]$PATHWAY[names(query[[1]]$PATHWAY) == pathway.id]
-    print(paste("i", i, " entry:", entry, " pathway id:", pathway.id, " pathway info:", pathway.info))
-    
-    # Updata values to dataframe
-    df.pathway.info[i, ]$pathway <- pathway.id
-    df.pathway.info[i, ]$pathway.info <- pathway.info
-  }
-}
-
-# save objects
-saveRDS(df.module.info, file = "./../saved/df_module_info_primary")
-saveRDS(df.pathway.info, file = "./../saved/df_pathway_info_primary")
-write.csv(df.module.info, file = "./../saved/df_module_info_primary.csv")
-write.csv(df.pathway.info, file = "./../saved/df_pathway_info_primary.csv")
-```
-
-#### 3.1.5 Visualize module and pathway importances
-```{r primary-data-visualize-module-and-pathway-importances, eval=FALSE}
-# Modules
-pdf("./../saved/modules_heatmap_primary_KEGG_modules.pdf")
+# Plot heatmap
 draw_trajectory_heatmap(expr_sel.primary.module, 
                         time = traj.primary$time,
                         progression_group = group_name.primary.module,
                         modules = modules.primary.module,
+                        annotation_row = ann.row,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
-dev.off()
+```
 
-# Pathways
-pdf("./../saved/modules_heatmap_primary_KEGG_pathways.pdf")
+#### 4.3.2 Primary data - pathways
+```{r trajectory-heatmap-primary-data-pathways}
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.primary.pathway)[rownames(sce.primary.pathway) %in% colnames(expr_sel.primary.pathway), , drop=FALSE])
+ann.row$pathway_name <- as.factor(ann.row$pathway_name)
+
+# Plot heatmap
 draw_trajectory_heatmap(expr_sel.primary.pathway, 
                         time = traj.primary$time,
                         progression_group = group_name.primary.pathway,
                         modules = modules.primary.pathway,
+                        annotation_row = ann.row,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
-dev.off()
-
 ```
 
+#### 4.3.3 De Micheli data - modules
+```{r trajectory-heatmap-deMicheli-data-modules}
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.deMicheli.module)[rownames(sce.deMicheli.module) %in% colnames(expr_sel.deMicheli.module), , drop=FALSE])
+ann.row$module_name <- as.factor(ann.row$module_name)
 
-
-
-### 3.2 De Micheli data
-#### 3.2.1 - Load pre-saved objects
-**All cell types**
-```{r load-deMicheli-module-and-pathway-importances}
-# Module
-## Define expression and group objects
-expression.deMicheli.module <- as.matrix(t(logcounts(sce.deMicheli.module)))
-group_name.deMicheli.module <- as.factor(sce.deMicheli.module$cell_type)
-
-## Get gimp & module objects
-gimp.deMicheli.module <- readRDS("./../saved/gimp_deMicheli_module")
-modules.deMicheli.module <- readRDS("./../saved/modules_deMicheli_module")
-gimp.deMicheli.module$qvalue <- p.adjust(p = gimp.deMicheli.module$pvalue, method = "BH")
-gene_sel.deMicheli.module <- gimp.deMicheli.module$gene[gimp.deMicheli.module$qvalue < .05]
-expr_sel.deMicheli.module <- scale_quantile(expression.deMicheli.module[, gene_sel.deMicheli.module])
-
-
-# Pathway
-## Define expression and group objects
-expression.deMicheli.pathway <- as.matrix(t(logcounts(sce.deMicheli.pathway)))
-group_name.deMicheli.pathway <- as.factor(sce.deMicheli.pathway$cell_type)
-
-## Get gimp & module objects
-gimp.deMicheli.pathway <- readRDS("./../saved/gimp_deMicheli_pathway")
-modules.deMicheli.pathway <- readRDS("./../saved/modules_deMicheli_pathway")
-gimp.deMicheli.pathway$qvalue <- p.adjust(p = gimp.deMicheli.pathway$pvalue, method = "BH")
-gene_sel.deMicheli.pathway <- gimp.deMicheli.pathway$gene[gimp.deMicheli.pathway$qvalue < .05]
-expr_sel.deMicheli.pathway <- scale_quantile(expression.deMicheli.pathway[, gene_sel.deMicheli.pathway])
-```
-
-**Without mature skeletal muscle**
-```{r load-deMicheli-module-and-pathway-importances-no-muscle}
-
-```
-
-
-#### 3.2.2 Compute module importances (optional)
-```{r compute-deMicheli-module-importances, eval=FASLE}
-#TODO
-```
-
-#### 3.2.3 Compute pathway importances (optional)
-```{r compute-deMicheli-pathway-importances, eval=FASLE}
-#TODO
-```
-
-#### 3.2.4 Get KEGG module / pathway information
-```{r deMicheli-fetch-KEGG-module-and-pathway-information}
-# Get the important modules / pathways and their associated KEGG entries
-# Add 'md:' and 'path:' identifiers to the list of important modules/pathways
-important.modules.deMicheli <- paste0("md:", colnames(expr_sel.deMicheli.module))
-important.pathways.deMicheli <- paste0("path:", colnames(expr_sel.deMicheli.pathway))
-
-# Filter only unique modules / pathways with their associated KEGG entries
-mouse.modules.f <- mouse.modules[mouse.modules %in% important.modules.deMicheli]
-mouse.modules.f <- mouse.modules.f[!duplicated(mouse.modules.f)]
-mouse.pathways.f <- mouse.pathways[mouse.pathways %in% important.pathways.deMicheli]
-mouse.pathways.f <- mouse.pathways.f[!duplicated(mouse.pathways.f)]
-
-# Query module information with KEGG entries
-df.module.info <- data.frame(module = NA, module.info = NA)
-
-for (i in 1:length(names(mouse.modules.f))) {
-  entry <- names(mouse.modules.f)[i]
-  # Get module and its corresponding name
-  query <- keggGet(entry)
-  module.id <- mouse.modules.f[[i]] %>% substring(4)
-  module.info <- query[[1]]$MODULE[names(query[[1]]$MODULE) == module.id]
-  print(paste("i", i, " entry:", entry, " module id:", module.id, " module info:", module.info))
-  
-  # Updata values to dataframe
-  df.module.info[i, ]$module <- module.id
-  df.module.info[i, ]$module.info <- module.info
-}
-
-# Query pathway information with KEGG entries
-df.pathway.info <- data.frame(pathway = NA, pathway.info = NA)
-
-for (i in 1:length(names(mouse.pathways.f))) {
-  entry <- names(mouse.pathways.f)[i]
-  # Get pathway and its corresponding name
-  query <- keggGet(entry)
-  pathway.id <- mouse.pathways.f[[i]] %>% substring(6)
-  pathway.info <- query[[1]]$PATHWAY[names(query[[1]]$PATHWAY) == pathway.id]
-  print(paste("i", i, " entry:", entry, " pathway id:", pathway.id, " pathway info:", pathway.info))
-  
-  # Updata values to dataframe
-  df.pathway.info[i, ]$pathway <- pathway.id
-  df.pathway.info[i, ]$pathway.info <- pathway.info
-}
-
-# save objects
-saveRDS(df.module.info, file = "./../saved/df_module_info_deMicheli")
-saveRDS(df.pathway.info, file = "./../saved/df_pathway_info_deMicheli")
-write.csv(df.module.info, file = "./../saved/df_module_info_deMicheli.csv")
-write.csv(df.pathway.info, file = "./../saved/df_pathway_info_deMicheli.csv")
-```
-
-
-#### 3.2.5 Visualize module and pathway importances
-**Module importances**
-```{r deMicheli-module-importance-heatmap, eval=FALSE}
-# Create annotation row for modules
-ann.row.deMicheli.modules <- data.frame(KEGG_module = factor(df.module.info$module.info))
-rownames(ann.row.deMicheli.modules) <- df.module.info$module
-
-# Create annotation row for pathways
-ann.row.deMicheli.pathways <- data.frame(KEGG_pathway = factor(df.pathway.info$pathway.info))
-rownames(ann.row.deMicheli.pathways) <- df.pathway.info$pathway
-
-# Modules
-pdf("./../saved/modules_heatmap_deMicheli_KEGG_modules.pdf")
+# Plot heatmap
 draw_trajectory_heatmap(expr_sel.deMicheli.module, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli.module,
-                        annotation_row = ann.row.deMicheli.modules,
                         modules = modules.deMicheli.module,
+                        annotation_row = ann.row,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
-dev.off()
+```
 
-# Pathways
-pdf("./../saved/modules_heatmap_deMicheli_KEGG_pathways.pdf")
+#### 4.3.4 De Micheli data - pathways
+```{r trajectory-heatmap-deMicheli-data-pathways}
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.deMicheli.pathway)[rownames(sce.deMicheli.pathway) %in% colnames(expr_sel.deMicheli.pathway), , drop=FALSE])
+ann.row$pathway_name <- as.factor(ann.row$pathway_name)
+
+# Plot heatmap
 draw_trajectory_heatmap(expr_sel.deMicheli.pathway, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli.pathway,
-                        annotation_row = ann.row.deMicheli.pathways,
                         modules = modules.deMicheli.pathway,
+                        annotation_row = ann.row,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
-dev.off()
+```
+
+#### 4.3.5 De Micheli data - modules (without mature skeletal muscle)
+```{r trajectory-heatmap-deMicheli-data-modules-no-muscle}
+# define time without mature skeletal muscle
+traj.deMicheli.time.module.f <-  traj.deMicheli$time[names(traj.deMicheli$time) %in% colnames(sce.deMicheli.module.f)]
+
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.deMicheli.module.f)[rownames(sce.deMicheli.module.f) %in% colnames(expr_sel.deMicheli.module.f), , drop=FALSE])
+ann.row$module_name <- as.factor(ann.row$module_name)
+
+# Draw heatmap
+draw_trajectory_heatmap(expr_sel.deMicheli.module.f, 
+                        time = traj.deMicheli.time.module.f,
+                        progression_group = group_name.deMicheli.module.f,
+                        modules = modules.deMicheli.module.f,
+                        annotation_row = ann.row,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+```
+
+#### 4.3.6 De Micheli data - pathways (without mature skeletal muscle)
+```{r trajectory-heatmap-deMicheli-data-pathways-no-muscle}
+# define time without mature skeletal muscle
+traj.deMicheli.time.pathway.f <-  traj.deMicheli$time[names(traj.deMicheli$time) %in% colnames(sce.deMicheli.pathway.f)]
+
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.deMicheli.pathway.f)[rownames(sce.deMicheli.pathway.f) %in% colnames(expr_sel.deMicheli.pathway.f), , drop=FALSE])
+ann.row$pathway_name <- as.factor(ann.row$pathway_name)
+
+# Draw heatmap
+draw_trajectory_heatmap(expr_sel.deMicheli.pathway.f, 
+                        time = traj.deMicheli.time.pathway.f,
+                        progression_group = group_name.deMicheli.pathway.f,
+                        modules = modules.deMicheli.pathway.f,
+                        annotation_row = ann.row,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+```
+
+#### 4.3.7 Dell'Orso data - modules
+```{r trajectory-heatmap-dellOrso-data-modules}
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.dellOrso.module)[rownames(sce.dellOrso.module) %in% colnames(expr_sel.dellOrso.module), , drop=FALSE])
+ann.row$module_name <- as.factor(ann.row$module_name)
+
+# Draw trajectory heatmap
+draw_trajectory_heatmap(expr_sel.dellOrso.module, 
+                        time = traj.dellOrso$time,
+                        progression_group = group_name.dellOrso.module,
+                        modules = modules.dellOrso.module,
+                        annotation_row = ann.row,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+```
+
+#### 4.3.8 Dell'Orso data - pathways
+```{r trajectory-heatmap-dellOrso-data-pathways}
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.dellOrso.pathway)[rownames(sce.dellOrso.pathway) %in% colnames(expr_sel.dellOrso.pathway), , drop=FALSE])
+ann.row$pathway_name <- as.factor(ann.row$pathway_name)
+
+# Draw trajectory heatmap
+draw_trajectory_heatmap(expr_sel.dellOrso.pathway, 
+                        time = traj.dellOrso$time,
+                        progression_group = group_name.dellOrso.pathway,
+                        modules = modules.dellOrso.pathway,
+                        annotation_row = ann.row,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
 ```
 
 
-**Pathway importances**
-```{r deMicheli-pathway-importance-heatmap, eval=FALSE}
+#### 4.3.9 Dell'Orso data - modules (without PMs)
+```{r trajectory-heatmap-dellOrso-data-modules-no-PMs}
+# define time without PMs
+traj.dellOrso.time.module.f <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.module.f)]
 
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.dellOrso.module.f)[rownames(sce.dellOrso.module.f) %in% colnames(expr_sel.dellOrso.module.f), , drop=FALSE])
+ann.row$module_name <- as.factor(ann.row$module_name)
+
+# Draw heatmap
+draw_trajectory_heatmap(expr_sel.dellOrso.module.f, 
+                        time = traj.dellOrso.time.module.f,
+                        progression_group = group_name.dellOrso.module.f,
+                        modules = modules.dellOrso.module.f,
+                        annotation_row = ann.row,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
 ```
 
+#### 4.3.10 Dell'Orso data - pathways (without PMs)
+```{r trajectory-heatmap-dellOrso-data-pathways-no-PMs}
+# define time without PMs
+traj.dellOrso.time.pathway.f <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.pathway.f)]
 
+# Define annotation row
+ann.row <- as.data.frame(rowData(sce.dellOrso.pathway.f)[rownames(sce.dellOrso.pathway.f) %in% colnames(expr_sel.dellOrso.pathway.f), , drop=FALSE])
+ann.row$pathway_name <- as.factor(ann.row$pathway_name)
 
-
-### 3.3 Dell'Orso data
-#### 3.3.1 Compute module importances (optional)
-```{r compute-dellOrso-module-importances, eval=FASLE}
-#TODO
+# Draw heatmap
+draw_trajectory_heatmap(expr_sel.dellOrso.pathway.f, 
+                        time = traj.dellOrso.time.pathway.f,
+                        progression_group = group_name.dellOrso.pathway.f,
+                        modules = modules.dellOrso.pathway.f,
+                        annotation_row = ann.row,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
 ```
-
-
-#### 3.3.2 Compute pathway importances (optional)
-```{r compute-dellOrso-pathway-importances, eval=FASLE}
-#TODO
-```
-
 
