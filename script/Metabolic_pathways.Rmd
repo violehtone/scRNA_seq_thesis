@@ -51,7 +51,7 @@ library(gridExtra)
 library(plyr)
 library(stringr)
 library(ggrepel)
-library(VennDiagram)
+library(gplots)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -344,6 +344,7 @@ expr_sel.deMicheli.m <- scale_quantile(expression.deMicheli.m[, gene_sel.deMiche
 # Load gimp & modules
 gimp.deMicheli.m.f <- readRDS("./../saved/gimp_deMicheli_m_no_muscle")
 modules.deMicheli.m.f <- readRDS("./../saved/modules_deMicheli_m_no_muscle")
+modules.primary.m.f4 <- readRDS("./../saved/modules_primary_m_f4")
 
 gimp.deMicheli.m.f$qvalue <- p.adjust(p = gimp.deMicheli.m.f$pvalue, method = "BH")
 gene_sel.deMicheli.m.f <- gimp.deMicheli.m.f$gene[gimp.deMicheli.m.f$qvalue < .05]
@@ -538,6 +539,14 @@ dev.off()
 
 #TODO (copy from Puhti script)
 
+
+# Modules extracted with >=4 modules
+modules.primary.m.f4 <- extract_modules(expr_sel.deMicheli.m.f,
+                                        time = traj.deMicheli.f.time,
+                                        verbose = FALSE,
+                                        G = 4:9)
+
+saveRDS(modules.primary.m.f4, file = "./../saved/modules_primary_m_f4")
 ```
 
 
@@ -571,12 +580,23 @@ pdf("./../saved/modules_heatmap_deMicheli_metabolic_genes_no_muscle.pdf")
 draw_trajectory_heatmap(expr_sel.deMicheli.m.f, 
                         time = traj.deMicheli.f.time,
                         progression_group = group_name.deMicheli.m.f,
-                        modules = modules.deMicheli.m.f.kegg,
-                        annotation_row = ann_row_deMicheli,
+                        modules = modules.deMicheli.m.f,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
 dev.off()
+
+# Modules but number of modules set to 4
+pdf("./../saved/modules_heatmap_deMicheli_metabolic_genes_no_muscle_g4.pdf")
+draw_trajectory_heatmap(expr_sel.deMicheli.m.f, 
+                        time = traj.deMicheli.f.time,
+                        progression_group = group_name.deMicheli.m.f,
+                        modules = modules.primary.m.f4,
+                        show_labels_row = TRUE,
+                        fontsize_row = 5,
+                        fontsize = 4)
+dev.off()
+
 ```
 
 
@@ -698,53 +718,20 @@ dev.off()
 
 ### 3.4 Comparison of metabolic genes between the datasets
 ```{r comparison-of-metabolic-genes-between-datasets}
-# Define colour palette for venn diagram
-venn.colors <- brewer.pal(3, "Pastel2")
-
 # Load metabolic genes if not defined
 if(!exists("modules.primary.m")) {modules.primary.m <- readRDS("./../saved/modules_primary_m")}
 if(!exists("modules.deMicheli.m")) {modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m_f")}
 if(!exists("modules.dellOrso.m")) {modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m_f")}
 
-m.genes.primary <- modules.primary.m$feature
-m.genes.deMicheli.f <- modules.deMicheli.m$feature
-m.genes.dellOrso.f <- modules.dellOrso.m$feature
+v.table <- venn(data = list(primary_data = modules.primary.m$feature,
+                            de_Micheli_data = modules.deMicheli.m$feature,
+                            dellOrso_data = modules.dellOrso.m$feature))
 
-# Creata a Venn diagram from metabolic genes
-venn <- venn.diagram(
-  x = list(m.genes.primary, m.genes.deMicheli.f, m.genes.dellOrso.f),
-  category.names = c("Primary data" , "de Micheli " , "Dell'Orso"),
-  filename = NULL,
-  fill = venn.colors,
-  fontface = "bold",
-  lwd = 2,
-  lty = "blank",
-  cat.fontface = "bold",
-  fontfamily = "sans",
-  cat.fontfamily = "sans"
-)
+# Plot the venn diagram
+plot(v.table)
 
-p.gg <- as_ggplot(venn)
-p.gg
-
-# Inspect the genes
-## Intersection (all)
-intersect(m.genes.primary, m.genes.deMicheli.f) %>%
-  intersect(m.genes.dellOrso.f)
-
-##Intersection: primary - de Micheli
-intersect(m.genes.primary, m.genes.deMicheli.f)
-
-## Intersection: primary - dell'Orso
-intersect(m.genes.primary, m.genes.dellOrso.f)
-
-## Intersection: de Micheli - Dell'Orso
-intersect(m.genes.deMicheli.f, m.genes.dellOrso.f)
-
-## Union (all)
-union(m.genes.primary, m.genes.deMicheli.f) %>% 
-  union(m.genes.dellOrso.f)
-
+# Print the intersections between datasets
+print(attr(v.table ,"intersections"))
 ```
 
 
