@@ -23,6 +23,11 @@ library(SingleCellExperiment)
 library(stats)
 library(data.table)
 library(dplyr)
+
+
+library(gridExtra)
+library(ggplot2)
+library(gplots)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -600,7 +605,7 @@ ann.row <- as.data.frame(rowData(sce.primary.module)[rownames(sce.primary.module
 ann.row$module_name <- as.factor(ann.row$module_name)
 
 # Plot heatmap
-draw_trajectory_heatmap(expr_sel.primary.module, 
+p.primary.modules <- draw_trajectory_heatmap(expr_sel.primary.module, 
                         time = traj.primary$time,
                         progression_group = group_name.primary.module,
                         modules = modules.primary.module,
@@ -608,6 +613,8 @@ draw_trajectory_heatmap(expr_sel.primary.module,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.primary.modules
 ```
 
 #### 4.3.2 Primary data - pathways
@@ -617,7 +624,7 @@ ann.row <- as.data.frame(rowData(sce.primary.pathway)[rownames(sce.primary.pathw
 ann.row$pathway_name <- as.factor(ann.row$pathway_name)
 
 # Plot heatmap
-draw_trajectory_heatmap(expr_sel.primary.pathway, 
+p.primary.pathways <- draw_trajectory_heatmap(expr_sel.primary.pathway, 
                         time = traj.primary$time,
                         progression_group = group_name.primary.pathway,
                         modules = modules.primary.pathway,
@@ -625,6 +632,8 @@ draw_trajectory_heatmap(expr_sel.primary.pathway,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.primary.pathways
 ```
 
 #### 4.3.3 De Micheli data - modules
@@ -634,7 +643,7 @@ ann.row <- as.data.frame(rowData(sce.deMicheli.module)[rownames(sce.deMicheli.mo
 ann.row$module_name <- as.factor(ann.row$module_name)
 
 # Plot heatmap
-draw_trajectory_heatmap(expr_sel.deMicheli.module, 
+p.deMicheli.modules <- draw_trajectory_heatmap(expr_sel.deMicheli.module, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli.module,
                         modules = modules.deMicheli.module,
@@ -642,6 +651,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli.module,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.deMicheli.modules
 ```
 
 #### 4.3.4 De Micheli data - pathways
@@ -651,7 +662,7 @@ ann.row <- as.data.frame(rowData(sce.deMicheli.pathway)[rownames(sce.deMicheli.p
 ann.row$pathway_name <- as.factor(ann.row$pathway_name)
 
 # Plot heatmap
-draw_trajectory_heatmap(expr_sel.deMicheli.pathway, 
+p.deMicheli.pathways <- draw_trajectory_heatmap(expr_sel.deMicheli.pathway, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli.pathway,
                         modules = modules.deMicheli.pathway,
@@ -659,6 +670,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli.pathway,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.deMicheli.pathways
 ```
 
 #### 4.3.5 De Micheli data - modules (without mature skeletal muscle)
@@ -671,7 +684,7 @@ ann.row <- as.data.frame(rowData(sce.deMicheli.module.f)[rownames(sce.deMicheli.
 ann.row$module_name <- as.factor(ann.row$module_name)
 
 # Draw heatmap
-draw_trajectory_heatmap(expr_sel.deMicheli.module.f, 
+p.deMicheli.modules.f <- draw_trajectory_heatmap(expr_sel.deMicheli.module.f, 
                         time = traj.deMicheli.time.module.f,
                         progression_group = group_name.deMicheli.module.f,
                         modules = modules.deMicheli.module.f,
@@ -679,6 +692,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli.module.f,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.deMicheli.modules.f
 ```
 
 #### 4.3.6 De Micheli data - pathways (without mature skeletal muscle)
@@ -691,7 +706,7 @@ ann.row <- as.data.frame(rowData(sce.deMicheli.pathway.f)[rownames(sce.deMicheli
 ann.row$pathway_name <- as.factor(ann.row$pathway_name)
 
 # Draw heatmap
-draw_trajectory_heatmap(expr_sel.deMicheli.pathway.f, 
+p.deMicheli.pathways.f <-  draw_trajectory_heatmap(expr_sel.deMicheli.pathway.f, 
                         time = traj.deMicheli.time.pathway.f,
                         progression_group = group_name.deMicheli.pathway.f,
                         modules = modules.deMicheli.pathway.f,
@@ -699,6 +714,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli.pathway.f,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.deMicheli.pathways.f
 ```
 
 #### 4.3.7 Dell'Orso data - modules
@@ -708,7 +725,7 @@ ann.row <- as.data.frame(rowData(sce.dellOrso.module)[rownames(sce.dellOrso.modu
 ann.row$module_name <- as.factor(ann.row$module_name)
 
 # Draw trajectory heatmap
-draw_trajectory_heatmap(expr_sel.dellOrso.module, 
+p.dellOrso.modules <- draw_trajectory_heatmap(expr_sel.dellOrso.module, 
                         time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso.module,
                         modules = modules.dellOrso.module,
@@ -716,6 +733,8 @@ draw_trajectory_heatmap(expr_sel.dellOrso.module,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.dellOrso.modules
 ```
 
 #### 4.3.8 Dell'Orso data - pathways
@@ -725,7 +744,7 @@ ann.row <- as.data.frame(rowData(sce.dellOrso.pathway)[rownames(sce.dellOrso.pat
 ann.row$pathway_name <- as.factor(ann.row$pathway_name)
 
 # Draw trajectory heatmap
-draw_trajectory_heatmap(expr_sel.dellOrso.pathway, 
+p.dellOrso.pathways <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway, 
                         time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso.pathway,
                         modules = modules.dellOrso.pathway,
@@ -733,6 +752,8 @@ draw_trajectory_heatmap(expr_sel.dellOrso.pathway,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.dellOrso.pathways
 ```
 
 
@@ -746,7 +767,7 @@ ann.row <- as.data.frame(rowData(sce.dellOrso.module.f)[rownames(sce.dellOrso.mo
 ann.row$module_name <- as.factor(ann.row$module_name)
 
 # Draw heatmap
-draw_trajectory_heatmap(expr_sel.dellOrso.module.f, 
+p.dellOrso.modules.f <- draw_trajectory_heatmap(expr_sel.dellOrso.module.f, 
                         time = traj.dellOrso.time.module.f,
                         progression_group = group_name.dellOrso.module.f,
                         modules = modules.dellOrso.module.f,
@@ -754,6 +775,8 @@ draw_trajectory_heatmap(expr_sel.dellOrso.module.f,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.dellOrso.modules.f
 ```
 
 #### 4.3.10 Dell'Orso data - pathways (without PMs)
@@ -766,7 +789,7 @@ ann.row <- as.data.frame(rowData(sce.dellOrso.pathway.f)[rownames(sce.dellOrso.p
 ann.row$pathway_name <- as.factor(ann.row$pathway_name)
 
 # Draw heatmap
-draw_trajectory_heatmap(expr_sel.dellOrso.pathway.f, 
+p.dellOrso.pathways.f <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway.f, 
                         time = traj.dellOrso.time.pathway.f,
                         progression_group = group_name.dellOrso.pathway.f,
                         modules = modules.dellOrso.pathway.f,
@@ -774,5 +797,76 @@ draw_trajectory_heatmap(expr_sel.dellOrso.pathway.f,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
                         fontsize = 4)
+
+p.dellOrso.pathways.f
 ```
 
+
+#### 4.3.11 Save all heatmaps in pdf format
+```{r save-all-heatmaps-in-pdf-format, eval=FALSE}
+all.plots <- arrangeGrob(p.primary.modules[[4]],
+                         p.primary.pathways[[4]],
+                         p.deMicheli.modules[[4]],
+                         p.deMicheli.pathways[[4]],
+                         p.deMicheli.modules.f[[4]],
+                         p.deMicheli.pathways.f[[4]],
+                         p.dellOrso.modules[[4]],
+                         p.dellOrso.pathways[[4]],
+                         p.dellOrso.modules.f[[4]],
+                         p.dellOrso.pathways.f[[4]],
+                         ncol = 1)
+
+ggsave(filename = "./../saved/module_and_pathway_importances_for_all_datasets.pdf",
+       plot = all.plots, limitsize = FALSE, width = 13, height = 100)
+
+```
+
+
+## 5. Venn diagram of shared metabolic modules / pathways between datasets
+```{r comparison-of-metabolic-genes-between-datasets}
+# Load metabolic genes if not defined
+if(!exists("modules.primary.module")) {modules.primary.module <- readRDS("./../saved/modules_primary_module")}
+if(!exists("modules.primary.pathway")) {modules.primary.pathway <- readRDS("./../saved/modules_primary_pathway")}
+
+if(!exists("modules.deMicheli.module")) {modules.deMicheli.module <- readRDS("./../saved/modules_deMicheli_module")}
+if(!exists("modules.deMicheli.pathway")) {modules.deMicheli.pathway <- readRDS("./../saved/modules_deMicheli_pathway")}
+if(!exists("modules.deMicheli.module.f")) {modules.deMicheli.module.f <- readRDS("./../saved/modules_deMicheli_module_no_muscle")}
+if(!exists("modules.deMicheli.pathway.f")) {modules.deMicheli.pathway.f <- readRDS("./../saved/modules_deMicheli_pathway_no_muscle")}
+
+if(!exists("modules.dellOrso.module")) {modules.dellOrso.module <- readRDS("./../saved/modules_dellOrso_module")}
+if(!exists("modules.dellOrso.pathway")) {modules.dellOrso.pathway <- readRDS("./../saved/modules_dellOrso_pathway")}
+if(!exists("modules.dellOrso.module.f")) {modules.dellOrso.module.f <- readRDS("./../saved/modules_dellOrso_module_no_pm")}
+if(!exists("modules.dellOrso.pathway.f")) {modules.dellOrso.pathway.f <- readRDS("./../saved/modules_dellOrso_pathway_no_pm")}
+
+venn.modules <- venn(data = list(primary_data = modules.primary.module$feature,
+                                 de_Micheli_data = modules.deMicheli.module$feature,
+                                 dellOrso_data = modules.dellOrso.module$feature))
+
+venn.pathways <- venn(data = list(primary_data = modules.primary.pathway$feature,
+                                 de_Micheli_data = modules.deMicheli.pathway$feature,
+                                 dellOrso_data = modules.dellOrso.pathway$feature))
+
+
+venn.modules.f <- venn(data = list(primary_data = modules.primary.module$feature,
+                                 de_Micheli_data = modules.deMicheli.module.f$feature,
+                                 dellOrso_data = modules.dellOrso.module.f$feature))
+
+
+venn.pathways.f <- venn(data = list(primary_data = modules.primary.pathway$feature,
+                                 de_Micheli_data = modules.deMicheli.pathway.f$feature,
+                                 dellOrso_data = modules.dellOrso.pathway.f$feature))
+
+# Plot the venn diagrams and print the intersections between datasets
+plot(venn.modules, main = "Metabolic modules: all cell types")
+print(attr(venn.modules ,"intersections"))
+
+plot(venn.pathways, main = "Metabolic pathways: all cell types")
+print(attr(venn.pathways ,"intersections"))
+
+plot(venn.modules.f, main = "Metabolic modules: no mature skeletal muscle or primary myoblasts")
+print(attr(venn.modules.f ,"intersections"))
+
+plot(venn.pathways.f, main = "Metabolic pathways: no mature skeletal muscle or primary myoblasts")
+print(attr(venn.pathways.f ,"intersections"))
+
+```
