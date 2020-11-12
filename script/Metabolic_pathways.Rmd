@@ -720,18 +720,25 @@ dev.off()
 ```{r comparison-of-metabolic-genes-between-datasets}
 # Load metabolic genes if not defined
 if(!exists("modules.primary.m")) {modules.primary.m <- readRDS("./../saved/modules_primary_m")}
-if(!exists("modules.deMicheli.m")) {modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m_f")}
-if(!exists("modules.dellOrso.m")) {modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m_f")}
+if(!exists("modules.deMicheli.m")) {modules.deMicheli.m <- readRDS("./../saved/modules_deMicheli_m")}
+if(!exists("modules.dellOrso.m")) {modules.dellOrso.m <- readRDS("./../saved/modules_dellOrso_m")}
+if(!exists("modules.deMicheli.m.f")) {modules.deMicheli.m.f <- readRDS("./../saved/modules_deMicheli_m_f")}
+if(!exists("modules.dellOrso.m.f")) {modules.dellOrso.m.f <- readRDS("./../saved/modules_dellOrso_m_f")}
+
 
 v.table <- venn(data = list(primary_data = modules.primary.m$feature,
                             de_Micheli_data = modules.deMicheli.m$feature,
                             dellOrso_data = modules.dellOrso.m$feature))
 
-# Plot the venn diagram
-plot(v.table)
-
 # Print the intersections between datasets
 print(attr(v.table ,"intersections"))
+
+v.table.f <- venn(data = list(primary_data = modules.primary.m$feature,
+                              de_Micheli_data = modules.deMicheli.m.f$feature,
+                              dellOrso_data = modules.dellOrso.m.f$feature))
+
+# Print the intersections between datasets
+print(attr(v.table.f ,"intersections"))
 ```
 
 

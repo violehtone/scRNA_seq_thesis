@@ -842,31 +842,30 @@ venn.modules <- venn(data = list(primary_data = modules.primary.module$feature,
                                  de_Micheli_data = modules.deMicheli.module$feature,
                                  dellOrso_data = modules.dellOrso.module$feature))
 
+# Print the intersections between datasets
+print(attr(venn.modules ,"intersections"))
+
+
 venn.pathways <- venn(data = list(primary_data = modules.primary.pathway$feature,
                                  de_Micheli_data = modules.deMicheli.pathway$feature,
                                  dellOrso_data = modules.dellOrso.pathway$feature))
+
+# Print the intersections between datasets
+print(attr(venn.pathways ,"intersections"))
 
 
 venn.modules.f <- venn(data = list(primary_data = modules.primary.module$feature,
                                  de_Micheli_data = modules.deMicheli.module.f$feature,
                                  dellOrso_data = modules.dellOrso.module.f$feature))
 
+# Print the intersections between datasets
+print(attr(venn.modules.f ,"intersections"))
+
 
 venn.pathways.f <- venn(data = list(primary_data = modules.primary.pathway$feature,
                                  de_Micheli_data = modules.deMicheli.pathway.f$feature,
                                  dellOrso_data = modules.dellOrso.pathway.f$feature))
 
-# Plot the venn diagrams and print the intersections between datasets
-plot(venn.modules, main = "Metabolic modules: all cell types")
-print(attr(venn.modules ,"intersections"))
-
-plot(venn.pathways, main = "Metabolic pathways: all cell types")
-print(attr(venn.pathways ,"intersections"))
-
-plot(venn.modules.f, main = "Metabolic modules: no mature skeletal muscle or primary myoblasts")
-print(attr(venn.modules.f ,"intersections"))
-
-plot(venn.pathways.f, main = "Metabolic pathways: no mature skeletal muscle or primary myoblasts")
+# Print the intersections between datasets
 print(attr(venn.pathways.f ,"intersections"))
-
 ```
