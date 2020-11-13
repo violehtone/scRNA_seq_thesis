@@ -44,14 +44,14 @@ denoised.sce.dellOrso <- readRDS("./../saved/denoised_sce_dellOrso")
 ```
 
 **Cell cycle genes (from OSCA pipeline)**
-```{r cc-genes-osca-shortcut, eval=FALSE}
+```{r cc-genes-osca-shortcut}
 # Get OSCA cell cycle genes
 cc.genes.osca <- readRDS("./../saved/cc_genes_osca")
 
 # Create new datasets where the cell cycle genes have been removed
-denoised.sce.cc.genes <- denoised.sce[!rownames(denoised.sce) %in% cc.genes.osca, ]
-denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!rownames(denoised.sce.deMicheli) %in% cc.genes.osca, ]
-denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!rownames(denoised.sce.dellOrso) %in% cc.genes.osca, ]
+denoised.sce.cc.genes <- denoised.sce[!(rownames(denoised.sce) %in% cc.genes.osca), ]
+denoised.sce.deMicheli.cc.genes <- denoised.sce.deMicheli[!(rownames(denoised.sce.deMicheli) %in% cc.genes.osca), ]
+denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!(rownames(denoised.sce.dellOrso) %in% cc.genes.osca), ]
 ```
 
 
@@ -87,7 +87,7 @@ denoised.sce$cell_type_deMicheli <- pred.deMicheli$pruned.labels
 plotScoreHeatmap(pred.deMicheli, annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.deMicheli, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.deMicheli, min.diff.next = 0.1)
 table(Label=pred.deMicheli$labels, Removed=to.remove)
 
 # Delta distribution
@@ -165,7 +165,7 @@ dev.off()
 ### 2.2 Without cell cycle genes
 #### 2.2.1 Cell annotations without cc genes
 **Load pre-calculated predictions (if available)**
-```{r load-deMicheli-cell-type-predictions-cc-genes, eval=FALSE}
+```{r load-deMicheli-cell-type-predictions-cc-genes}
 pred.deMicheli.cc.genes <- readRDS("./../saved/pred_deMicheli_cc_genes")
 
 # Assign cell types to primary data
@@ -187,7 +187,23 @@ denoised.sce.cc.genes$cell_type_deMicheli <- pred.deMicheli.cc.genes$pruned.labe
 
 
 #### 2.2.2 Diagnostic plots without cc genes (pdf documents)
-```{r deMicheli-annotation-diagnostic-plots-cc-genes, eval=FALSE}
+**Diagnostic plots**
+```{r deMicheli-annotation-diagnostic-plots-cc-genes}
+# Score heatmap
+plotScoreHeatmap(pred.deMicheli.cc.genes, 
+                 annotation_col = as.data.frame(colData(denoised.sce.cc.genes)[, "sample", drop = FALSE]), width = 10)
+
+# Remove low-quality cells
+to.remove <- pruneScores(pred.deMicheli.cc.genes, min.diff.next=0.1)
+table(Label=pred.deMicheli.cc.genes$labels, Removed=to.remove)
+
+# Delta distribution
+plotScoreDistribution(results = pred.deMicheli.cc.genes, show = "delta.med")
+```
+
+
+**Pdf files**
+```{r deMicheli-annotation-diagnostic-plots-cc-genes-pdf, eval=FALSE}
 # Visualize the score matrix
 pdf("./../saved/deMicheli_cc_genes_score_heatmap.pdf", width = 30, height = 50)
 plotScoreHeatmap(pred.deMicheli.cc.genes, 
@@ -321,7 +337,7 @@ plotScoreHeatmap(pred.segments,
                  annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.segments, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.segments, min.diff.next = 0.1)
 table(Label=pred.segments$labels, Removed=to.remove)
 
 # Delta distribution
@@ -531,7 +547,7 @@ denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
 plotScoreHeatmap(pred.dellOrso,  annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.dellOrso, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.dellOrso, min.diff.next = 0.1)
 table(Label=pred.dellOrso$labels, Removed=to.remove)
 
 # Delta distribution
@@ -580,9 +596,9 @@ dev.off()
 ```
 
 ### 3.2 Without cell cycle genes
-#### 3.2.1 Cell annotations without cc genes
+#### 3.2.1 Cell annotations without cc genes using Dell'Orso dataset
 **Load pre-calculated predictions (if available)**
-```{r load-dellOrso-cell-type-predictions-cc-genes, eval=FALSE}
+```{r load-dellOrso-cell-type-predictions-cc-genes}
 pred.dellOrso.cc.genes <- readRDS("./../saved/pred_dellOrso_cc_genes")
 
 # Assign cell types to primary data
@@ -603,17 +619,29 @@ denoised.sce.cc.genes$cell_type_dellOrso <- pred.dellOrso.cc.genes$pruned.labels
 #saveRDS(pred.dellOrso.cc.genes, file = "./../saved/pred_dellOrso_cc_genes")
 ```
 
+**diagnostics**
+```{r dellOrso-annotation-diagnostic-plots-cc-genes}
+# Score heatmap
+plotScoreHeatmap(pred.dellOrso.cc.genes, 
+                 annotation_col = as.data.frame(colData(denoised.sce.cc.genes)[, "sample", drop = FALSE]), width = 10)
 
+# Remove low-quality cells
+to.remove <- pruneScores(pred.dellOrso.cc.genes, min.diff.next=0.1)
+table(Label=pred.dellOrso.cc.genes$labels, Removed=to.remove)
+
+# Delta distribution
+plotScoreDistribution(results = pred.dellOrso.cc.genes, show = "delta.med")
+```
+
+
+**pdf documents**
 #### 3.2.2 Diagnostic plots without cc genes (pdf documents)
-```{r dellOrso-annotation-diagnostic-plots-cc-genes, eval=FALSE}
+```{r dellOrso-annotation-diagnostic-plots-cc-genes-pdf, eval=FALSE}
 # Visualize the score matrix
 pdf("./../saved/dellOrso_cc_genes_score_heatmap.pdf", width = 30, height = 50)
 plotScoreHeatmap(pred.dellOrso.cc.genes, 
                  annotation_col = as.data.frame(colData(denoised.sce.cc.genes)[, "sample", drop = FALSE]), width = 10)
 dev.off()
-
-to.remove <- pruneScores(pred.dellOrso.cc.genes, min.diff.next=0.1)
-table(Label=pred.dellOrso.cc.genes$labels, Removed=to.remove)
 
 # Delta distribution
 pdf("./../saved/dellOrso_cc_genes_score_distribution.pdf", width = 20, height = 15)
@@ -735,7 +763,7 @@ balloon.dellOrso
 
 
 ### 5.2 Without cell cycle genes
-```{r inspect-cell-types-cc-genes, eval=FALSE}
+```{r inspect-cell-types-cc-genes}
 table(pred.deMicheli.cc.genes$pruned.labels)
 table(pred.dellOrso.cc.genes$labels)
 
@@ -747,7 +775,8 @@ tab.deMicheli.cc.genes
 tab.dellOrso.cc.genes
 ```
 
-### De Micheli: segments on trajectory
+
+### 5.3 De Micheli: segments on trajectory
 ```{r deMicheli-cell-mapping-visualization-with-segments}
 # Put predictions on a table
 tab.deMicheli.segments <- table(denoised.sce$sample, pred.segments$pruned.labels)[c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h"),]
