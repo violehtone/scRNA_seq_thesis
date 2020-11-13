@@ -853,17 +853,49 @@ plotScoreDistribution(results = pred.dellOrso.m.no.pm, show = "delta.med")
 
 ## 5. Differential expression (DE) analysis with metabolic genes
 ### 5.1 Marker genes: Control vs. Cap samples
+**Using t-test**
 ```{r marker-genes-metabolic-primary-data}
 markers.primary <- findMarkers(denoised.sce.m,
                                groups = denoised.sce.m$sample,
-                               lfc = 0.5)
+                               lfc = log2(1.5))
 
+# Choose markers for control sample
 control.markers <- markers.primary[["control"]]
-control.markers.interesting <- control.markers[control.markers$Top <= 10, ]
-#control.markers.interesting <- control.markers[control.markers$FDR <= 0.05, ]
-logFCs <- getMarkerEffects(control.markers.interesting)
 
-pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = "Marker genes: Control sample vs. Cap samples (metabolic genes)", fontsize_row = 12)
+# Save marker information to .csv file
+write.csv(control.markers, file = "./../saved/control_marker_metabolic_genes.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.markers[control.markers$Top <= 6,]
+
+# Extract the marker effect sizes
+logFCs <- getMarkerEffects(best.set)
+
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Metabolic marker genes (t-test): Control vs. other samples (metabolic genes)", fontsize_row = 12)
+```
+
+**Using wmw test**
+```{r de-genes-primary-data-samples-wmw}
+# Find markers by sample
+markers.primary.wmw <- findMarkers(denoised.sce, 
+                                   groups = denoised.sce.m$sample,
+                                   lfc = log2(1.5),
+                                   test = "wilcox")
+
+# Choose markers for control sample
+control.markers.wmw <- markers.primary.wmw[["control"]]
+
+# Save marker information to .csv file
+write.csv(control.markers.wmw, file = "./../saved/control_marker_metabolic_genes_wmw.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.markers.wmw[control.markers.wmw$Top <= 6,]
+
+# Extract the area under curves
+AUCs <- getMarkerEffects(best.set, prefix="AUC")
+
+# Plot results in a heatmap
+pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Metabolic marker genes (wmw): Control vs. other samples")
 ```
 
 ### 5.2 Marker genes shown on reference trajectories
