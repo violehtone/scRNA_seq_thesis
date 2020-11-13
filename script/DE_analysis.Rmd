@@ -34,46 +34,151 @@ denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
 
 # Generate the CC corrected data
 denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
+denoised.sce.cc$cluster.cc <- denoised.sce$cluster.cc
 ```
 
 ## 1. Primary data marker genes
-### 1.1 Uncorrected dataset
-```{r de-genes-primary-data}
+### 1.1 Pairwise comparisons with t-test
+**Markers by sample: Control**
+```{r de-genes-primary-data-samples}
+# Find markers by sample
 markers.primary <- findMarkers(denoised.sce, 
                                groups = denoised.sce$sample,
-                               pval.type = "some",
-                               direction = "up",
-                               lfc = 1)
+                               lfc = log2(1.5))
 
-for(sample in unique(denoised.sce$sample)) {
-  markers <- markers.primary[[sample]]
-  markers.interesting <- markers[markers$p.value <= .05, ]
-  # Print out the marker genes
-  print(markers.interesting)
-  # Get marker effects and plot on a heatmap
-  logFCs <- getMarkerEffects(markers.interesting)
-  pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
+# Choose markers for control sample
+control.markers <- markers.primary[["control"]]
+
+# Save marker information to .csv file
+write.csv(control.markers, file = "./../saved/control_marker_genes.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.markers[control.markers$Top <= 6,]
+
+# Extract the marker effect sizes
+logFCs <- getMarkerEffects(best.set)
+
+# Plot results in a heatmap
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), show_rownames = TRUE, show_colnames = TRUE, main = "Marker genes (t-test): Control vs. other samples")
+```
+
+**Markers by cluster**
+```{r de-genes-primary-data-clusters}
+# Find markers by sample
+markers.primary.clust <- findMarkers(denoised.sce, 
+                               groups = denoised.sce$cluster,
+                               lfc = log2(1.5))
+
+# Perform marker gene identification for all clusters
+for(cluster in unique(denoised.sce$cluster)) {
+  # Choose marker for cluster x
+  markers <- markers.primary.clust[[cluster]]
+  # Save marker information to .csv file
+  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, ".csv")
+  write.csv(markers, file = fpath)
+  # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
+  best.set <- markers[markers$Top <= 6,]
+  # Extract the marker effect sizes
+  logFCs <- getMarkerEffects(best.set)
+  # Plot results in a heatmap
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), show_rownames = TRUE, show_colnames = TRUE, main = paste("Marker genes (t-test): cluster:", cluster))
+}
+```
+
+**Markers by cell cycle corrected clusters**
+```{r de-genes-primary-data-clusters-cc}
+# Find markers by sample
+markers.primary.clust.cc <- findMarkers(denoised.sce, 
+                               groups = denoised.sce$cluster.cc,
+                               lfc = log2(1.5))
+
+# Perform marker gene identification for all clusters
+for(cluster in unique(denoised.sce$cluster.cc)) {
+  # Choose marker for cluster x
+  markers <- markers.primary.clust.cc[[cluster]]
+  # Save marker information to .csv file
+  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, "_cc.csv")
+  write.csv(markers, file = fpath)
+  # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
+  best.set <- markers[markers$Top <= 6,]
+  # Extract the marker effect sizes
+  logFCs <- getMarkerEffects(best.set)
+  # Plot results in a heatmap
+  pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), show_rownames = TRUE, show_colnames = TRUE, main = paste("Marker genes (t-test): cc corected cluster:", cluster))
 }
 ```
 
 
-### 1.2 Cell cycle corrected dataset
-```{r de-genes-primary-data-cc-corrected}
-markers.primary.cc <- findMarkers(denoised.sce.cc, 
-                               groups = denoised.sce.cc$sample,
-                               assay.type = "scaled_logcounts",
-                               pval.type = "some",
-                               direction = "up",
-                               lfc = 1)
+### 1.2 Pairwise comparisons with Wilcoxon rank sum (Wilcoxon-Mann-Whitney, wmw)  test
+**Markers by sample: Control**
+```{r de-genes-primary-data-samples-wmw}
+# Find markers by sample
+markers.primary.wmw <- findMarkers(denoised.sce, 
+                                   groups = denoised.sce$sample,
+                                   lfc = log2(1.5),
+                                   test = "wilcox")
 
-for(sample in unique(denoised.sce$sample)) {
-  markers <- markers.primary.cc[[sample]]
-  markers.interesting <- markers[markers$p.value < .05, ]
-  # Print out the marker genes
-  print(markers.interesting)
-  # Get marker effects and plot on a heatmap
-  logFCs <- getMarkerEffects(markers.interesting)
-  pheatmap(logFCs, breaks=seq(-2.5, 2.5, length.out=101), main = paste(sample, " marker genes"), fontsize_row = 5)
+# Choose markers for control sample
+control.markers.wmw <- markers.primary.wmw[["control"]]
+
+# Save marker information to .csv file
+write.csv(control.markers.wmw, file = "./../saved/control_marker_genes_wmw.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.markers.wmw[control.markers.wmw$Top <= 6,]
+
+# Extract the area under curves
+AUCs <- getMarkerEffects(best.set, prefix="AUC")
+
+# Plot results in a heatmap
+pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples")
+```
+
+**Markers by cluster**
+```{r de-genes-primary-data-cluster-wmw}
+# Find markers by sample
+markers.primary.clust.wmw <- findMarkers(denoised.sce, 
+                                   groups = denoised.sce$cluster,
+                                   lfc = log2(1.5),
+                                   test = "wilcox")
+
+# Perform marker gene identification for all clusters
+for(cluster in unique(denoised.sce$cluster)) {
+  # Choose marker for cluster x
+  markers.clust.wmw <- markers.primary.clust.wmw[[cluster]]
+  # Save marker information to .csv file
+  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, "_wmw.csv")
+  write.csv(markers.clust.wmw, file = fpath)
+  # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
+  best.set <- markers.clust.wmw[markers.clust.wmw$Top <= 6,]
+  # Extract the area under curves
+  AUCs <- getMarkerEffects(best.set, prefix="AUC")
+  # Plot results in a heatmap
+  pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = paste("Marker genes (wmw): cluster:", cluster))
+}
+```
+
+**Markers by cell cycle corrected clusters**
+```{r de-genes-primary-data-cluster-wmw-cc}
+# Find markers by sample
+markers.primary.clust.wmw.cc <- findMarkers(denoised.sce, 
+                                   groups = denoised.sce$cluster.cc,
+                                   lfc = log2(1.5),
+                                   test = "wilcox")
+
+# Perform marker gene identification for all clusters
+for(cluster in unique(denoised.sce$cluster.cc)) {
+  # Choose marker for cluster x
+  markers.clust.wmw <- markers.primary.clust.wmw.cc[[cluster]]
+  # Save marker information to .csv file
+  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, "cc_wmw.csv")
+  write.csv(markers.clust.wmw, file = fpath)
+  # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
+  best.set <- markers.clust.wmw[markers.clust.wmw$Top <= 6,]
+  # Extract the area under curves
+  AUCs <- getMarkerEffects(best.set, prefix="AUC")
+  # Plot results in a heatmap
+  pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = paste("Marker genes (wmw): cc corrected cluster:", cluster))
 }
 ```
 
