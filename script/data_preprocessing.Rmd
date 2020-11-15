@@ -974,9 +974,11 @@ data@assays$RNA@var.features <- hvgs.data
 data <- ScaleData(data, vars.to.regress = "CC.Difference", features = VariableFeatures(data))
 
 # Run PCA on HVGs and cell cycle genes
+set.seed(123)
 data <- RunPCA(data, features = VariableFeatures(data), nfeatures.print = 10)
 DimPlot(data)
 
+set.seed(123)
 data <- RunPCA(data, features = c(s.genes.mouse, g2m.genes.mouse), BSPARAM = BiocSingular::RandomParam())
 DimPlot(data)
 
@@ -1038,7 +1040,9 @@ results
 sce.cc.uncorrected <- sce.cc
 sce.cc.corrected <- as(altExp(sce.cc, "CC_corrected"), "SingleCellExperiment")
 
+set.seed(123)
 sce.cc.uncorrected <- runPCA(sce.cc.uncorrected, exprs_values = "logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse))
+set.seed(123)
 sce.cc.corrected <- runPCA(sce.cc.corrected, exprs_values = "scaled_logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse)[c(s.genes.mouse, g2m.genes.mouse) %in% rownames(sce.cc.corrected)])
 
 pca.uncorrected <- plotReducedDim(sce.cc.uncorrected, dimred = "PCA", colour_by = "Phase") + ggtitle("Uncorrected dataset: PCA plot")
@@ -1046,7 +1050,9 @@ pca.corrected <- plotReducedDim(sce.cc.corrected, dimred = "PCA", colour_by = "P
 
 gridExtra::grid.arrange(pca.corrected, pca.uncorrected, ncol = 2)
 
+set.seed(123)
 sce.cc.uncorrected <- runUMAP(sce.cc.uncorrected, exprs_values = "logcounts", dimred = "PCA")
+set.seed(123)
 sce.cc.corrected <- runUMAP(sce.cc.corrected, exprs_values = "scaled_logcounts", dimred = "PCA")
 umap.uncorrected <- plotUMAP(sce.cc.uncorrected, colour_by = "Phase") + ggtitle("Uncorrected dataset: UMAP plot")
 umap.corrected <- plotUMAP(sce.cc.corrected, colour_by = "Phase") + ggtitle("CC corrected dataset: UMAP plot")
@@ -1160,14 +1166,18 @@ pie(phases.dellOrso$Primary_MB, labels = rownames(phases.dellOrso), main = "Dell
 sce.deMicheli.cc.uncorrected <- sce.deMicheli.cc
 sce.deMicheli.cc.corrected <- as(altExp(sce.deMicheli.cc, "CC_corrected"), "SingleCellExperiment")
 
+set.seed(123)
 sce.deMicheli.cc.uncorrected <- runPCA(sce.deMicheli.cc.uncorrected, exprs_values = "logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse))
+set.seed(123)
 sce.deMicheli.cc.corrected <- runPCA(sce.deMicheli.cc.corrected, exprs_values = "scaled_logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse)[c(s.genes.mouse, g2m.genes.mouse) %in% rownames(sce.deMicheli.cc.corrected)])
 
 pca.corrected.deMicheli <- plotReducedDim(sce.deMicheli.cc.corrected, dimred = "PCA", colour_by = "Phase") + ggtitle("CC corrected De Micheli dataset: PCA plot")
 pca.uncorrected.deMicheli <- plotReducedDim(sce.deMicheli.cc.uncorrected, dimred = "PCA", colour_by = "Phase") + ggtitle("Uncorrected De Micheli dataset: PCA plot")
 gridExtra::grid.arrange(pca.uncorrected.deMicheli, pca.corrected.deMicheli, ncol = 2)
 
+set.seed(123)
 sce.deMicheli.cc.uncorrected <- runUMAP(sce.deMicheli.cc.uncorrected, exprs_values = "logcounts", dimred = "PCA")
+set.seed(123)
 sce.deMicheli.cc.corrected <- runUMAP(sce.deMicheli.cc.corrected, exprs_values = "scaled_logcounts", dimred = "PCA")
 umap.uncorrected.deMicheli <- plotUMAP(sce.deMicheli.cc.uncorrected, colour_by = "Phase") + ggtitle("Uncorrected  De Micheli dataset: UMAP plot")
 umap.corrected.deMicheli <- plotUMAP(sce.deMicheli.cc.corrected, colour_by = "Phase") + ggtitle("CC corrected  De Micheli dataset: UMAP plot")
@@ -1178,14 +1188,18 @@ gridExtra::grid.arrange(umap.uncorrected.deMicheli, umap.corrected.deMicheli, nc
 sce.dellOrso.cc.uncorrected <- sce.dellOrso.cc
 sce.dellOrso.cc.corrected <- as(altExp(sce.dellOrso.cc, "CC_corrected"), "SingleCellExperiment")
 
+set.seed(123)
 sce.dellOrso.cc.uncorrected <- runPCA(sce.dellOrso.cc.uncorrected, exprs_values = "logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse))
+set.seed(123)
 sce.dellOrso.cc.corrected <- runPCA(sce.dellOrso.cc.corrected, exprs_values = "scaled_logcounts", subset_row = c(s.genes.mouse, g2m.genes.mouse)[c(s.genes.mouse, g2m.genes.mouse) %in% rownames(sce.dellOrso.cc.corrected)])
 
 pca.corrected.dellOrso <- plotReducedDim(sce.dellOrso.cc.corrected, dimred = "PCA", colour_by = "Phase") + ggtitle("CC corrected Dell'Orso dataset: PCA plot")
 pca.uncorrected.dellOrso <- plotReducedDim(sce.dellOrso.cc.uncorrected, dimred = "PCA", colour_by = "Phase") + ggtitle("Uncorrected Dell'Orso dataset: PCA plot")
 gridExtra::grid.arrange(pca.corrected.dellOrso, pca.uncorrected.dellOrso, ncol = 2)
 
+set.seed(123)
 sce.dellOrso.cc.uncorrected <- runUMAP(sce.dellOrso.cc.uncorrected, exprs_values = "logcounts", dimred = "PCA")
+set.seed(123)
 sce.dellOrso.cc.corrected <- runUMAP(sce.dellOrso.cc.corrected, exprs_values = "scaled_logcounts", dimred = "PCA")
 umap.uncorrected.dellOrso <- plotUMAP(sce.dellOrso.cc.uncorrected, colour_by = "Phase") + ggtitle("Uncorrected Dell'Orso dataset: UMAP plot")
 umap.corrected.dellOrso <- plotUMAP(sce.dellOrso.cc.corrected, colour_by = "Phase") + ggtitle("CC corrected Dell'Orso dataset: UMAP plot")
@@ -1196,15 +1210,14 @@ gridExtra::grid.arrange(umap.uncorrected.dellOrso, umap.corrected.dellOrso, ncol
 
 ## 11. Dimensionality reduction
   - PCA is performed on the log-normalized expression values by using runPCA() function
-  - Methods for choosing the number of PCs to use:
-      - Find elbow point in the % of variance explained by successive PCs
-      - Remove PCs corresponding to technical noise
+  - Remove PCs corresponding to technical noise
 
 ### 11.1 Primary data
 ```{r primary-data-dimension-reduction}
 # PCA for non-corrected and cc-corrected data
 set.seed(123)
 sce.cc <- runPCA(sce.cc, subset_row = hvgs.data, exprs_values = "logcounts", name = "PCA")
+set.seed(123)
 sce.cc <- runPCA(sce.cc, altexp = "CC_corrected", subset_row = hvgs.data, exprs_values = "scaled_logcounts", name = "PCA_cc")
 
 # Plot reduced dims
@@ -1212,22 +1225,6 @@ plotReducedDim(sce.cc, dimred = "PCA", colour_by = "sample") + ggtitle("Primary 
 sce.cc.corrected <- as(altExp(sce.cc, "CC_corrected"), "SingleCellExperiment")
 reducedDim(sce.cc.corrected, "PCA_cc") <- reducedDim(sce.cc, "PCA_cc")
 plotReducedDim(sce.cc.corrected, dimred = "PCA_cc", colour_by = "sample") + ggtitle("Primary data (cc corrected): PCA")
-
-# Compute the variance explained by each PC
-percent.var <- attr(reducedDim(sce.cc, "PCA"), "percentVar")
-percent.var.cc <- attr(reducedDim(sce.cc, "PCA_cc"), "percentVar")
-
-chosen.elbow <- PCAtools::findElbowPoint(percent.var)
-chosen.elbow.cc <- PCAtools::findElbowPoint(percent.var.cc)
-chosen.elbow
-chosen.elbow.cc
-
-# Plot variance explained by PCs
-par(mfrow=c(1,2))
-plot(percent.var, xlab = "PC", ylab = "Variance explained (%)", main = "Variance explained by each PC", sub = "Primary data")
-abline(v = chosen.elbow, col = "red")
-plot(percent.var.cc, xlab = "PC", ylab = "Variance explained (%)", sub = "Primary data (cc corrected)")
-abline(v = chosen.elbow.cc, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
@@ -1248,7 +1245,9 @@ ncol(reducedDim(denoised.sce, "PCA_cc"))
 ### 11.2 De Micheli et al. (2020) reference data
 ```{r deMicheli-dimension-reduction}
 # PCA for non-corrected and cc-corrected data
+set.seed(123)
 sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, subset_row = hvgs.deMicheli, exprs_values = "logcounts", name = "PCA")
+set.seed(123)
 sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, altexp = "CC_corrected", subset_row = hvgs.deMicheli, exprs_values = "scaled_logcounts", name = "PCA_cc")
 
 # Plot reduced dims
@@ -1256,22 +1255,6 @@ plotReducedDim(sce.deMicheli.cc, dimred = "PCA", colour_by = "cell_type")  + ggt
 sce.deMicheli.cc.corrected <- as(altExp(sce.deMicheli.cc, "CC_corrected"), "SingleCellExperiment")
 reducedDim(sce.deMicheli.cc.corrected, "PCA_cc") <- reducedDim(sce.deMicheli.cc, "PCA_cc")
 plotReducedDim(sce.deMicheli.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("De Micheli data (cc corrected): PCA")
-
-# Compute the variance explained by each PC
-percent.var.deMicheli <- attr(reducedDim(sce.deMicheli.cc, "PCA"), "percentVar")
-percent.var.deMicheli.cc <- attr(reducedDim(sce.deMicheli.cc, "PCA_cc"), "percentVar")
-
-chosen.elbow.deMicheli <- PCAtools::findElbowPoint(percent.var.deMicheli)
-chosen.elbow.deMicheli.cc <- PCAtools::findElbowPoint(percent.var.deMicheli.cc)
-chosen.elbow.deMicheli
-chosen.elbow.deMicheli.cc
-
-# Plot variance explained by PCs
-par(mfrow=c(1,2))
-plot(percent.var.deMicheli, xlab = "PC", ylab = "Variance explained (%)", main = "Variance explained by each PC", sub = "De Micheli data")
-abline(v=chosen.elbow.deMicheli, col = "red")
-plot(percent.var.deMicheli.cc, xlab = "PC", ylab = "Variance explained (%)", sub = "De Micheli data (cc corrected)")
-abline(v=chosen.elbow.deMicheli.cc, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
@@ -1290,7 +1273,9 @@ ncol(reducedDim(denoised.sce.deMicheli, "PCA_cc"))
 ### 11.3 Dell'Orso et al. (2019) reference data
 ```{r dellOrso-dimension-reduction}
 # Perform dimension reduction
+set.seed(123)
 sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, subset_row = hvgs.dellOrso,  exprs_values = "logcounts", name = "PCA")
+set.seed(123)
 sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, altexp = "CC_corrected", subset_row = hvgs.dellOrso,  exprs_values = "scaled_logcounts", name = "PCA_cc")
 
 
@@ -1299,22 +1284,6 @@ plotReducedDim(sce.dellOrso.cc, dimred = "PCA", colour_by = "cell_type")+ ggtitl
 sce.dellOrso.cc.corrected <- as(altExp(sce.dellOrso.cc, "CC_corrected"), "SingleCellExperiment")
 reducedDim(sce.dellOrso.cc.corrected, "PCA_cc") <- reducedDim(sce.dellOrso.cc, "PCA_cc")
 plotReducedDim(sce.dellOrso.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("Dell'Orso data (cc corrected): PCA")
-
-# Compute the variance explained by each PC
-percent.var.dellOrso <- attr(reducedDim(sce.dellOrso.cc, "PCA"), "percentVar")
-percent.var.dellOrso.cc <- attr(reducedDim(sce.dellOrso.cc, "PCA_cc"), "percentVar")
-
-chosen.elbow.dellOrso <- PCAtools::findElbowPoint(percent.var.dellOrso)
-chosen.elbow.dellOrso.cc <- PCAtools::findElbowPoint(percent.var.dellOrso.cc)
-chosen.elbow.dellOrso
-chosen.elbow.dellOrso.cc
-
-# Plot variance explained by PCs
-par(mfrow=c(1,1))
-plot(percent.var.dellOrso, xlab = "PC", ylab = "Variance explained (%)",  main = "Variance explained by each PC", sub = "Dell'Orso data")
-abline(v=chosen.elbow.dellOrso, col = "red")
-plot(percent.var.dellOrso.cc, xlab = "PC", ylab = "Variance explained (%)", sub = "Dell'Orso data (cc corrected)")
-abline(v=chosen.elbow.dellOrso.cc, col = "red")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
