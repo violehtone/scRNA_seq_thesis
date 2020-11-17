@@ -151,15 +151,20 @@ colnames(kegg.pathways) <- c("pathway", "pathway_name")
 
 **Fetch entry, gene, module, and pathway information from KEGG**
 ```{r fetch-kegg-information, eval=FALSE, message=FALSE}
-# Fetch all the modules (and KEGG entries) for mouse
+# Fetch all KEGG entries for mouse modules and pathways using the 'module' and 'pathway' databases
 mouse.org.id <- "T01002"
+mouse.pathways <- keggLink(target = "pathway", source = mouse.org.id)
 mouse.modules <- keggLink(target = "module", source = mouse.org.id)
 
-# Filter non-metabolic-module associated entries
-mouse.modules <- mouse.modules[substring(mouse.modules, 4) %in% kegg.modules$module]
+# Filter non-metabolic module/pathway associated KEGG entries
+mouse.pathways.f <- mouse.pathways[substring(mouse.pathways, 6) %in% kegg.pathways$pathway]
+mouse.modules.f <- mouse.modules[substring(mouse.modules, 4) %in% kegg.modules$module]
+
+# Combine unique KEGG entries for mouse modules / pathways into a single list of entries
+mouse.metabolic.entries <- unique(c(names(mouse.modules.f), names(mouse.pathways.f)))
 
 # Build a dataframe to store module, gene, and pathway information for each KEGG entry
-df.kegg.entries <- data.frame(entry = names(mouse.modules),
+df.kegg.entries <- data.frame(entry = mouse.metabolic.entries,
                               module = NA,
                               genes = NA,
                               pathway = NA,
@@ -171,15 +176,16 @@ for (i in 1:nrow(df.kegg.entries)) {
   print(i)
   entry <- df.kegg.entries[i,]$entry
   query <- keggGet(entry)
+  # add gene names
   genes <- query[[1]]$NAME
   # add module IDs
   module.list <- names(query[[1]]$MODULE)
   module.list <- module.list[module.list %in% kegg.modules$module]
-  module <- paste(module.list, collapse = ", ")
+  module.id <- paste(module.list, collapse = ", ")
   # add pathway IDs
   pathway.list <- names(query[[1]]$PATHWAY)
   pathway.list <- pathway.list[pathway.list %in% kegg.pathways$pathway]
-  pathway <- paste(pathway.list, collapse = ", ")
+  pathway.id <- paste(pathway.list, collapse = ", ")
   # Add module information
   module_info.list <- query[[1]]$MODULE
   module_info.list <- module_info.list[names(module_info.list) %in% module.list]
@@ -190,14 +196,33 @@ for (i in 1:nrow(df.kegg.entries)) {
   pathway_info <- paste(pathway_info.list, collapse = ", ")
   # Update information to dataframe
   df.kegg.entries[i,]$genes <- genes
-  df.kegg.entries[i,]$module <- module
-  df.kegg.entries[i,]$pathway <- pathway
+  df.kegg.entries[i,]$module <- module.id
+  df.kegg.entries[i,]$pathway <- pathway.id
   df.kegg.entries[i,]$module_info <- module_info
   df.kegg.entries[i,]$pathway_info <- pathway_info
 }
 
+# Manually correct some of the mispelled gene names in KEGG (ATP6, ATP8, COX1, COX2, COX3, CYTB, ND1, ND2, ND3, ND4, ND4L, ND5, ND6)
+# Correct names: mt-Atp6, mt-Atp8, mt-Co1, mt-Co2, mt-Co3, mt-Cytb, mt-Nd1, mt-Nd2, mt-Nd3, mt-Nd4,mt-Nd4l, mt-Nd5, mt-Nd6
+df.kegg.entries[df.kegg.entries$genes == "ATP6", ]$genes <- "mt-Atp6"
+df.kegg.entries[df.kegg.entries$genes == "ATP8", ]$genes <- "mt-Atp8"
+df.kegg.entries[843, ]$genes <- "mt-Co1" # COX1 gene
+df.kegg.entries[df.kegg.entries$genes == "COX2", ]$genes <- "mt-Co2" 
+df.kegg.entries[df.kegg.entries$genes == "COX3", ]$genes <- "mt-Co3"
+df.kegg.entries[df.kegg.entries$genes == "CYTB", ]$genes <- "mt-Cytb"
+df.kegg.entries[df.kegg.entries$genes == "ND1", ]$genes <- "mt-Nd1" 
+df.kegg.entries[df.kegg.entries$genes == "ND2", ]$genes <- "mt-Nd2"
+df.kegg.entries[df.kegg.entries$genes == "ND3", ]$genes <- "mt-Nd3"
+df.kegg.entries[df.kegg.entries$genes == "ND4", ]$genes <- "mt-Nd4"
+df.kegg.entries[df.kegg.entries$genes == "ND4L", ]$genes <- "mt-Nd4l"
+df.kegg.entries[df.kegg.entries$genes == "ND5", ]$genes <- "mt-Nd5"
+df.kegg.entries[df.kegg.entries$genes == "ND6", ]$genes <- "mt-Nd6"
+
 # Save objects
 saveRDS(df.kegg.entries, file = "./../saved/df_kegg_entries")
+
+# Save as csv
+write.csv(df.kegg.entries, file ="./../saved/df_kegg_entries.csv")
 ```
 
 
@@ -219,8 +244,10 @@ for(i in 1:nrow(df.kegg.entries)) {
   print(i)
   # Split the gene names into a list
   genes <- unlist(lapply(strsplit(df.kegg.entries[i,]$genes, split = ",")[[1]], trimws))
-  useful_genes <- genes[genes %in% rownames(denoised.sce.m)]
-  for(gene in useful_genes) {
+  # Get the first gene from the list (= the correct gene name)
+  gene <- genes[1]
+  # If the gene exists in the genes of the sce object, update its row data
+  if(gene %in% rownames(denoised.sce)) {
     rowData(denoised.sce.m)[gene, ]$module <- df.kegg.entries[i,]$module
     rowData(denoised.sce.m)[gene, ]$pathway <- df.kegg.entries[i,]$pathway
     rowData(denoised.sce.m)[gene, ]$module_info <- df.kegg.entries[i,]$module_info
@@ -228,8 +255,12 @@ for(i in 1:nrow(df.kegg.entries)) {
   }
 }
 
-genes.to.use <- rownames(denoised.sce.m)[rowData(denoised.sce.m)$module != ""]
+# Subset genes that have associated metabolic module / pathway information
+genes.to.use <- rownames(denoised.sce.m)[(rowData(denoised.sce.m)$module != "") | (rowData(denoised.sce.m)$pathway != "")]
 denoised.sce.m <- denoised.sce.m[rownames(denoised.sce.m) %in% genes.to.use, ]
+
+# Inspect number of genes
+dim(denoised.sce.m)
 
 # Save sce object containing only metabolic genes and module/pathway information stored on rowData
 saveRDS(denoised.sce.m, "./../saved/denoised_sce_m")
@@ -252,8 +283,10 @@ for(i in 1:nrow(df.kegg.entries)) {
   print(i)
   # Split the gene names into a list
   genes <- unlist(lapply(strsplit(df.kegg.entries[i,]$genes, split = ",")[[1]], trimws))
-  useful_genes <- genes[genes %in% rownames(denoised.sce.deMicheli.m)]
-  for(gene in useful_genes) {
+  # Get the first gene from the list (= the correct gene name)
+  gene <- genes[1]
+  # If the gene exists in the genes of the sce object, update its row data
+  if(gene %in% rownames(denoised.sce.deMicheli.m)) {
     rowData(denoised.sce.deMicheli.m)[gene, ]$module <- df.kegg.entries[i,]$module
     rowData(denoised.sce.deMicheli.m)[gene, ]$pathway <- df.kegg.entries[i,]$pathway
     rowData(denoised.sce.deMicheli.m)[gene, ]$module_info <- df.kegg.entries[i,]$module_info
@@ -261,7 +294,7 @@ for(i in 1:nrow(df.kegg.entries)) {
   }
 }
 
-genes.to.use <- rownames(denoised.sce.deMicheli.m)[rowData(denoised.sce.deMicheli.m)$module != ""]
+genes.to.use <- rownames(denoised.sce.deMicheli.m)[(rowData(denoised.sce.deMicheli.m)$module != "") | (rowData(denoised.sce.deMicheli.m)$pathway != "")]
 denoised.sce.deMicheli.m <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% genes.to.use, ]
 
 # Inspect number of genes
@@ -289,8 +322,10 @@ for(i in 1:nrow(df.kegg.entries)) {
   print(i)
   # Split the gene names into a list
   genes <- unlist(lapply(strsplit(df.kegg.entries[i,]$genes, split = ",")[[1]], trimws))
-  useful_genes <- genes[genes %in% rownames(denoised.sce.dellOrso.m)]
-  for(gene in useful_genes) {
+  # Get the first gene from the list (= the correct gene name)
+  gene <- genes[1]
+  # If the gene exists in the genes of the sce object, update its row data
+  if(gene %in% rownames(denoised.sce.dellOrso.m)) {
     rowData(denoised.sce.dellOrso.m)[gene, ]$module <- df.kegg.entries[i,]$module
     rowData(denoised.sce.dellOrso.m)[gene, ]$pathway <- df.kegg.entries[i,]$pathway
     rowData(denoised.sce.dellOrso.m)[gene, ]$module_info <- df.kegg.entries[i,]$module_info
@@ -298,7 +333,7 @@ for(i in 1:nrow(df.kegg.entries)) {
   }
 }
 
-genes.to.use <- rownames(denoised.sce.dellOrso.m)[rowData(denoised.sce.dellOrso.m)$module != ""]
+genes.to.use <- rownames(denoised.sce.dellOrso.m)[(rowData(denoised.sce.dellOrso.m)$module != "") | (rowData(denoised.sce.dellOrso.m)$pathway != "")]
 denoised.sce.dellOrso.m <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% genes.to.use, ]
 
 # Inspect number of genes
