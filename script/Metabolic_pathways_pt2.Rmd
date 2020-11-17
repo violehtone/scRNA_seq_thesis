@@ -59,6 +59,14 @@ sce.deMicheli.pathway <- readRDS("./../saved/sce_deMicheli_pathway")
 # Dell Orso
 sce.dellOrso.module <- readRDS("./../saved/sce_dellOrso_module")
 sce.dellOrso.pathway <- readRDS("./../saved/sce_dellOrso_pathway")
+
+# Inspect dimensions of objects
+dim(sce.primary.module)
+dim(sce.primary.pathway)
+dim(sce.deMicheli.module)
+dim(sce.deMicheli.pathway)
+dim(sce.dellOrso.module)
+dim(sce.dellOrso.pathway)
 ```
 
 
@@ -152,6 +160,10 @@ sce.primary.pathway <- SingleCellExperiment(assays = list(logcounts = as.matrix(
 ###########################################
 saveRDS(sce.primary.module, file = "./../saved/sce_primary_module")
 saveRDS(sce.primary.pathway, file = "./../saved/sce_primary_pathway")
+
+# Inspect dimensions of module and pathway objects
+dim(sce.primary.module)
+dim(sce.primary.pathway)
 ```
 
 ### 2.2 De Micheli dataset
@@ -232,6 +244,10 @@ sce.deMicheli.pathway <- SingleCellExperiment(assays = list(logcounts = as.matri
 ###########################################
 saveRDS(sce.deMicheli.module, file = "./../saved/sce_deMicheli_module")
 saveRDS(sce.deMicheli.pathway, file = "./../saved/sce_deMicheli_pathway")
+
+# Inspect dimensions of module and pathway objects
+dim(sce.deMicheli.module)
+dim(sce.deMicheli.pathway)
 ```
 
 ### 2.3 Dell'Orso dataset
@@ -312,6 +328,10 @@ sce.dellOrso.pathway <- SingleCellExperiment(assays = list(logcounts = as.matrix
 ###########################################
 saveRDS(sce.dellOrso.module, file = "./../saved/sce_dellOrso_module")
 saveRDS(sce.dellOrso.pathway, file = "./../saved/sce_dellOrso_pathway")
+
+# Inspect dimensions of module and pathway objects
+dim(sce.dellOrso.module)
+dim(sce.dellOrso.pathway)
 ```
 
 
