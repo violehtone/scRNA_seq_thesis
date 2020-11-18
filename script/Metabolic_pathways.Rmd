@@ -379,7 +379,6 @@ expr_sel.deMicheli.m <- scale_quantile(expression.deMicheli.m[, gene_sel.deMiche
 # Load gimp & modules
 gimp.deMicheli.m.f <- readRDS("./../saved/gimp_deMicheli_m_no_muscle")
 modules.deMicheli.m.f <- readRDS("./../saved/modules_deMicheli_m_no_muscle")
-modules.primary.m.f4 <- readRDS("./../saved/modules_primary_m_f4")
 
 gimp.deMicheli.m.f$qvalue <- p.adjust(p = gimp.deMicheli.m.f$pvalue, method = "BH")
 gene_sel.deMicheli.m.f <- gimp.deMicheli.m.f$gene[gimp.deMicheli.m.f$qvalue < .05]
@@ -476,7 +475,7 @@ draw_trajectory_heatmap(expr_sel.primary.m,
 ```
 
 **Save as pdf**
-```{r primary-data-gimp-modules-metabolic-genes-pdf, eval=FALSE}
+```{r primary-data-gimp-modules-metabolic-genes-pdf}
 # Gimp
 pdf("./../saved/gimp_heatmap_primary_metabolic_genes.pdf")
 draw_trajectory_heatmap(expr_sel.primary.m, 
@@ -545,7 +544,7 @@ draw_trajectory_heatmap(expr_sel.deMicheli.m,
 ```
 
 **Save as pdf**
-```{r deMicheli-gimp-modules-metabolic-genes-pdf, eval=FALSE}
+```{r deMicheli-gimp-modules-metabolic-genes-pdf}
 # Gimp
 pdf("./../saved/gimp_heatmap_deMicheli_metabolic_genes.pdf")
 draw_trajectory_heatmap(expr_sel.deMicheli.m, 
@@ -574,14 +573,6 @@ dev.off()
 
 #TODO (copy from Puhti script)
 
-
-# Modules extracted with >=4 modules
-modules.primary.m.f4 <- extract_modules(expr_sel.deMicheli.m.f,
-                                        time = traj.deMicheli.f.time,
-                                        verbose = FALSE,
-                                        G = 4:9)
-
-saveRDS(modules.primary.m.f4, file = "./../saved/modules_primary_m_f4")
 ```
 
 
@@ -599,7 +590,7 @@ draw_trajectory_heatmap(expr_sel.deMicheli.m.f,
 
 
 **Save as pdf**
-```{r visualization-deMicheli-gimp-without-skeletal-muscle-pdf, eval=FALSE}
+```{r visualization-deMicheli-gimp-without-skeletal-muscle-pdf}
 # Gimp
 pdf("./../saved/gimp_heatmap_deMicheli_metabolic_genes_no_muscle.pdf")
 draw_trajectory_heatmap(expr_sel.deMicheli.m.f, 
@@ -620,18 +611,6 @@ draw_trajectory_heatmap(expr_sel.deMicheli.m.f,
                         fontsize_row = 5,
                         fontsize = 4)
 dev.off()
-
-# Modules but number of modules set to 4
-pdf("./../saved/modules_heatmap_deMicheli_metabolic_genes_no_muscle_g4.pdf")
-draw_trajectory_heatmap(expr_sel.deMicheli.m.f, 
-                        time = traj.deMicheli.f.time,
-                        progression_group = group_name.deMicheli.m.f,
-                        modules = modules.primary.m.f4,
-                        show_labels_row = TRUE,
-                        fontsize_row = 5,
-                        fontsize = 4)
-dev.off()
-
 ```
 
 
@@ -682,7 +661,7 @@ draw_trajectory_heatmap(expr_sel.dellOrso.m,
 
 
 **Save as pdf**
-```{r dellOrso-gimp-modules-metabolic-genes-pdf, eval=FALSE}
+```{r dellOrso-gimp-modules-metabolic-genes-pdf}
 # Gimp
 pdf("./../saved/gimp_heatmap_dellOrso_metabolic_genes.pdf")
 draw_trajectory_heatmap(expr_sel.dellOrso.m, 
@@ -728,7 +707,7 @@ draw_trajectory_heatmap(expr_sel.dellOrso.m.f,
 ```
 
 **save as pdf**
-```{r dellOrso-gimp-modules-metabolic-genes-no-pm-pdf, eval=FALSE}
+```{r dellOrso-gimp-modules-metabolic-genes-no-pm-pdf}
 # Gimp
 pdf("./../saved/gimp_heatmap_dellOrso_metabolic_genes_no_PM.pdf")
 draw_trajectory_heatmap(expr_sel.dellOrso.m.f, 
@@ -834,7 +813,7 @@ plotScoreDistribution(results = pred.dellOrso.m, show = "delta.med")
 
 ### 4.2 Cell annotation: Without mature skeletal muscle and primary myoblasts
 #### 4.2.1 Load pre-computed prediction objects
-```{r}
+```{r load-singleR-predictions-without-skeletal-muscle-and-primary-myoblasts}
 # Load prediction objects
 pred.deMicheli.m.no.muscle <- readRDS("./../saved/pred_deMicheli_m_no_muscle")
 pred.dellOrso.m.no.pm <- readRDS("./../saved/pred_dellOrso_m_no_pm")
@@ -884,6 +863,83 @@ table(Label=pred.dellOrso.m.no.pm$labels, Removed=to.remove)
 # Delta distribution
 plotScoreDistribution(results = pred.dellOrso.m.no.pm, show = "delta.med")
 ```
+
+### 4.3 Cell annotation: using only important genes
+#### 4.3.1 Load predictions
+```{r load-singleR-predictions-using-only-set-of-important-genes}
+# Load prediction objects
+pred.deMicheli.important.genes <- readRDS("./../saved/pred_deMicheli_important_genes")
+pred.dellOrso.important.genes <- readRDS("./../saved/pred_dellOrso_important_genes")
+```
+
+### 4.3.2 Predict cell types (optional)
+```{r predict-cell-types-using-only-set-of-important-genes, eval=FALSE}
+# Get the sets of important genes
+important.genes.deMicheli <- modules.deMicheli.m$feature
+important.genes.dellOrso <- modules.dellOrso.m$feature
+
+# Subset these genes from the datasets
+primary.important.deMicheli <- denoised.sce.m[rownames(denoised.sce.m) %in% important.genes.deMicheli, ]
+denoised.sce.deMicheli.important.genes <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% important.genes.deMicheli, ]
+
+primary.important.dellOrso <- denoised.sce.m[rownames(denoised.sce.m) %in% important.genes.dellOrso, ]
+denoised.sce.dellOrso.important.genes <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% important.genes.dellOrso, ]
+
+# Perform SingleR predictions
+pred.deMicheli.important.genes <- SingleR(test = primary.important.deMicheli,
+                                          assay.type.test = "logcounts",
+                                          ref = denoised.sce.deMicheli.important.genes,
+                                          labels = denoised.sce.deMicheli.important.genes$cell_type)
+
+pred.dellOrso.important.genes <- SingleR(test = primary.important.dellOrso,
+                                          assay.type.test = "logcounts",
+                                          ref = denoised.sce.dellOrso.important.genes,
+                                          labels = denoised.sce.dellOrso.important.genes$cell_type)
+
+# save prediction objects
+saveRDS(pred.deMicheli.important.genes, file = "./../saved/pred_deMicheli_important_genes")
+saveRDS(pred.dellOrso.important.genes, file = "./../saved/pred_dellOrso_important_genes")
+
+```
+
+### 4.3.3 Inspect cell type annotations
+```{r inspect-cell-types-using-only-set-of-important-genes}
+# De Micheli (only important genes)
+tab.deMicheli.m.important <- t(table(pred.deMicheli.important.genes$pruned.labels, primary.important.deMicheli$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+tab.deMicheli.m.important
+
+# Dell'Orso (only important genes)
+tab.dellOrso.m.important <- t(table(pred.dellOrso.important.genes$pruned.labels, primary.important.dellOrso$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+tab.dellOrso.m.important
+```
+
+### 4.3.4 Diagnostic plots
+**De Micheli**
+```{r deMicheli-diagnostic-plots-for-singleR-predictions-using-only-set-of-important-genes}
+# Score heatmap
+plotScoreHeatmap(pred.deMicheli.important.genes, annotation_col = as.data.frame(colData(primary.important.deMicheli)[, "sample", drop = FALSE]), width = 10)
+
+# Remove low-quality cells
+to.remove <- pruneScores(pred.deMicheli.important.genes, min.diff.med = 0.2)
+table(Label=pred.deMicheli.important.genes$labels, Removed=to.remove)
+
+# Delta distribution
+plotScoreDistribution(results = pred.deMicheli.important.genes, show = "delta.med")
+```
+
+**Dell'Orso**
+```{r dellOrso-diagnostic-plots-for-singleR-predictions-using-only-set-of-important-genes}
+# Score heatmap
+plotScoreHeatmap(pred.dellOrso.important.genes, annotation_col = as.data.frame(colData(primary.important.dellOrso)[, "sample", drop = FALSE]), width = 10)
+
+# Remove low-quality cells
+to.remove <- pruneScores(pred.dellOrso.important.genes, min.diff.med = 0.2)
+table(Label=pred.dellOrso.important.genes$labels, Removed=to.remove)
+
+# Delta distribution
+plotScoreDistribution(results = pred.dellOrso.important.genes, show = "delta.med")
+```
+
 
 
 ## 5. Differential expression (DE) analysis with metabolic genes
