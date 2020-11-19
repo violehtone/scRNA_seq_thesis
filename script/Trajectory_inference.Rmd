@@ -123,6 +123,10 @@ set.seed(123)
 traj.primary <- infer_trajectory(space.primary)
 traj.primary <- reverse_trajectory(traj.primary)
 
+# Save space and trajectory objects
+saveRDS(space.primary, file = "./../saved/space_primary")
+saveRDS(traj.primary, file = "./../saved/traj_primary")
+
 # Plot the trajectory
 draw_trajectory_plot(space = space.primary, 
                      progression_group = group_name.primary,
@@ -133,6 +137,36 @@ draw_trajectory_plot(space = space.primary,
                      contour = TRUE) +
   ggtitle("Trajectory inference",
           subtitle = "Primary dataset: All genes (ndim = 2) - Cell types") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+# Plot by cc cluster
+draw_trajectory_plot(space = space.primary, 
+                     progression_group = as.factor(denoised.sce$cluster.cc),
+                     path = traj.primary$path,
+                     point_size = 1,
+                     point_alpha = 0.5,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "Primary dataset: All genes (ndim = 2) - Clusters") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 14),
+        axis.title = element_text(size = 16))
+
+# Highlight cc cluster 5
+colpalette.cluster <- c("#778899", "#778899", "#778899","#778899", "#E41A1C")
+names(colpalette.cluster) <- c("1", "2", "3", "4", "5")
+
+draw_trajectory_plot(space = space.primary, 
+                     progression_group = as.factor(denoised.sce$cluster.cc),
+                     progression_group_palette = colpalette.cluster,
+                     path = traj.primary$path,
+                     point_size = 1,
+                     point_alpha = 0.7,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference",
+          subtitle = "Primary dataset: All genes (ndim = 2) - Cluster 5 highlighted on red") +
   theme(plot.title = element_text(size = 20, face = "bold"),
         plot.subtitle = element_text(size = 14),
         axis.title = element_text(size = 16))
@@ -294,12 +328,43 @@ draw_trajectory_plot(space = space.primary.cc,
                      point_size = 1,
                      point_alpha = 0.4,
                      contour = TRUE) +
-  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2)") +
+  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2) - samples") +
   theme(plot.title = element_text(size = 20, face = "bold"),
         plot.subtitle = element_text(size = 16),
         legend.text = element_text(size = 16),
         legend.title = element_text(size = 20, face = "bold"),
         axis.title = element_text(size = 16))
+
+# Plot by cluster
+draw_trajectory_plot(space = space.primary.cc, 
+                     progression_group = as.factor(denoised.sce$cluster.cc),
+                     path = traj.primary.cc$path,
+                     point_size = 1,
+                     point_alpha = 0.4,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2) - clusters") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 16))
+
+# Highlight cluster 5
+draw_trajectory_plot(space = space.primary.cc, 
+                     progression_group = as.factor(denoised.sce$cluster.cc),
+                     progression_group_palette = colpalette.cluster,
+                     path = traj.primary.cc$path,
+                     point_size = 1,
+                     point_alpha = 0.4,
+                     contour = TRUE) +
+  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2) - clusters") +
+  theme(plot.title = element_text(size = 20, face = "bold"),
+        plot.subtitle = element_text(size = 16),
+        legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 16))
+
+
 ``` 
 
 
