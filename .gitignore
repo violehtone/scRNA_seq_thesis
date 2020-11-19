@@ -1,10 +1,6 @@
-ANALYSIS
 data
-results
-saved
+saved/R_objects/*
+saved/old/*
 old_stuff
-script/data_preprocessing_files/
-script/downstream_analysis_files/
 script/old_stuff
-script/marker_gene_detection.R
 script/puhti*
