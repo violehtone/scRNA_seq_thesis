@@ -32,13 +32,13 @@ library(cluster)
 **The clusters are calculated using Puhti supercomputer and results are loaded in the code chunk below to speed up the process**
 ```{r primary-data-clustering-shortcut}
 # Load primary dataset
-denoised.sce <- readRDS("./../saved/denoised_sce_clust")
+denoised.sce <- readRDS("./../saved/R_objects/denoised_sce_clust")
 
 # Load cluster assignments and SNN graphs
-snng <- readRDS("./../saved/snng")
-snng.cc <- readRDS("./../saved/snng_cc")
-clust <- readRDS("./../saved/clust")
-clust.cc <- readRDS("./../saved/clust_cc")
+snng <- readRDS("./../saved/R_objects/snng")
+snng.cc <- readRDS("./../saved/R_objects/snng_cc")
+clust <- readRDS("./../saved/R_objects/clust")
+clust.cc <- readRDS("./../saved/R_objects/clust_cc")
 
 # Make the cc corrected data a separate object
 denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
@@ -53,7 +53,7 @@ reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
 **Perform clustering (in case no pre-calculated files are available)**
 ```{r primary-data-clustering, eval=FALSE}
 # Load data
-denoised.sce <- readRDS("./../saved/denoised_sce")
+denoised.sce <- readRDS("./../saved/R_objects/denoised_sce")
 
 # Get # of reduced dimensions for uncorrected & cc-corrected datasets
 dimensions <- ncol(reducedDim(denoised.sce, "PCA"))
@@ -93,7 +93,7 @@ reducedDim(denoised.sce.cc, "TSNE_cc") <- reducedDim(denoised.sce, "TSNE_cc")
 reducedDim(denoised.sce.cc, "force_cc") <- reducedDim(denoised.sce, "force_cc")
 
 # Save sce file
-#saveRDS(denoised.sce, file = "./../saved/denoised_sce_clust")
+#saveRDS(denoised.sce, file = "./../saved/R_objects/denoised_sce_clust")
 ```
 
 
@@ -218,7 +218,7 @@ p.umap.cc
 
 **Save UMAP and t-SNE plots in a pdf file**
 ```{r umap-tsne-into-pdf, eval=FALSE}
-pdf("./../saved/primary_data_umap_and_tsne_plots.pdf", width = 7, height = 7)
+pdf("./../saved/figures/primary_data_umap_and_tsne_plots.pdf", width = 7, height = 7)
 p.tsne
 p.tsne.cc
 p.umap

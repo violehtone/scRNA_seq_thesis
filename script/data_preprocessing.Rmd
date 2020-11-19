@@ -111,7 +111,7 @@ sce <- SingleCellExperiment(assays=list(counts=counts))
 colData(sce)$sample <- as.vector(cellcodes$samples)
 
 # Save sce object
-#saveRDS(sce, file = "./../saved/sce")
+#saveRDS(sce, file = "./../saved/R_objects/sce")
 
 # Free space
 remove(counts)
@@ -128,7 +128,7 @@ sce.deMicheli <- sce.deMicheli[, sce.deMicheli$cell_annotation %in% c('MuSCs and
 sce.deMicheli <- sce.deMicheli[, sce.deMicheli$sampleID != "D0_Cv3"]
 
 # Save sce object
-#saveRDS(sce.deMicheli, file = "./../saved/sce_deMicheli")
+#saveRDS(sce.deMicheli, file = "./../saved/R_objects/sce_deMicheli")
 
 # free memory
 remove(GSE143437_raw)
@@ -158,7 +158,7 @@ sce.dellOrso <- cbind(sce_GSE126834_hom1, sce_GSE126834_hom2,
                       deparse.level = 1)
 
 # Save sce object
-#saveRDS(sce.dellOrso, file = "./../saved/sce_dellOrso")
+#saveRDS(sce.dellOrso, file = "./../saved/R_objects/sce_dellOrso")
 
 # free memory
 remove(sce_GSE126834_hom1)
@@ -178,9 +178,9 @@ remove(GSE126834_mb)
 **Note: the code chunks above for data loading and sce object creation are not executed (eval=FALSE) because the computation time is long so to speed-up things, we just load the sce files of the 3 datasets directly from the pre-saved files stored locally. In case you are running this script for the first time (and don't have the sce files ready), please ignore this code chunk and run all the chunks above.**
 
 ```{r shortcut-load-sce-files}
-sce <- readRDS("./../saved/sce")
-sce.deMicheli <- readRDS("./../saved/sce_deMicheli")
-sce.dellOrso <- readRDS("./../saved/sce_dellOrso")
+sce <- readRDS("./../saved/R_objects/sce")
+sce.deMicheli <- readRDS("./../saved/R_objects/sce_deMicheli")
+sce.dellOrso <- readRDS("./../saved/R_objects/sce_dellOrso")
 ```
 
 ## 6 Quality Control (QC)
@@ -325,7 +325,7 @@ changed <- logFC > 1
 rownames(sce)[changed]
 
 # Save filtered sce file
-#saveRDS(sce.f, file = "./../saved/sce_f")
+#saveRDS(sce.f, file = "./../saved/R_objects/sce_f")
 ```
 
 ### 6.2 De Micheli et al. (2020) reference data
@@ -499,7 +499,7 @@ changed <- logFC > 1
 rownames(sce.deMicheli)[changed]
 
 # Save filtered sce file
-#saveRDS(sce.deMicheli.f, file = "./../saved/sce_deMicheli_f")
+#saveRDS(sce.deMicheli.f, file = "./../saved/R_objects/sce_deMicheli_f")
 ```
 
 ### 6.3 Dell'Orso et al. (2019) reference data
@@ -628,7 +628,7 @@ changed <- logFC > 1
 rownames(sce.dellOrso)[changed]
 
 # Save filtered sce file
-#saveRDS(sce.dellOrso.f, file = "./../saved/sce_dellOrso_f")
+#saveRDS(sce.dellOrso.f, file = "./../saved/R_objects/sce_dellOrso_f")
 ```
 
 
@@ -665,7 +665,7 @@ abline(a=0, b=1, col="red")
 sce.n <- logNormCounts(sce.n)
 
 # Save normalized data
-#saveRDS(sce.n, file = "./../saved/sce_n")
+#saveRDS(sce.n, file = "./../saved/R_objects/sce_n")
 
 ```
 
@@ -695,7 +695,7 @@ abline(a=0, b=1, col="red")
 sce.deMicheli.n <- logNormCounts(sce.deMicheli.n)
 
 # Save normalized data
-#saveRDS(sce.deMicheli.n, file = "./../saved/sce_deMicheli_n")
+#saveRDS(sce.deMicheli.n, file = "./../saved/R_objects/sce_deMicheli_n")
 ```
 
 
@@ -725,7 +725,7 @@ abline(a=0, b=1, col="red")
 sce.dellOrso.n <- logNormCounts(sce.dellOrso.n)
 
 # Save normalized data
-#saveRDS(sce.dellOrso.n, file = "./../saved/sce_dellOrso_n")
+#saveRDS(sce.dellOrso.n, file = "./../saved/R_objects/sce_dellOrso_n")
 ```
 
 
@@ -750,8 +750,8 @@ curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 hvgs.data <- getTopHVGs(dec.data, prop = 0.1)
 
 # save HVGS and per-gene variance
-#saveRDS(hvgs.data, file = "./../saved/hvgs_data")
-#saveRDS(dec.data, file = "./../saved/dec_data")
+#saveRDS(hvgs.data, file = "./../saved/R_objects/hvgs_data")
+#saveRDS(dec.data, file = "./../saved/R_objects/dec_data")
 ```
 
 
@@ -769,8 +769,8 @@ curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 hvgs.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.1)
 
 # save HVGS and per-gene variance
-#saveRDS(hvgs.deMicheli, file = "./../saved/hvgs_deMicheli")
-#saveRDS(dec.deMicheli, file = "./../saved/dec_deMicheli")
+#saveRDS(hvgs.deMicheli, file = "./../saved/R_objects/hvgs_deMicheli")
+#saveRDS(dec.deMicheli, file = "./../saved/R_objects/dec_deMicheli")
 
 ```
 
@@ -788,8 +788,8 @@ curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 hvgs.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.1)
 
 # save HVGS and per-gene variance
-#saveRDS(hvgs.dellOrso, file = "./../saved/hvgs_dellOrso")
-#saveRDS(dec.dellOrso, file = "./../saved/dec_dellOrso")
+#saveRDS(hvgs.dellOrso, file = "./../saved/R_objects/hvgs_dellOrso")
+#saveRDS(dec.dellOrso, file = "./../saved/R_objects/dec_dellOrso")
 ```
 
 
@@ -937,8 +937,8 @@ for(g in g2m.genes) {
   }
 }
 
-#saveRDS(g2m.genes.mouse, file = "./../saved/cc_g2m_genes_mouse")
-#saveRDS(s.genes.mouse, file = "./../saved/cc_gs_genes_mouse")
+#saveRDS(g2m.genes.mouse, file = "./../saved/R_objects/g2m_genes_mouse")
+#saveRDS(s.genes.mouse, file = "./../saved/R_objects/s_genes_mouse")
 
 ```
 
@@ -992,7 +992,7 @@ cc_corrected <- SummarizedExperiment(assays = list(scaled_logcounts = data@assay
 altExp(sce.cc, "CC_corrected", withColData = TRUE) <- cc_corrected
 
 # save sce object
-#saveRDS(sce.cc, file = "./../saved/sce_cc")
+#saveRDS(sce.cc, file = "./../saved/R_objects/sce_cc")
 
 # Plot cell cycle phases for each sample as pie charts
 cc_vs_labels <- as.data.frame.matrix(table(altExp(sce.cc, "CC_corrected")$Phase, altExp(sce.cc, "CC_corrected")$sample))
@@ -1143,8 +1143,8 @@ altExp(sce.deMicheli.cc, "CC_corrected", withColData = TRUE) <- cc_corrected.deM
 altExp(sce.dellOrso.cc, "CC_corrected", withColData = TRUE) <- cc_corrected.dellOrso
 
 # Save cc objects
-#saveRDS(sce.deMicheli.cc, file = "./../saved/sce_deMicheli_cc")
-#saveRDS(sce.dellOrso.cc, file = "./../saved/sce_dellOrso_cc")
+#saveRDS(sce.deMicheli.cc, file = "./../saved/R_objects/sce_deMicheli_cc")
+#saveRDS(sce.dellOrso.cc, file = "./../saved/R_objects/sce_dellOrso_cc")
 
 # Plot cc phases for the datasets
 phases.deMicheli <- as.data.frame.matrix(table(sce.deMicheli.cc$Phase, sce.deMicheli.cc$cell_type))
@@ -1237,7 +1237,7 @@ ncol(reducedDim(denoised.sce, "PCA"))
 ncol(reducedDim(denoised.sce, "PCA_cc"))
 
 # Save the sce object
-#saveRDS(denoised.sce, file = "./../saved/denoised_sce")
+#saveRDS(denoised.sce, file = "./../saved/R_objects/denoised_sce")
 
 ```
 
@@ -1267,7 +1267,7 @@ ncol(reducedDim(denoised.sce.deMicheli, "PCA"))
 ncol(reducedDim(denoised.sce.deMicheli, "PCA_cc"))
 
 # Save sce object
-#saveRDS(denoised.sce.deMicheli, file = "./../saved/denoised_sce_deMicheli")
+#saveRDS(denoised.sce.deMicheli, file = "./../saved/R_objects/denoised_sce_deMicheli")
 ```
 
 ### 11.3 Dell'Orso et al. (2019) reference data
@@ -1296,7 +1296,7 @@ ncol(reducedDim(denoised.sce.dellOrso, "PCA"))
 ncol(reducedDim(denoised.sce.dellOrso, "PCA_cc"))
 
 # Save sce object
-#saveRDS(denoised.sce.dellOrso, file = "./../saved/denoised_sce_dellOrso")
+#saveRDS(denoised.sce.dellOrso, file = "./../saved/R_objects/denoised_sce_dellOrso")
 ```
 
 

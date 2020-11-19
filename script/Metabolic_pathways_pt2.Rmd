@@ -34,9 +34,9 @@ library(gplots)
 **Single Cell Experiments**
 ```{r load-sce-objects}
 # Load datasets with metabolic genes only
-denoised.sce.m <- readRDS("./../saved/denoised_sce_m")
-denoised.sce.deMicheli.m <- readRDS("./../saved/denoised_sce_deMicheli_m")
-denoised.sce.dellOrso.m <- readRDS("./../saved/denoised_sce_dellOrso_m")
+denoised.sce.m <- readRDS("./../saved/R_objects/denoised_sce_m")
+denoised.sce.deMicheli.m <- readRDS("./../saved/R_objects/denoised_sce_deMicheli_m")
+denoised.sce.dellOrso.m <- readRDS("./../saved/R_objects/denoised_sce_dellOrso_m")
 
 # Inspect dimensions
 dim(denoised.sce.m)
@@ -46,24 +46,24 @@ dim(denoised.sce.dellOrso.m)
 
 **Trajectories**
 ```{r load-trajectories}
-traj.primary <- readRDS("./../saved/traj_primary")
-traj.deMicheli <- readRDS("./../saved/traj_deMicheli")
-traj.dellOrso <- readRDS("./../saved/traj_dellOrso")
+traj.primary <- readRDS("./../saved/R_objects/traj_primary")
+traj.deMicheli <- readRDS("./../saved/R_objects/traj_deMicheli")
+traj.dellOrso <- readRDS("./../saved/R_objects/traj_dellOrso")
 ```
 
 **Aggregated sce objects**
 ```{r load-aggr-sce-objects}
 # Primary
-sce.primary.module <- readRDS("./../saved/sce_primary_module")
-sce.primary.pathway <- readRDS("./../saved/sce_primary_pathway")
+sce.primary.module <- readRDS("./../saved/R_objects/sce_primary_module")
+sce.primary.pathway <- readRDS("./../saved/R_objects/sce_primary_pathway")
 
 # De Micheli
-sce.deMicheli.module <- readRDS("./../saved/sce_deMicheli_module")
-sce.deMicheli.pathway <- readRDS("./../saved/sce_deMicheli_pathway")
+sce.deMicheli.module <- readRDS("./../saved/R_objects/sce_deMicheli_module")
+sce.deMicheli.pathway <- readRDS("./../saved/R_objects/sce_deMicheli_pathway")
 
 # Dell Orso
-sce.dellOrso.module <- readRDS("./../saved/sce_dellOrso_module")
-sce.dellOrso.pathway <- readRDS("./../saved/sce_dellOrso_pathway")
+sce.dellOrso.module <- readRDS("./../saved/R_objects/sce_dellOrso_module")
+sce.dellOrso.pathway <- readRDS("./../saved/R_objects/sce_dellOrso_pathway")
 
 # Inspect dimensions of objects
 dim(sce.primary.module)
@@ -78,10 +78,10 @@ dim(sce.dellOrso.pathway)
 **KEGG module and pathway id:name mappings**
 Data available at https://www.genome.jp/dbget-bin/www_bget?pathway:mmu01100
 ```{r load-kegg-module-and-pathway-csv-files}
-kegg.modules <- read.csv("./../saved/kegg_metabolic_modules.csv", header = FALSE)
+kegg.modules <- read.csv("./../saved/tables/kegg_metabolic_modules.csv", header = FALSE)
 colnames(kegg.modules) <- c("module", "module_name")
 
-kegg.pathways <- read.csv("./../saved/kegg_metabolic_pathways.csv", header = FALSE)
+kegg.pathways <- read.csv("./../saved/tables/kegg_metabolic_pathways.csv", header = FALSE)
 colnames(kegg.pathways) <- c("pathway", "pathway_name")
 ```
 
@@ -163,8 +163,8 @@ sce.primary.pathway <- SingleCellExperiment(assays = list(logcounts = as.matrix(
 ###########################################
 # Save aggregated module & pathway objects
 ###########################################
-saveRDS(sce.primary.module, file = "./../saved/sce_primary_module")
-saveRDS(sce.primary.pathway, file = "./../saved/sce_primary_pathway")
+saveRDS(sce.primary.module, file = "./../saved/R_objects/sce_primary_module")
+saveRDS(sce.primary.pathway, file = "./../saved/R_objects/sce_primary_pathway")
 
 # Inspect dimensions of module and pathway objects
 dim(sce.primary.module)
@@ -247,8 +247,8 @@ sce.deMicheli.pathway <- SingleCellExperiment(assays = list(logcounts = as.matri
 ###########################################
 # Save aggregated module & pathway objects
 ###########################################
-saveRDS(sce.deMicheli.module, file = "./../saved/sce_deMicheli_module")
-saveRDS(sce.deMicheli.pathway, file = "./../saved/sce_deMicheli_pathway")
+saveRDS(sce.deMicheli.module, file = "./../saved/R_objects/sce_deMicheli_module")
+saveRDS(sce.deMicheli.pathway, file = "./../saved/R_objects/sce_deMicheli_pathway")
 
 # Inspect dimensions of module and pathway objects
 dim(sce.deMicheli.module)
@@ -331,8 +331,8 @@ sce.dellOrso.pathway <- SingleCellExperiment(assays = list(logcounts = as.matrix
 ###########################################
 # Save aggregated module & pathway objects
 ###########################################
-saveRDS(sce.dellOrso.module, file = "./../saved/sce_dellOrso_module")
-saveRDS(sce.dellOrso.pathway, file = "./../saved/sce_dellOrso_pathway")
+saveRDS(sce.dellOrso.module, file = "./../saved/R_objects/sce_dellOrso_module")
+saveRDS(sce.dellOrso.pathway, file = "./../saved/R_objects/sce_dellOrso_pathway")
 
 # Inspect dimensions of module and pathway objects
 dim(sce.dellOrso.module)
@@ -385,12 +385,12 @@ rowData(sce.dellOrso.pathway)$pathway_name <- kegg.pathways.dellOrso.sorted$path
 
 
 # Overwrite saved sce objects with new objects containing rowData
-saveRDS(sce.dellOrso.module, file = "./../saved/sce_dellOrso_module")
-saveRDS(sce.dellOrso.pathway, file = "./../saved/sce_dellOrso_pathway")
-saveRDS(sce.deMicheli.module, file = "./../saved/sce_deMicheli_module")
-saveRDS(sce.deMicheli.pathway, file = "./../saved/sce_deMicheli_pathway")
-saveRDS(sce.primary.module, file = "./../saved/sce_primary_module")
-saveRDS(sce.primary.pathway, file = "./../saved/sce_primary_pathway")
+saveRDS(sce.dellOrso.module, file = "./../saved/R_objects/sce_dellOrso_module")
+saveRDS(sce.dellOrso.pathway, file = "./../saved/R_objects/sce_dellOrso_pathway")
+saveRDS(sce.deMicheli.module, file = "./../saved/R_objects/sce_deMicheli_module")
+saveRDS(sce.deMicheli.pathway, file = "./../saved/R_objects/sce_deMicheli_pathway")
+saveRDS(sce.primary.module, file = "./../saved/R_objects/sce_primary_module")
+saveRDS(sce.primary.pathway, file = "./../saved/R_objects/sce_primary_pathway")
 
 ```
 
@@ -405,8 +405,8 @@ expression.primary.module <- as.matrix(t(logcounts(sce.primary.module)))
 group_name.primary.module <- as.factor(sce.primary.module$sample)
 
 # Get gimp & module objects
-gimp.primary.module <- readRDS("./../saved/gimp_primary_module")
-modules.primary.module <- readRDS("./../saved/modules_primary_module")
+gimp.primary.module <- readRDS("./../saved/R_objects/gimp_primary_module")
+modules.primary.module <- readRDS("./../saved/R_objects/modules_primary_module")
 gimp.primary.module$qvalue <- p.adjust(p = gimp.primary.module$pvalue, method = "BH")
 gene_sel.primary.module <- gimp.primary.module$gene[gimp.primary.module$qvalue < .05]
 expr_sel.primary.module <- scale_quantile(expression.primary.module[, gene_sel.primary.module])
@@ -419,8 +419,8 @@ expression.primary.pathway <- as.matrix(t(logcounts(sce.primary.pathway)))
 group_name.primary.pathway <- as.factor(sce.primary.pathway$sample)
 
 # Get gimp & module objects
-gimp.primary.pathway <- readRDS("./../saved/gimp_primary_pathway")
-modules.primary.pathway <- readRDS("./../saved/modules_primary_pathway")
+gimp.primary.pathway <- readRDS("./../saved/R_objects/gimp_primary_pathway")
+modules.primary.pathway <- readRDS("./../saved/R_objects/modules_primary_pathway")
 gimp.primary.pathway$qvalue <- p.adjust(p = gimp.primary.pathway$pvalue, method = "BH")
 gene_sel.primary.pathway <- gimp.primary.pathway$gene[gimp.primary.pathway$qvalue < .05]
 expr_sel.primary.pathway <- scale_quantile(expression.primary.pathway[, gene_sel.primary.pathway])
@@ -433,8 +433,8 @@ expression.deMicheli.module <- as.matrix(t(logcounts(sce.deMicheli.module)))
 group_name.deMicheli.module <- as.factor(sce.deMicheli.module$cell_type)
 
 # Get gimp & module objects
-gimp.deMicheli.module <- readRDS("./../saved/gimp_deMicheli_module")
-modules.deMicheli.module <- readRDS("./../saved/modules_deMicheli_module")
+gimp.deMicheli.module <- readRDS("./../saved/R_objects/gimp_deMicheli_module")
+modules.deMicheli.module <- readRDS("./../saved/R_objects/modules_deMicheli_module")
 gimp.deMicheli.module$qvalue <- p.adjust(p = gimp.deMicheli.module$pvalue, method = "BH")
 gene_sel.deMicheli.module <- gimp.deMicheli.module$gene[gimp.deMicheli.module$qvalue < .05]
 expr_sel.deMicheli.module <- scale_quantile(expression.deMicheli.module[, gene_sel.deMicheli.module])
@@ -447,8 +447,8 @@ expression.deMicheli.pathway <- as.matrix(t(logcounts(sce.deMicheli.pathway)))
 group_name.deMicheli.pathway <- as.factor(sce.deMicheli.pathway$cell_type)
 
 # Get gimp & module objects
-gimp.deMicheli.pathway <- readRDS("./../saved/gimp_deMicheli_pathway")
-modules.deMicheli.pathway <- readRDS("./../saved/modules_deMicheli_pathway")
+gimp.deMicheli.pathway <- readRDS("./../saved/R_objects/gimp_deMicheli_pathway")
+modules.deMicheli.pathway <- readRDS("./../saved/R_objects/modules_deMicheli_pathway")
 gimp.deMicheli.pathway$qvalue <- p.adjust(p = gimp.deMicheli.pathway$pvalue, method = "BH")
 gene_sel.deMicheli.pathway <- gimp.deMicheli.pathway$gene[gimp.deMicheli.pathway$qvalue < .05]
 expr_sel.deMicheli.pathway <- scale_quantile(expression.deMicheli.pathway[, gene_sel.deMicheli.pathway])
@@ -465,8 +465,8 @@ expression.deMicheli.module.f <- as.matrix(t(logcounts(sce.deMicheli.module.f)))
 group_name.deMicheli.module.f <- as.factor(sce.deMicheli.module.f$cell_type)
 
 # Get gimp & module objects
-gimp.deMicheli.module.f <- readRDS("./../saved/gimp_deMicheli_module_no_muscle")
-modules.deMicheli.module.f <- readRDS("./../saved/modules_deMicheli_module_no_muscle")
+gimp.deMicheli.module.f <- readRDS("./../saved/R_objects/gimp_deMicheli_module_no_muscle")
+modules.deMicheli.module.f <- readRDS("./../saved/R_objects/modules_deMicheli_module_no_muscle")
 gimp.deMicheli.module.f$qvalue <- p.adjust(p = gimp.deMicheli.module.f$pvalue, method = "BH")
 gene_sel.deMicheli.module.f <- gimp.deMicheli.module.f$gene[gimp.deMicheli.module.f$qvalue < .05]
 expr_sel.deMicheli.module.f <- scale_quantile(expression.deMicheli.module.f[, gene_sel.deMicheli.module.f])
@@ -483,8 +483,8 @@ expression.deMicheli.pathway.f <- as.matrix(t(logcounts(sce.deMicheli.pathway.f)
 group_name.deMicheli.pathway.f <- as.factor(sce.deMicheli.pathway.f$cell_type)
 
 # Get gimp & module objects
-gimp.deMicheli.pathway.f <- readRDS("./../saved/gimp_deMicheli_pathway_no_muscle")
-modules.deMicheli.pathway.f <- readRDS("./../saved/modules_deMicheli_pathway_no_muscle")
+gimp.deMicheli.pathway.f <- readRDS("./../saved/R_objects/gimp_deMicheli_pathway_no_muscle")
+modules.deMicheli.pathway.f <- readRDS("./../saved/R_objects/modules_deMicheli_pathway_no_muscle")
 gimp.deMicheli.pathway.f$qvalue <- p.adjust(p = gimp.deMicheli.pathway.f$pvalue, method = "BH")
 gene_sel.deMicheli.pathway.f <- gimp.deMicheli.pathway.f$gene[gimp.deMicheli.pathway.f$qvalue < .05]
 expr_sel.deMicheli.pathway.f <- scale_quantile(expression.deMicheli.pathway.f[, gene_sel.deMicheli.pathway.f])
@@ -498,8 +498,8 @@ expression.dellOrso.module <- as.matrix(t(logcounts(sce.dellOrso.module)))
 group_name.dellOrso.module <- as.factor(sce.dellOrso.module$cell_type)
 
 # Get gimp & module objects
-gimp.dellOrso.module <- readRDS("./../saved/gimp_dellOrso_module")
-modules.dellOrso.module <- readRDS("./../saved/modules_dellOrso_module")
+gimp.dellOrso.module <- readRDS("./../saved/R_objects/gimp_dellOrso_module")
+modules.dellOrso.module <- readRDS("./../saved/R_objects/modules_dellOrso_module")
 gimp.dellOrso.module$qvalue <- p.adjust(p = gimp.dellOrso.module$pvalue, method = "BH")
 gene_sel.dellOrso.module <- gimp.dellOrso.module$gene[gimp.dellOrso.module$qvalue < .05]
 expr_sel.dellOrso.module <- scale_quantile(expression.dellOrso.module[, gene_sel.dellOrso.module])
@@ -512,8 +512,8 @@ expression.dellOrso.pathway <- as.matrix(t(logcounts(sce.dellOrso.pathway)))
 group_name.dellOrso.pathway <- as.factor(sce.dellOrso.pathway$cell_type)
 
 # Get gimp & module objects
-gimp.dellOrso.pathway <- readRDS("./../saved/gimp_dellOrso_pathway")
-modules.dellOrso.pathway <- readRDS("./../saved/modules_dellOrso_pathway")
+gimp.dellOrso.pathway <- readRDS("./../saved/R_objects/gimp_dellOrso_pathway")
+modules.dellOrso.pathway <- readRDS("./../saved/R_objects/modules_dellOrso_pathway")
 gimp.dellOrso.pathway$qvalue <- p.adjust(p = gimp.dellOrso.pathway$pvalue, method = "BH")
 gene_sel.dellOrso.pathway <- gimp.dellOrso.pathway$gene[gimp.dellOrso.pathway$qvalue < .05]
 expr_sel.dellOrso.pathway <- scale_quantile(expression.dellOrso.pathway[, gene_sel.dellOrso.pathway])
@@ -528,8 +528,8 @@ expression.dellOrso.module.f <- as.matrix(t(logcounts(sce.dellOrso.module.f)))
 group_name.dellOrso.module.f <- as.factor(sce.dellOrso.module.f$cell_type)
 
 # Get gimp & module objects
-gimp.dellOrso.module.f <- readRDS("./../saved/gimp_dellOrso_module_no_pm")
-modules.dellOrso.module.f <- readRDS("./../saved/modules_dellOrso_module_no_pm")
+gimp.dellOrso.module.f <- readRDS("./../saved/R_objects/gimp_dellOrso_module_no_pm")
+modules.dellOrso.module.f <- readRDS("./../saved/R_objects/modules_dellOrso_module_no_pm")
 gimp.dellOrso.module.f$qvalue <- p.adjust(p = gimp.dellOrso.module.f$pvalue, method = "BH")
 gene_sel.dellOrso.module.f <- gimp.dellOrso.module.f$gene[gimp.dellOrso.module.f$qvalue < .05]
 expr_sel.dellOrso.module.f <- scale_quantile(expression.dellOrso.module.f[, gene_sel.dellOrso.module.f])
@@ -545,8 +545,8 @@ expression.dellOrso.pathway.f <- as.matrix(t(logcounts(sce.dellOrso.pathway.f)))
 group_name.dellOrso.pathway.f <- as.factor(sce.dellOrso.pathway.f$cell_type)
 
 # Get gimp & module objects
-gimp.dellOrso.pathway.f <- readRDS("./../saved/gimp_dellOrso_pathway_no_pm")
-modules.dellOrso.pathway.f <- readRDS("./../saved/modules_dellOrso_pathway_no_pm")
+gimp.dellOrso.pathway.f <- readRDS("./../saved/R_objects/gimp_dellOrso_pathway_no_pm")
+modules.dellOrso.pathway.f <- readRDS("./../saved/R_objects/modules_dellOrso_pathway_no_pm")
 gimp.dellOrso.pathway.f$qvalue <- p.adjust(p = gimp.dellOrso.pathway.f$pvalue, method = "BH")
 gene_sel.dellOrso.pathway.f <- gimp.dellOrso.pathway.f$gene[gimp.dellOrso.pathway.f$qvalue < .05]
 expr_sel.dellOrso.pathway.f <- scale_quantile(expression.dellOrso.pathway.f[, gene_sel.dellOrso.pathway.f])
@@ -558,7 +558,7 @@ expr_sel.dellOrso.pathway.f <- scale_quantile(expression.dellOrso.pathway.f[, ge
 #### 4.2.1 Primary data - modules
 ```{r compute-primary-module-importances, eval=FALSE}
 # Load required objects (if required)
-if(!exists("sce.primary.module")) {sce.primary.module <- readRDS("./../saved/sce_primary_module")}
+if(!exists("sce.primary.module")) {sce.primary.module <- readRDS("./../saved/R_objects/sce_primary_module")}
 
 # Create expression and sample objects
 expression.primary.module <- as.matrix(t(logcounts(sce.primary.module)))
@@ -574,14 +574,14 @@ gimp.primary.module$qvalue <- p.adjust(p = gimp.primary.module$pvalue, method = 
 gene_sel.primary.module <- gimp.primary.module$gene[gimp.primary.module$qvalue < .05]
 expr_sel.primary.module <- scale_quantile(expression.primary.module[, gene_sel.primary.module])
 
-saveRDS(gimp.primary.module, file = "./../saved/gimp_primary_module")
+saveRDS(gimp.primary.module, file = "./../saved/R_objects/gimp_primary_module")
 
 # Extract modules
 modules.primary.module <- extract_modules(expr_sel.primary.module,
                                           time = traj.primary$time,
                                           verbose = FALSE)
 
-saveRDS(modules.primary.module, file = "./../saved/modules_primary_module")
+saveRDS(modules.primary.module, file = "./../saved/R_objects/modules_primary_module")
 ```
 
 #### 4.2.2 Primary data - pathways
@@ -644,7 +644,7 @@ p.primary.modules
 **Save as pdf**
 ```{r trajectory-heatmap-primary-data-modules-pdf, eval=FALSE}
 #save as pdf
-pdf("./../saved/gimp_heatmap_primary_metabolic_modules.pdf")
+pdf("./../saved/figures/gimp_heatmap_primary_metabolic_modules.pdf")
 p.primary.modules
 dev.off()
 ```
@@ -698,11 +698,11 @@ p.primary.pathways.names
 **Save as pdf**
 ```{r trajectory-heatmap-primary-data-pathways-pdf, eval=FALSE}
 #save as pdf
-pdf("./../saved/gimp_heatmap_primary_metabolic_pathways.pdf")
+pdf("./../saved/figures/gimp_heatmap_primary_metabolic_pathways.pdf")
 p.primary.pathways
 dev.off()
 
-pdf("./../saved/gimp_heatmap_primary_metabolic_pathways_names.pdf")
+pdf("./../saved/figures/gimp_heatmap_primary_metabolic_pathways_names.pdf")
 p.primary.pathways.names
 dev.off()
 ```
@@ -729,7 +729,7 @@ p.deMicheli.modules
 **Save as pdf**
 ```{r trajectory-heatmap-deMicheli-data-modules-pdf, eval=FALSE}
 #save as pdf
-pdf("./../saved/gimp_heatmap_deMicheli_metabolic_modules.pdf")
+pdf("./../saved/figures/gimp_heatmap_deMicheli_metabolic_modules.pdf")
 p.deMicheli.modules
 dev.off()
 ```
@@ -782,11 +782,11 @@ p.deMicheli.pathways.names
 **Save as pdf**
 ```{r trajectory-heatmap-deMicheli-data-pathways-pdf, eval=FALSE}
 #save as pdf
-pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways.pdf")
+pdf("./../saved/figures/gimp_heatmap_deMicheli_metabolic_pathways.pdf")
 p.deMicheli.pathways
 dev.off()
 
-pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways_names.pdf")
+pdf("./../saved/figures/gimp_heatmap_deMicheli_metabolic_pathways_names.pdf")
 p.deMicheli.pathways.names
 dev.off()
 ```
@@ -816,7 +816,7 @@ p.deMicheli.modules.f
 **Save as pdf**
 ```{r trajectory-heatmap-deMicheli-data-modules-no-muscle-pdf, eval=FALSE}
 #save as pdf
-pdf("./../saved/gimp_heatmap_deMicheli_metabolic_modules_f.pdf")
+pdf("./../saved/figures/gimp_heatmap_deMicheli_metabolic_modules_f.pdf")
 p.deMicheli.modules.f
 dev.off()
 ```
@@ -872,13 +872,18 @@ p.deMicheli.pathways.names.f
 **Save as pdf**
 ```{r trajectory-heatmap-deMicheli-data-pathways-no-muscle-pdf, eval=FALSE}
 #save as pdf
-pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways_f.pdf")
+pdf("./../saved/figures/gimp_heatmap_deMicheli_metabolic_pathways_f.pdf")
 p.deMicheli.pathways.f
 dev.off()
 
-pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways_f_names.pdf")
+pdf("./../saved/figures/gimp_heatmap_deMicheli_metabolic_pathways_f_names.pdf")
 p.deMicheli.pathways.names.f
 dev.off()
+
+jpeg("./../saved/figures/gimp_heatmap_deMicheli_metabolic_pathways_f_names.jpeg")
+p.deMicheli.pathways.names.f
+dev.off()
+
 ```
 
 
@@ -904,7 +909,7 @@ p.dellOrso.modules
 **Save as pdf**
 ```{r trajectory-heatmap-dellOrso-data-modules-pdf, eval=FALSE}
 # Save as pdf
-pdf("./../saved/gimp_heatmap_dellOrso_metabolic_modules.pdf")
+pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_modules.pdf")
 p.dellOrso.modules
 dev.off()
 ```
@@ -957,11 +962,11 @@ p.dellOrso.pathways.names
 **Save as pdf**
 ```{r trajectory-heatmap-dellOrso-data-pathways-pdf, eval=FALSE}
 # Save as pdf
-pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways.pdf")
+pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_pathways.pdf")
 p.dellOrso.pathways
 dev.off()
 
-pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways_names.pdf")
+pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_pathways_names.pdf")
 p.dellOrso.pathways.names
 dev.off()
 ```
@@ -992,7 +997,7 @@ p.dellOrso.modules.f
 **Save as pdf**
 ```{r trajectory-heatmap-dellOrso-data-modules-no-PMs-pdf, eval=FALSE}
 # Save as pdf
-pdf("./../saved/gimp_heatmap_dellOrso_metabolic_modules_f.pdf")
+pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_modules_f.pdf")
 p.dellOrso.modules.f
 dev.off()
 ```
@@ -1049,11 +1054,15 @@ p.dellOrso.pathways.names.f
 **Save as pdf**
 ```{r trajectory-heatmap-dellOrso-data-pathways-no-PMs-pdf, eval=FALSE}
 # Save as pdf
-pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways_f.pdf")
+pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_pathways_f.pdf")
 p.dellOrso.pathways.f
 dev.off()
 
-pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways_f_names.pdf")
+pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_pathways_f_names.pdf")
+p.dellOrso.pathways.names.f
+dev.off()
+
+jpeg("./../saved/figures/gimp_heatmap_dellOrso_metabolic_pathways_f_names.jpeg")
 p.dellOrso.pathways.names.f
 dev.off()
 ```
@@ -1062,18 +1071,18 @@ dev.off()
 ## 5. Venn diagram of shared metabolic modules / pathways between datasets
 ```{r comparison-of-metabolic-genes-between-datasets}
 # Load metabolic genes if not defined
-if(!exists("modules.primary.module")) {modules.primary.module <- readRDS("./../saved/modules_primary_module")}
-if(!exists("modules.primary.pathway")) {modules.primary.pathway <- readRDS("./../saved/modules_primary_pathway")}
+if(!exists("modules.primary.module")) {modules.primary.module <- readRDS("./../saved/R_objects/modules_primary_module")}
+if(!exists("modules.primary.pathway")) {modules.primary.pathway <- readRDS("./../saved/R_objects/modules_primary_pathway")}
 
-if(!exists("modules.deMicheli.module")) {modules.deMicheli.module <- readRDS("./../saved/modules_deMicheli_module")}
-if(!exists("modules.deMicheli.pathway")) {modules.deMicheli.pathway <- readRDS("./../saved/modules_deMicheli_pathway")}
-if(!exists("modules.deMicheli.module.f")) {modules.deMicheli.module.f <- readRDS("./../saved/modules_deMicheli_module_no_muscle")}
-if(!exists("modules.deMicheli.pathway.f")) {modules.deMicheli.pathway.f <- readRDS("./../saved/modules_deMicheli_pathway_no_muscle")}
+if(!exists("modules.deMicheli.module")) {modules.deMicheli.module <- readRDS("./../saved/R_objects/modules_deMicheli_module")}
+if(!exists("modules.deMicheli.pathway")) {modules.deMicheli.pathway <- readRDS("./../saved/R_objects/modules_deMicheli_pathway")}
+if(!exists("modules.deMicheli.module.f")) {modules.deMicheli.module.f <- readRDS("./../saved/R_objects/modules_deMicheli_module_no_muscle")}
+if(!exists("modules.deMicheli.pathway.f")) {modules.deMicheli.pathway.f <- readRDS("./../saved/R_objects/modules_deMicheli_pathway_no_muscle")}
 
-if(!exists("modules.dellOrso.module")) {modules.dellOrso.module <- readRDS("./../saved/modules_dellOrso_module")}
-if(!exists("modules.dellOrso.pathway")) {modules.dellOrso.pathway <- readRDS("./../saved/modules_dellOrso_pathway")}
-if(!exists("modules.dellOrso.module.f")) {modules.dellOrso.module.f <- readRDS("./../saved/modules_dellOrso_module_no_pm")}
-if(!exists("modules.dellOrso.pathway.f")) {modules.dellOrso.pathway.f <- readRDS("./../saved/modules_dellOrso_pathway_no_pm")}
+if(!exists("modules.dellOrso.module")) {modules.dellOrso.module <- readRDS("./../saved/R_objects/modules_dellOrso_module")}
+if(!exists("modules.dellOrso.pathway")) {modules.dellOrso.pathway <- readRDS("./../saved/R_objects/modules_dellOrso_pathway")}
+if(!exists("modules.dellOrso.module.f")) {modules.dellOrso.module.f <- readRDS("./../saved/R_objects/modules_dellOrso_module_no_pm")}
+if(!exists("modules.dellOrso.pathway.f")) {modules.dellOrso.pathway.f <- readRDS("./../saved/R_objects/modules_dellOrso_pathway_no_pm")}
 
 venn.modules <- venn(data = list(primary_data = modules.primary.module$feature,
                                  de_Micheli_data = modules.deMicheli.module$feature,

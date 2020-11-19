@@ -29,8 +29,8 @@ library(plyr)
 **Single Cell Experiments**
 ```{r load-objects}
 # Load pre-processed sce objects
-denoised.sce <- readRDS("./../saved/denoised_sce_clust")
-denoised.sce.deMicheli <- readRDS("./../saved/denoised_sce_deMicheli")
+denoised.sce <- readRDS("./../saved/R_objects/denoised_sce_clust")
+denoised.sce.deMicheli <- readRDS("./../saved/R_objects/denoised_sce_deMicheli")
 
 # Generate the CC corrected data
 denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
@@ -50,7 +50,7 @@ markers.primary <- findMarkers(denoised.sce,
 control.markers <- markers.primary[["control"]]
 
 # Save marker information to .csv file
-write.csv(control.markers, file = "./../saved/control_marker_genes.csv")
+write.csv(control.markers, file = "./../saved/tables/control_marker_genes.csv")
 
 # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
 best.set <- control.markers[control.markers$Top <= 6,]
@@ -74,7 +74,7 @@ for(cluster in unique(denoised.sce$cluster)) {
   # Choose marker for cluster x
   markers <- markers.primary.clust[[cluster]]
   # Save marker information to .csv file
-  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, ".csv")
+  fpath <- paste0("./../saved/tables/marker_genes_cluster_", cluster, ".csv")
   write.csv(markers, file = fpath)
   # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
   best.set <- markers[markers$Top <= 6,]
@@ -97,7 +97,7 @@ for(cluster in unique(denoised.sce$cluster.cc)) {
   # Choose marker for cluster x
   markers <- markers.primary.clust.cc[[cluster]]
   # Save marker information to .csv file
-  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, "_cc.csv")
+  fpath <- paste0("./../saved/tables/marker_genes_cluster_", cluster, "_cc.csv")
   write.csv(markers, file = fpath)
   # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
   best.set <- markers[markers$Top <= 6,]
@@ -122,7 +122,7 @@ markers.primary.wmw <- findMarkers(denoised.sce,
 control.markers.wmw <- markers.primary.wmw[["control"]]
 
 # Save marker information to .csv file
-write.csv(control.markers.wmw, file = "./../saved/control_marker_genes_wmw.csv")
+write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw.csv")
 
 # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
 best.set <- control.markers.wmw[control.markers.wmw$Top <= 6,]
@@ -147,7 +147,7 @@ for(cluster in unique(denoised.sce$cluster)) {
   # Choose marker for cluster x
   markers.clust.wmw <- markers.primary.clust.wmw[[cluster]]
   # Save marker information to .csv file
-  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, "_wmw.csv")
+  fpath <- paste0("./../saved/tables/marker_genes_cluster_", cluster, "_wmw.csv")
   write.csv(markers.clust.wmw, file = fpath)
   # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
   best.set <- markers.clust.wmw[markers.clust.wmw$Top <= 6,]
@@ -171,7 +171,7 @@ for(cluster in unique(denoised.sce$cluster.cc)) {
   # Choose marker for cluster x
   markers.clust.wmw <- markers.primary.clust.wmw.cc[[cluster]]
   # Save marker information to .csv file
-  fpath <- paste0("./../saved/marker_genes_cluster_", cluster, "cc_wmw.csv")
+  fpath <- paste0("./../saved/tables/marker_genes_cluster_", cluster, "cc_wmw.csv")
   write.csv(markers.clust.wmw, file = fpath)
   # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving the cluster x
   best.set <- markers.clust.wmw[markers.clust.wmw$Top <= 6,]
@@ -204,11 +204,11 @@ ridge.primary <- RidgePlot(seurat.primary, features = genes.primary, ncol = 2)
 
 **Save ridge line plots as pdf**
 ```{r ridge-plots-pdf, eval=FALSE}
-pdf("./../saved/ridge_plot_primary.pdf", width = 10, height = 25)
+pdf("./../saved/figures/ridge_plot_primary.pdf", width = 10, height = 25)
 ridge.primary
 dev.off()
 
-pdf("./../saved/ridge_plot_deMicheli.pdf", width = 10, height = 25)
+pdf("./../saved/figures/ridge_plot_deMicheli.pdf", width = 10, height = 25)
 ridge.deMicheli
 dev.off()
 ```
