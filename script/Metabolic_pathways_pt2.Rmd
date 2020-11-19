@@ -37,6 +37,11 @@ library(gplots)
 denoised.sce.m <- readRDS("./../saved/denoised_sce_m")
 denoised.sce.deMicheli.m <- readRDS("./../saved/denoised_sce_deMicheli_m")
 denoised.sce.dellOrso.m <- readRDS("./../saved/denoised_sce_dellOrso_m")
+
+# Inspect dimensions
+dim(denoised.sce.m)
+dim(denoised.sce.deMicheli.m)
+dim(denoised.sce.dellOrso.m)
 ```
 
 **Trajectories**
@@ -637,6 +642,16 @@ p.primary.modules <- draw_trajectory_heatmap(expr_sel.primary.module,
 p.primary.modules
 ```
 
+**Save as pdf**
+```{r trajectory-heatmap-primary-data-modules-pdf, eval=FALSE}
+#save as pdf
+pdf("./../saved/gimp_heatmap_primary_metabolic_modules.pdf")
+p.primary.modules
+dev.off()
+```
+
+
+
 #### 4.3.2 Primary data - pathways
 ```{r trajectory-heatmap-primary-data-pathways}
 # Define annotation row
@@ -654,7 +669,46 @@ p.primary.pathways <- draw_trajectory_heatmap(expr_sel.primary.pathway,
                         fontsize = 4)
 
 p.primary.pathways
+
+# Plot by pathway names as row values
+## Get pathway names
+sce.primary.pathway.important <- sce.primary.pathway[(rownames(sce.primary.pathway) %in% modules.primary.pathway$feature), ]
+
+## Sort objects in the same order
+sce.primary.pathway.important <- sce.primary.pathway.important[modules.primary.pathway$feature, ]
+expr_sel.primary.pathway.name <- expr_sel.primary.pathway[, modules.primary.pathway$feature]
+
+# Change pathway IDs to pathway names
+rownames(sce.primary.pathway.important) <- rowData(sce.primary.pathway.important)$pathway_name
+colnames(expr_sel.primary.pathway.name) <- rowData(sce.primary.pathway.important)$pathway_name
+modules.primary.pathway.name <- modules.primary.pathway
+modules.primary.pathway.name$feature <- rowData(sce.primary.pathway.important)$pathway_name
+
+## Make the plot
+p.primary.pathways.names <- draw_trajectory_heatmap(expr_sel.primary.pathway.name, 
+                                                      time = traj.primary$time,
+                                                      progression_group = group_name.primary.pathway,
+                                                      modules = modules.primary.pathway.name,
+                                                      show_labels_row = TRUE,
+                                                      fontsize_row = 5,
+                                                      fontsize = 4)
+
+p.primary.pathways.names
+
 ```
+
+**Save as pdf**
+```{r trajectory-heatmap-primary-data-pathways-pdf, eval=FALSE}
+#save as pdf
+pdf("./../saved/gimp_heatmap_primary_metabolic_pathways.pdf")
+p.primary.pathways
+dev.off()
+
+pdf("./../saved/gimp_heatmap_primary_metabolic_pathways_names.pdf")
+p.primary.pathways.names
+dev.off()
+```
+
 
 #### 4.3.3 De Micheli data - modules
 ```{r trajectory-heatmap-deMicheli-data-modules}
@@ -675,6 +729,15 @@ p.deMicheli.modules <- draw_trajectory_heatmap(expr_sel.deMicheli.module,
 p.deMicheli.modules
 ```
 
+**Save as pdf**
+```{r trajectory-heatmap-deMicheli-data-modules-pdf, eval=FALSE}
+#save as pdf
+pdf("./../saved/gimp_heatmap_deMicheli_metabolic_modules.pdf")
+p.deMicheli.modules
+dev.off()
+```
+
+
 #### 4.3.4 De Micheli data - pathways
 ```{r trajectory-heatmap-deMicheli-data-pathways}
 # Define annotation row
@@ -692,7 +755,46 @@ p.deMicheli.pathways <- draw_trajectory_heatmap(expr_sel.deMicheli.pathway,
                         fontsize = 4)
 
 p.deMicheli.pathways
+
+# Plot by pathway names as row values
+## Get pathway names
+sce.deMicheli.pathway.important <- sce.deMicheli.pathway[(rownames(sce.deMicheli.pathway) %in% modules.deMicheli.pathway$feature), ]
+
+## Sort objects in the same order
+sce.deMicheli.pathway.important <- sce.deMicheli.pathway.important[modules.deMicheli.pathway$feature, ]
+expr_sel.deMicheli.pathway.name <- expr_sel.deMicheli.pathway[, modules.deMicheli.pathway$feature]
+
+# Change pathway IDs to pathway names
+rownames(sce.deMicheli.pathway.important) <- rowData(sce.deMicheli.pathway.important)$pathway_name
+colnames(expr_sel.deMicheli.pathway.name) <- rowData(sce.deMicheli.pathway.important)$pathway_name
+modules.deMicheli.pathway.name <- modules.deMicheli.pathway
+modules.deMicheli.pathway.name$feature <- rowData(sce.deMicheli.pathway.important)$pathway_name
+
+## Make the plot
+p.deMicheli.pathways.names <- draw_trajectory_heatmap(expr_sel.deMicheli.pathway.name, 
+                                                      time = traj.deMicheli$time,
+                                                      progression_group = group_name.deMicheli.pathway,
+                                                      modules = modules.deMicheli.pathway.name,
+                                                      show_labels_row = TRUE,
+                                                      fontsize_row = 5,
+                                                      fontsize = 4)
+
+p.deMicheli.pathways.names
+
 ```
+
+**Save as pdf**
+```{r trajectory-heatmap-deMicheli-data-pathways-pdf, eval=FALSE}
+#save as pdf
+pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways.pdf")
+p.deMicheli.pathways
+dev.off()
+
+pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways_names.pdf")
+p.deMicheli.pathways.names
+dev.off()
+```
+
 
 #### 4.3.5 De Micheli data - modules (without mature skeletal muscle)
 ```{r trajectory-heatmap-deMicheli-data-modules-no-muscle}
@@ -716,6 +818,15 @@ p.deMicheli.modules.f <- draw_trajectory_heatmap(expr_sel.deMicheli.module.f,
 p.deMicheli.modules.f
 ```
 
+**Save as pdf**
+```{r trajectory-heatmap-deMicheli-data-modules-no-muscle-pdf, eval=FALSE}
+#save as pdf
+pdf("./../saved/gimp_heatmap_deMicheli_metabolic_modules_f.pdf")
+p.deMicheli.modules.f
+dev.off()
+```
+
+
 #### 4.3.6 De Micheli data - pathways (without mature skeletal muscle)
 ```{r trajectory-heatmap-deMicheli-data-pathways-no-muscle}
 # define time without mature skeletal muscle
@@ -736,7 +847,47 @@ p.deMicheli.pathways.f <-  draw_trajectory_heatmap(expr_sel.deMicheli.pathway.f,
                         fontsize = 4)
 
 p.deMicheli.pathways.f
+
+# Plot by pathway names as row values
+## Get pathway names
+sce.deMicheli.pathway.important.f <- sce.deMicheli.pathway.f[(rownames(sce.deMicheli.pathway.f) %in% modules.deMicheli.pathway.f$feature), ]
+
+## Sort objects in the same order
+sce.deMicheli.pathway.important.f <- sce.deMicheli.pathway.important.f[modules.deMicheli.pathway.f$feature, ]
+expr_sel.deMicheli.pathway.name.f <- expr_sel.deMicheli.pathway.f[, modules.deMicheli.pathway.f$feature]
+
+# Change pathway IDs to pathway names
+rownames(sce.deMicheli.pathway.important.f) <- rowData(sce.deMicheli.pathway.important.f)$pathway_name
+colnames(expr_sel.deMicheli.pathway.name.f) <- rowData(sce.deMicheli.pathway.important.f)$pathway_name
+modules.deMicheli.pathway.name.f <- modules.deMicheli.pathway.f
+modules.deMicheli.pathway.name.f$feature <- rowData(sce.deMicheli.pathway.important.f)$pathway_name
+
+## Make the plot
+p.deMicheli.pathways.names.f <- draw_trajectory_heatmap(expr_sel.deMicheli.pathway.name.f, 
+                                                      time = traj.deMicheli.time.pathway.f,
+                                                      progression_group = group_name.deMicheli.pathway.f,
+                                                      modules = modules.deMicheli.pathway.name.f,
+                                                      show_labels_row = TRUE,
+                                                      fontsize_row = 5,
+                                                      fontsize = 4)
+
+p.deMicheli.pathways.names.f
 ```
+
+
+**Save as pdf**
+```{r trajectory-heatmap-deMicheli-data-pathways-no-muscle-pdf, eval=FALSE}
+#save as pdf
+pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways_f.pdf")
+p.deMicheli.pathways.f
+dev.off()
+
+pdf("./../saved/gimp_heatmap_deMicheli_metabolic_pathways_f_names.pdf")
+p.deMicheli.pathways.names.f
+dev.off()
+```
+
+
 
 #### 4.3.7 Dell'Orso data - modules
 ```{r trajectory-heatmap-dellOrso-data-modules}
@@ -757,6 +908,16 @@ p.dellOrso.modules <- draw_trajectory_heatmap(expr_sel.dellOrso.module,
 p.dellOrso.modules
 ```
 
+**Save as pdf**
+```{r trajectory-heatmap-dellOrso-data-modules-pdf, eval=FALSE}
+# Save as pdf
+pdf("./../saved/gimp_heatmap_dellOrso_metabolic_modules.pdf")
+p.dellOrso.modules
+dev.off()
+```
+
+
+
 #### 4.3.8 Dell'Orso data - pathways
 ```{r trajectory-heatmap-dellOrso-data-pathways}
 # Define annotation row
@@ -773,7 +934,44 @@ p.dellOrso.pathways <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway,
                         fontsize_row = 5,
                         fontsize = 4)
 
+# Plot by pathway names as row values
+## Get pathway names
+sce.dellOrso.pathway.important <- sce.dellOrso.pathway[(rownames(sce.dellOrso.pathway) %in% modules.dellOrso.pathway$feature), ]
+
+## Sort objects in the same order
+sce.dellOrso.pathway.important <- sce.dellOrso.pathway.important[modules.dellOrso.pathway$feature, ]
+expr_sel.dellOrso.pathway.name <- expr_sel.dellOrso.pathway[, modules.dellOrso.pathway$feature]
+
+# Change pathway IDs to pathway names
+rownames(sce.dellOrso.pathway.important) <- rowData(sce.dellOrso.pathway.important)$pathway_name
+colnames(expr_sel.dellOrso.pathway.name) <- rowData(sce.dellOrso.pathway.important)$pathway_name
+modules.dellOrso.pathway.name <- modules.dellOrso.pathway
+modules.dellOrso.pathway.name$feature <- rowData(sce.dellOrso.pathway.important)$pathway_name
+
+## Make the plot
+p.dellOrso.pathways.names <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway.name, 
+                                                      time = traj.dellOrso$time,
+                                                      progression_group = group_name.dellOrso.pathway,
+                                                      modules = modules.dellOrso.pathway.name,
+                                                      show_labels_row = TRUE,
+                                                      fontsize_row = 5,
+                                                      fontsize = 4)
+
+p.dellOrso.pathways.names
+
+```
+
+
+**Save as pdf**
+```{r trajectory-heatmap-dellOrso-data-pathways-pdf, eval=FALSE}
+# Save as pdf
+pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways.pdf")
 p.dellOrso.pathways
+dev.off()
+
+pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways_names.pdf")
+p.dellOrso.pathways.names
+dev.off()
 ```
 
 
@@ -799,6 +997,17 @@ p.dellOrso.modules.f <- draw_trajectory_heatmap(expr_sel.dellOrso.module.f,
 p.dellOrso.modules.f
 ```
 
+
+**Save as pdf**
+```{r trajectory-heatmap-dellOrso-data-modules-no-PMs-pdf, eval=FALSE}
+# Save as pdf
+pdf("./../saved/gimp_heatmap_dellOrso_metabolic_modules_f.pdf")
+p.dellOrso.modules.f
+dev.off()
+```
+
+
+
 #### 4.3.10 Dell'Orso data - pathways (without PMs)
 ```{r trajectory-heatmap-dellOrso-data-pathways-no-PMs}
 # define time without PMs
@@ -819,26 +1028,44 @@ p.dellOrso.pathways.f <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway.f,
                         fontsize = 4)
 
 p.dellOrso.pathways.f
+
+# Plot by pathway names as row values
+## Get pathway names
+sce.dellOrso.pathway.important.f <- sce.dellOrso.pathway.f[(rownames(sce.dellOrso.pathway.f) %in% modules.dellOrso.pathway.f$feature), ]
+
+## Sort objects in the same order
+sce.dellOrso.pathway.important.f <- sce.dellOrso.pathway.important.f[modules.dellOrso.pathway.f$feature, ]
+expr_sel.dellOrso.pathway.name.f <- expr_sel.dellOrso.pathway.f[, modules.dellOrso.pathway.f$feature]
+
+# Change pathway IDs to pathway names
+rownames(sce.dellOrso.pathway.important.f) <- rowData(sce.dellOrso.pathway.important.f)$pathway_name
+colnames(expr_sel.dellOrso.pathway.name.f) <- rowData(sce.dellOrso.pathway.important.f)$pathway_name
+modules.dellOrso.pathway.name.f <- modules.dellOrso.pathway.f
+modules.dellOrso.pathway.name.f$feature <- rowData(sce.dellOrso.pathway.important.f)$pathway_name
+
+## Make the plot
+p.dellOrso.pathways.names.f <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway.name.f, 
+                                                        time = traj.dellOrso.time.pathway.f,
+                                                        progression_group = group_name.dellOrso.pathway.f,
+                                                        modules = modules.dellOrso.pathway.name.f,
+                                                        show_labels_row = TRUE,
+                                                        fontsize_row = 5,
+                                                        fontsize = 4)
+
+p.dellOrso.pathways.names.f
+
 ```
 
+**Save as pdf**
+```{r trajectory-heatmap-dellOrso-data-pathways-no-PMs-pdf, eval=FALSE}
+# Save as pdf
+pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways_f.pdf")
+p.dellOrso.pathways.f
+dev.off()
 
-#### 4.3.11 Save all heatmaps in pdf format
-```{r save-all-heatmaps-in-pdf-format, eval=FALSE}
-all.plots <- arrangeGrob(p.primary.modules[[4]],
-                         p.primary.pathways[[4]],
-                         p.deMicheli.modules[[4]],
-                         p.deMicheli.pathways[[4]],
-                         p.deMicheli.modules.f[[4]],
-                         p.deMicheli.pathways.f[[4]],
-                         p.dellOrso.modules[[4]],
-                         p.dellOrso.pathways[[4]],
-                         p.dellOrso.modules.f[[4]],
-                         p.dellOrso.pathways.f[[4]],
-                         ncol = 1)
-
-ggsave(filename = "./../saved/module_and_pathway_importances_for_all_datasets.pdf",
-       plot = all.plots, limitsize = FALSE, width = 13, height = 100)
-
+pdf("./../saved/gimp_heatmap_dellOrso_metabolic_pathways_f_names.pdf")
+p.dellOrso.pathways.names.f
+dev.off()
 ```
 
 
