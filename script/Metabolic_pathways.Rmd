@@ -786,8 +786,8 @@ dev.off()
 if(!exists("modules.primary.m")) {modules.primary.m <- readRDS("./../saved/R_objects/modules_primary_m")}
 if(!exists("modules.deMicheli.m")) {modules.deMicheli.m <- readRDS("./../saved/R_objects/modules_deMicheli_m")}
 if(!exists("modules.dellOrso.m")) {modules.dellOrso.m <- readRDS("./../saved/R_objects/modules_dellOrso_m")}
-if(!exists("modules.deMicheli.m.f")) {modules.deMicheli.m.f <- readRDS("./../saved/R_objects/modules_deMicheli_m_f")}
-if(!exists("modules.dellOrso.m.f")) {modules.dellOrso.m.f <- readRDS("./../saved/R_objects/modules_dellOrso_m_f")}
+if(!exists("modules.deMicheli.m.f")) {modules.deMicheli.m.f <- readRDS("./../saved/R_objects/modules_deMicheli_m_no_muscle")}
+if(!exists("modules.dellOrso.m.f")) {modules.dellOrso.m.f <- readRDS("./../saved/R_objects/modules_dellOrso_m_no_primaryMB")}
 
 
 v.table <- venn(data = list(primary_data = modules.primary.m$feature,
@@ -804,6 +804,49 @@ v.table.f <- venn(data = list(primary_data = modules.primary.m$feature,
 # Print the intersections between datasets
 print(attr(v.table.f ,"intersections"))
 ```
+
+### 3.5   DE analysis of the shared metabolic genes with high importance in predicting the ordering of cells on trajectories
+**T-test**
+```{r de-analysis-of-metabolic-gimp-genes-ttest}
+# Get list of important genes from the Venn diagram
+important.m.genes <- attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+
+# Compute gene importances
+markers.primary.gimp <- findMarkers(denoised.sce.m,
+                                    groups = denoised.sce.m$sample,
+                                    lfc = log2(1.5))
+
+# Choose markers for control sample
+control.markers.gimp <- markers.primary.gimp[["control"]]
+control.markers.gimp <- control.markers.gimp[rownames(control.markers.gimp) %in% important.m.genes, ]
+
+# Extract the marker effect sizes
+logFCs <- getMarkerEffects(control.markers.gimp)
+
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "DE analysis: Important metabolic marker genes (t-test): Control vs. other samples", fontsize_row = 12)
+```
+**WMW test**
+```{r de-analysis-of-metabolic-gimp-genes-wmwtest}
+# Get list of important genes from the Venn diagram
+important.m.genes <- attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+
+# Compute gene importances
+markers.primary.gimp <- findMarkers(denoised.sce.m,
+                                    groups = denoised.sce.m$sample,
+                                    lfc = log2(1.5),
+                                    test = "wilcox")
+
+# Choose markers for control sample
+control.markers.gimp <- markers.primary.gimp[["control"]]
+control.markers.gimp <- control.markers.gimp[rownames(control.markers.gimp) %in% important.m.genes, ]
+
+# Extract the area under curves
+AUCs <- getMarkerEffects(control.markers.gimp, prefix="AUC")
+
+# Plot results in a heatmap
+pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "DE analysis: Important metabolic marker genes (WMW test): Control vs. other samples")
+```
+
 
 
 ## 4. SingleR cell annotations using only metabolic genes
