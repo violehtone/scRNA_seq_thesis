@@ -1357,7 +1357,14 @@ best.set <- control.marker.modules[control.marker.modules$Top <= 6,]
 # Extract the marker effect sizes
 logFCs <- getMarkerEffects(best.set)
 
-pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Metabolic marker modules (t-test): Control vs. other samples (metabolic genes)", fontsize_row = 12)
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Metabolic marker modules (t-test): Control vs. other samples", fontsize_row = 12)
+
+
+# Using only the shared modules from the Venn diagram
+important.modules <- attr(venn.modules.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+best.set <- control.marker.modules[rownames(control.marker.modules) %in% important.modules, ]
+logFCs <- getMarkerEffects(best.set)
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Important metabolic marker modules (t-test): Control vs. other samples", fontsize_row = 12)
 ```
 
 **WMW test**
@@ -1382,10 +1389,17 @@ AUCs <- getMarkerEffects(best.set, prefix="AUC")
 
 # Plot results in a heatmap
 pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Metabolic marker modules (wmw): Control vs. other samples")
+
+# Using only the shared modules from the Venn diagram
+important.modules <- attr(venn.modules.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+best.set <- control.markers.modules.wmw[rownames(control.markers.modules.wmw) %in% important.modules, ]
+AUCs <- getMarkerEffects(best.set, prefix="AUC")
+pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Important metabolic marker modules (wmw): Control vs. other samples")
 ```
 
 
 ### 5.1 DE pathways
+**T-test**
 ```{r de-pathways-primary-data-ttest}
 marker.pathways <- findMarkers(sce.primary.pathway,
                               groups = sce.primary.pathway$sample,
@@ -1403,7 +1417,13 @@ best.set <- control.marker.pathways[control.marker.pathways$Top <= 6,]
 # Extract the marker effect sizes
 logFCs <- getMarkerEffects(best.set)
 
-pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Metabolic marker pathways (t-test): Control vs. other samples (metabolic genes)", fontsize_row = 12)
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Metabolic marker pathways (t-test): Control vs. other samples", fontsize_row = 12)
+
+# Using only the shared pathways from the Venn diagram
+important.pathways <- attr(venn.pathways.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+best.set <- control.marker.pathways[rownames(control.marker.pathways) %in% important.pathways, ]
+logFCs <- getMarkerEffects(best.set)
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Important metabolic marker pathways (t-test): Control vs. other samples", fontsize_row = 12)
 ```
 
 **WMW test**
@@ -1428,6 +1448,12 @@ AUCs <- getMarkerEffects(best.set, prefix="AUC")
 
 # Plot results in a heatmap
 pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Metabolic marker pathways (wmw): Control vs. other samples")
+
+# Using only the shared pathways from the Venn diagram
+important.pathways <- attr(venn.pathways.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+best.set <- control.markers.pathways.wmw[rownames(control.markers.pathways.wmw) %in% important.pathways, ]
+AUCs <- getMarkerEffects(best.set, prefix="AUC")
+pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Important metabolic marker pathways (wmw): Control vs. other samples")
 ```
 
 
