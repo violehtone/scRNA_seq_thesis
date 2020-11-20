@@ -586,40 +586,265 @@ saveRDS(modules.primary.module, file = "./../saved/R_objects/modules_primary_mod
 ```
 
 #### 4.2.2 Primary data - pathways
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-primary-pathway-importances, eval=FALSE}
+# Create expression and sample objects
+expression.primary.pathway <- as.matrix(t(logcounts(sce.primary.pathway)))
+group_name.primary.pathway <- as.factor(sce.primary.pathway$sample)
+
+# Compute gene importances
+gimp.primary.pathway <- gene_importances(x = expression.primary.pathway,
+                                        time = traj.primary$time,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.primary.pathway$qvalue <- p.adjust(p = gimp.primary.pathway$pvalue, method = "BH")
+gene_sel.primary.pathway <- gimp.primary.pathway$gene[gimp.primary.pathway$qvalue < .05]
+expr_sel.primary.pathway <- scale_quantile(expression.primary.pathway[, gene_sel.primary.pathway])
+
+saveRDS(gimp.primary.pathway, file = "gimp_primary_pathway")
+
+# Extract modules
+modules.primary.pathway <- extract_modules(expr_sel.primary.pathway,
+                                          time = traj.primary$time,
+                                          verbose = FALSE)
+
+saveRDS(modules.primary.pathway, file = "modules_primary_pathway")
 ```
+
+
 #### 4.2.3 De Micheli data - modules
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-deMicheli-module-importances, eval=FALSE}
+# Create expression and sample objects
+expression.deMicheli.module <- as.matrix(t(logcounts(sce.deMicheli.module)))
+group_name.deMicheli.module <- as.factor(sce.deMicheli.module$sample)
+
+# Compute gene importances
+gimp.deMicheli.module <- gene_importances(x = expression.deMicheli.module,
+                                        time = traj.deMicheli$time,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.deMicheli.module$qvalue <- p.adjust(p = gimp.deMicheli.module$pvalue, method = "BH")
+gene_sel.deMicheli.module <- gimp.deMicheli.module$gene[gimp.deMicheli.module$qvalue < .05]
+expr_sel.deMicheli.module <- scale_quantile(expression.deMicheli.module[, gene_sel.deMicheli.module])
+
+saveRDS(gimp.deMicheli.module, file = "gimp_deMicheli_module")
+
+# Extract modules
+modules.deMicheli.module <- extract_modules(expr_sel.deMicheli.module,
+                                          time = traj.deMicheli$time,
+                                          verbose = FALSE)
+
+saveRDS(modules.deMicheli.module, file = "modules_deMicheli_module")
 ```
+
+
 #### 4.2.4 De Micheli data - pathways
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-deMicheli-pathway-importances, eval=FALSE}
+# Create expression and sample objects
+expression.deMicheli.pathway <- as.matrix(t(logcounts(sce.deMicheli.pathway)))
+group_name.deMicheli.pathway <- as.factor(sce.deMicheli.pathway$sample)
+
+# Compute gene importances
+gimp.deMicheli.pathway <- gene_importances(x = expression.deMicheli.pathway,
+                                        time = traj.deMicheli$time,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.deMicheli.pathway$qvalue <- p.adjust(p = gimp.deMicheli.pathway$pvalue, method = "BH")
+gene_sel.deMicheli.pathway <- gimp.deMicheli.pathway$gene[gimp.deMicheli.pathway$qvalue < .05]
+expr_sel.deMicheli.pathway <- scale_quantile(expression.deMicheli.pathway[, gene_sel.deMicheli.pathway])
+
+saveRDS(gimp.deMicheli.pathway, file = "gimp_deMicheli_pathway")
+
+# Extract modules
+modules.deMicheli.pathway <- extract_modules(expr_sel.deMicheli.pathway,
+                                          time = traj.deMicheli$time,
+                                          verbose = FALSE)
+
+saveRDS(modules.deMicheli.pathway, file = "modules_deMicheli_pathway")
 ```
+
+
 #### 4.2.5 De Micheli data - modules (without mature skeletal muscle)
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-deMicheli-module-importances-no-muscle, eval=FALSE}
+# Filter out Mature skeletal muscle
+muscle_cells.module <- sce.deMicheli.module$cell_type == "d0_mature_skeletal_muscle" | sce.deMicheli.module$cell_type =="d5_mature_skeletal_muscle" | sce.deMicheli.module$cell_type == "d7_mature_skeletal_muscle"
+sce.deMicheli.module <- sce.deMicheli.module[, !muscle_cells.module]
+traj.deMicheli.time.module <-  traj.deMicheli$time[names(traj.deMicheli$time) %in% colnames(sce.deMicheli.module)]
+
+# Create expression and sample objects
+expression.deMicheli.module <- as.matrix(t(logcounts(sce.deMicheli.module)))
+group_name.deMicheli.module <- as.factor(sce.deMicheli.module$sample)
+
+# Compute gene importances
+gimp.deMicheli.module <- gene_importances(x = expression.deMicheli.module,
+                                        time = traj.deMicheli.time.module,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.deMicheli.module$qvalue <- p.adjust(p = gimp.deMicheli.module$pvalue, method = "BH")
+gene_sel.deMicheli.module <- gimp.deMicheli.module$gene[gimp.deMicheli.module$qvalue < .05]
+expr_sel.deMicheli.module <- scale_quantile(expression.deMicheli.module[, gene_sel.deMicheli.module])
+
+saveRDS(gimp.deMicheli.module, file = "gimp_deMicheli_module_no_muscle")
+
+# Extract modules
+modules.deMicheli.module <- extract_modules(expr_sel.deMicheli.module,
+                                          time = traj.deMicheli.time.module,
+                                          verbose = FALSE)
+
+saveRDS(modules.deMicheli.module, file = "modules_deMicheli_module_no_muscle")
 ```
+
+
 #### 4.2.6 De Micheli data - pathways (without mature skeletal muscle)
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-deMicheli-pathway-importances-no-muscle, eval=FALSE}
+# Filter out Mature skeletal muscle
+muscle_cells.pathway <- sce.deMicheli.pathway$cell_type == "d0_mature_skeletal_muscle" | sce.deMicheli.pathway$cell_type =="d5_mature_skeletal_muscle" | sce.deMicheli.pathway$cell_type == "d7_mature_skeletal_muscle"
+sce.deMicheli.pathway <- sce.deMicheli.pathway[, !muscle_cells.pathway]
+traj.deMicheli.time.pathway <-  traj.deMicheli$time[names(traj.deMicheli$time) %in% colnames(sce.deMicheli.pathway)]
+
+# Create expression and sample objects
+expression.deMicheli.pathway <- as.matrix(t(logcounts(sce.deMicheli.pathway)))
+group_name.deMicheli.pathway <- as.factor(sce.deMicheli.pathway$sample)
+
+# Compute gene importances
+gimp.deMicheli.pathway <- gene_importances(x = expression.deMicheli.pathway,
+                                        time = traj.deMicheli.time.pathway,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.deMicheli.pathway$qvalue <- p.adjust(p = gimp.deMicheli.pathway$pvalue, method = "BH")
+gene_sel.deMicheli.pathway <- gimp.deMicheli.pathway$gene[gimp.deMicheli.pathway$qvalue < .05]
+expr_sel.deMicheli.pathway <- scale_quantile(expression.deMicheli.pathway[, gene_sel.deMicheli.pathway])
+
+saveRDS(gimp.deMicheli.pathway, file = "gimp_deMicheli_pathway_no_muscle")
+
+# Extract modules
+modules.deMicheli.pathway <- extract_modules(expr_sel.deMicheli.pathway,
+                                          time = traj.deMicheli.time.pathway,
+                                          verbose = FALSE)
+
+saveRDS(modules.deMicheli.pathway, file = "modules_deMicheli_pathway_no_muscle")
 ```
+
+
 #### 4.2.7 Dell'Orso data - modules
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-dellOrso-module-importances, eval=FALSE}
+# Create expression and sample objects
+expression.dellOrso.module <- as.matrix(t(logcounts(sce.dellOrso.module)))
+group_name.dellOrso.module <- as.factor(sce.dellOrso.module$sample)
+
+# Compute gene importances
+gimp.dellOrso.module <- gene_importances(x = expression.dellOrso.module,
+                                        time = traj.dellOrso$time,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.dellOrso.module$qvalue <- p.adjust(p = gimp.dellOrso.module$pvalue, method = "BH")
+gene_sel.dellOrso.module <- gimp.dellOrso.module$gene[gimp.dellOrso.module$qvalue < .05]
+expr_sel.dellOrso.module <- scale_quantile(expression.dellOrso.module[, gene_sel.dellOrso.module])
+
+saveRDS(gimp.dellOrso.module, file = "gimp_dellOrso_module")
+
+# Extract modules
+modules.dellOrso.module <- extract_modules(expr_sel.dellOrso.module,
+                                          time = traj.dellOrso$time,
+                                          verbose = FALSE)
+
+saveRDS(modules.dellOrso.module, file = "modules_dellOrso_module")
 ```
+
+
 #### 4.2.8 Dell'Orso data - pathways
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-dellOrso-pathway-importances, eval=FALSE}
+# Create expression and sample objects
+expression.dellOrso.pathway <- as.matrix(t(logcounts(sce.dellOrso.pathway)))
+group_name.dellOrso.pathway <- as.factor(sce.dellOrso.pathway$sample)
+
+# Compute gene importances
+gimp.dellOrso.pathway <- gene_importances(x = expression.dellOrso.pathway,
+                                        time = traj.dellOrso$time,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.dellOrso.pathway$qvalue <- p.adjust(p = gimp.dellOrso.pathway$pvalue, method = "BH")
+gene_sel.dellOrso.pathway <- gimp.dellOrso.pathway$gene[gimp.dellOrso.pathway$qvalue < .05]
+expr_sel.dellOrso.pathway <- scale_quantile(expression.dellOrso.pathway[, gene_sel.dellOrso.pathway])
+
+saveRDS(gimp.dellOrso.pathway, file = "gimp_dellOrso_pathway")
+
+# Extract modules
+modules.dellOrso.pathway <- extract_modules(expr_sel.dellOrso.pathway,
+                                          time = traj.dellOrso$time,
+                                          verbose = FALSE)
+
+saveRDS(modules.dellOrso.pathway, file = "modules_dellOrso_pathway")
 ```
+
+
 #### 4.2.9 Dell'Orso data - modules (without PMs)
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-dellOrso-module-importances-no-PMs, eval=FALSE}
+# Filter out PMs
+primary_mbs.module <- sce.dellOrso.module$cell_type == "Primary_MB"
+sce.dellOrso.module <- sce.dellOrso.module[, !primary_mbs.module]
+traj.dellOrso.time.module <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.module)]
+
+# Create expression and sample objects
+expression.dellOrso.module <- as.matrix(t(logcounts(sce.dellOrso.module)))
+group_name.dellOrso.module <- as.factor(sce.dellOrso.module$sample)
+
+# Compute gene importances
+gimp.dellOrso.module <- gene_importances(x = expression.dellOrso.module,
+                                        time = traj.dellOrso.time.module,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.dellOrso.module$qvalue <- p.adjust(p = gimp.dellOrso.module$pvalue, method = "BH")
+gene_sel.dellOrso.module <- gimp.dellOrso.module$gene[gimp.dellOrso.module$qvalue < .05]
+expr_sel.dellOrso.module <- scale_quantile(expression.dellOrso.module[, gene_sel.dellOrso.module])
+
+saveRDS(gimp.dellOrso.module, file = "gimp_dellOrso_module_no_pm")
+
+# Extract modules
+modules.dellOrso.module <- extract_modules(expr_sel.dellOrso.module,
+                                          time = traj.dellOrso.time.module,
+                                          verbose = FALSE)
+
+saveRDS(modules.dellOrso.module, file = "modules_dellOrso_module_no_pm")
 ```
+
+
 #### 4.2.10 Dell'Orso data - pathways (without PMs)
-```{r, eval=FALSE}
-# TODO: copy from puhti script
+```{r compute-dellOrso-pathway-importances-no-PMs, eval=FALSE}
+# Filter out PMs
+primary_mbs.pathway <- sce.dellOrso.pathway$cell_type == "Primary_MB"
+sce.dellOrso.pathway <- sce.dellOrso.pathway[, !primary_mbs.pathway]
+traj.dellOrso.time.pathway <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.pathway)]
+
+# Create expression and sample objects
+expression.dellOrso.pathway <- as.matrix(t(logcounts(sce.dellOrso.pathway)))
+group_name.dellOrso.pathway <- as.factor(sce.dellOrso.pathway$sample)
+
+# Compute gene importances
+gimp.dellOrso.pathway <- gene_importances(x = expression.dellOrso.pathway,
+                                        time = traj.dellOrso.time.pathway,
+                                        num_permutations = 10,
+                                        num_threads = 8)
+
+gimp.dellOrso.pathway$qvalue <- p.adjust(p = gimp.dellOrso.pathway$pvalue, method = "BH")
+gene_sel.dellOrso.pathway <- gimp.dellOrso.pathway$gene[gimp.dellOrso.pathway$qvalue < .05]
+expr_sel.dellOrso.pathway <- scale_quantile(expression.dellOrso.pathway[, gene_sel.dellOrso.pathway])
+
+saveRDS(gimp.dellOrso.pathway, file = "gimp_dellOrso_pathway_no_pm")
+
+# Extract modules
+modules.dellOrso.pathway <- extract_modules(expr_sel.dellOrso.pathway,
+                                          time = traj.dellOrso.time.pathway,
+                                          verbose = FALSE)
+
+saveRDS(modules.dellOrso.pathway, file = "modules_dellOrso_pathway_no_pm")
 ```
 
 
