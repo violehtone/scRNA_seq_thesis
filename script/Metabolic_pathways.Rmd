@@ -41,12 +41,15 @@ library(ggplot2)
 
 ### 1.2 Load pre-calculated data
 **Single Cell Experiments**
-```{r load-objects}
+```{r load-denoised-sce-all-genes, eval=FALSE}
 # Load pre-processed sce objects
 denoised.sce <- readRDS("./../saved/R_objects/denoised_sce")
 denoised.sce.deMicheli <- readRDS("./../saved/R_objects/denoised_sce_deMicheli")
 denoised.sce.dellOrso <- readRDS("./../saved/R_objects/denoised_sce_dellOrso")
+```
 
+
+```{r load-objects}
 # Load datasets with metabolic genes only
 denoised.sce.m <- readRDS("./../saved/R_objects/denoised_sce_m")
 denoised.sce.deMicheli.m <- readRDS("./../saved/R_objects/denoised_sce_deMicheli_m")
