@@ -31,7 +31,7 @@ library(scran)
 
 ### 1.2 Load pre-calculated data
 **Single Cell Experiments**
-```{r load-sce-objects}
+```{r load-sce-objects, eval=FALSE}
 # Load datasets with metabolic genes only
 denoised.sce.m <- readRDS("./../saved/R_objects/denoised_sce_m")
 denoised.sce.deMicheli.m <- readRDS("./../saved/R_objects/denoised_sce_deMicheli_m")
