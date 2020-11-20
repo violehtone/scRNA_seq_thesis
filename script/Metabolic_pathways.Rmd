@@ -24,34 +24,19 @@ The aggregation of gene expression values into modules / pathways, and the subse
 ## 1. Load packages and data
 ### 1.1 Load packages
 ```{r load-packages, message=FALSE}
-# TODO: Remove unused libraries
 library(SCORPIUS)
-library(scater)
 library(scran)
 library(SingleCellExperiment)
 library(dplyr)
 library(SingleR)
-library(igraph)
 library(stats)
-library(cluster)
 library(pheatmap)
-library(fossil)
-library(Seurat)
-library(reshape)
 library(data.table)
-library(scRNAseq)
-library(org.Mm.eg.db)
-library(tidyr)
-library(BBmisc)
 library(KEGGREST)
 library(RColorBrewer)
-library(ggpubr)
-library(grid)
 library(gridExtra)
-library(plyr)
-library(stringr)
-library(ggrepel)
 library(gplots)
+library(ggplot2)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -570,9 +555,41 @@ dev.off()
 #### 3.2.2 Gimp: Without mature skeletal muscle
 ##### 3.2.2.1 Compute gene importances
 ```{r gimp-modules-deMicheli-metabolic-genes-no-muscle, eval=FALSE}
+muscle_cells <- denoised.sce.deMicheli$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli$cell_type == "d7_mature_skeletal_muscle"
+denoised.sce.deMicheli.f <- denoised.sce.deMicheli[, !muscle_cells]
 
-#TODO (copy from Puhti script)
+muscle_cells.m <- denoised.sce.deMicheli.m$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type == "d7_mature_skeletal_muscle"
+denoised.sce.deMicheli.m.f <- denoised.sce.deMicheli.m[, !muscle_cells.m]
 
+# Define expression of metabolic genes
+expression.deMicheli.m <- as.matrix(t(logcounts(denoised.sce.deMicheli.m.f)))
+
+# Calculate trajectory with all genes but without skeletal muscle
+expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli.f)))
+set.seed(123)
+space.deMicheli <- reduce_dimensionality(expression.deMicheli, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.deMicheli <- infer_trajectory(space.deMicheli)
+traj.deMicheli <- reverse_trajectory(traj.deMicheli)
+
+# Gimp
+gimp.deMicheli.m <- gene_importances(x = expression.deMicheli.m,
+                                     time = traj.deMicheli$time,
+                                     num_permutations = 10,
+                                     num_threads = 8)
+
+saveRDS(gimp.deMicheli.m, file = "./../saved/R_objects/gimp_deMicheli_m_no_muscle")
+
+gimp.deMicheli.m$qvalue <- p.adjust(p = gimp.deMicheli.m$pvalue, method = "BH")
+gene_sel.deMicheli.m <- gimp.deMicheli.m$gene[gimp.deMicheli.m$qvalue < .05]
+expr_sel.deMicheli.m <- scale_quantile(expression.deMicheli.m[, gene_sel.deMicheli.m])
+
+# Modules
+modules.deMicheli.m <- extract_modules(expr_sel.deMicheli.m,
+                                       time = traj.deMicheli$time,
+                                       verbose = FALSE)
+
+saveRDS(modules.deMicheli.m, file = "./../saved/R_objects/modules_deMicheli_m_no_muscle")
 ```
 
 
@@ -689,8 +706,41 @@ dev.off()
 ##### 3.3.2.1 Compute gene importances
 #### 5.2.2 Compute gene importances (optional)
 ```{r gimp-modules-dellOrso-metabolic-genes-without-pm, eval=FALSE}
+# Subset PMs from both datasets
+primary_mbs <- denoised.sce.dellOrso$cell_type == "Primary_MB"
+denoised.sce.dellOrso.f <- denoised.sce.dellOrso[, !primary_mbs]
 
-#TODO (copy from Puhti script)
+primary_mbs.m <- denoised.sce.dellOrso.m$cell_type == "Primary_MB"
+denoised.sce.dellOrso.m.f <- denoised.sce.dellOrso.m[, !primary_mbs.m]
+
+# Define expression of metabolic genes
+expression.dellOrso.m <- as.matrix(t(logcounts(denoised.sce.dellOrso.m.f)))
+
+# Calculate trajectory with all genes but without skeletal muscle
+expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso.f)))
+set.seed(123)
+space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
+set.seed(123)
+traj.dellOrso <- infer_trajectory(space.dellOrso)
+
+# Gimp
+gimp.dellOrso.m <- gene_importances(x = expression.dellOrso.m,
+                                     time = traj.dellOrso$time,
+                                     num_permutations = 10,
+                                     num_threads = 8)
+
+saveRDS(gimp.dellOrso.m, file = "./../saved/R_objects/gimp_dellOrso_m_no_primaryMB")
+
+gimp.dellOrso.m$qvalue <- p.adjust(p = gimp.dellOrso.m$pvalue, method = "BH")
+gene_sel.dellOrso.m <- gimp.dellOrso.m$gene[gimp.dellOrso.m$qvalue < .05]
+expr_sel.dellOrso.m <- scale_quantile(expression.dellOrso.m[, gene_sel.dellOrso.m])
+
+# Modules
+modules.dellOrso.m <- extract_modules(expr_sel.dellOrso.m,
+                                       time = traj.dellOrso$time,
+                                       verbose = FALSE)
+
+saveRDS(modules.dellOrso.m, file = "./../saved/R_objects/modules_dellOrso_m_no_primaryMB")
 
 ```
 
@@ -767,9 +817,21 @@ pred.dellOrso.m <- readRDS("./../saved/R_objects/pred_dellOrso_m")
 
 #### 4.1.2 Predict cell types (optional)
 ```{r predict-cell-types-using-mteabolic-genes, eval=FALSE}
+# De Micheli
+pred.deMicheli.m <- SingleR(test = denoised.sce.m,
+                                   assay.type.test = "logcounts",
+                                   ref = denoised.sce.deMicheli.m,
+                                   labels = denoised.sce.deMicheli.m$cell_type)
 
-# TODO (copy from Puhti script)
+saveRDS(pred.deMicheli.m, file = "./../saved/R_objects/pred_deMicheli_m")
 
+## Dell'Orso
+pred.dellOrso.m <- SingleR(test = denoised.sce.m,
+                                  assay.type.test = "logcounts",
+                                  ref = denoised.sce.dellOrso.m,
+                                  labels = denoised.sce.dellOrso.m$cell_type)
+
+saveRDS(pred.dellOrso.m, file = "./../saved/R_objects/pred_dellOrso_m")
 ```
 
 #### 4.1.3 Inspect predictions
@@ -821,9 +883,29 @@ pred.dellOrso.m.no.pm <- readRDS("./../saved/R_objects/pred_dellOrso_m_no_pm")
 
 #### 4.2.2 Predict cell types (optional)
 ```{r predict-cell-types-using-metabolic-genes-filtered-cell-types, eval=FALSE}
+# Filter out primary MBs and mature skeletal muscle
+muscle_cells <- denoised.sce.deMicheli.m$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type == "d7_mature_skeletal_muscle"
+denoised.sce.deMicheli.m.no.muscle <- denoised.sce.deMicheli.m[, !muscle_cells]
 
-# TODO (copy from Puhti script)
+primary_mbs <- denoised.sce.dellOrso.m$cell_type == "Primary_MB"
+denoised.sce.dellOrso.m.no.pm <- denoised.sce.dellOrso.m[, !primary_mbs]
 
+
+# De Micheli
+pred.deMicheli.m <- SingleR(test = denoised.sce.m,
+                            assay.type.test = "logcounts",
+                            ref = denoised.sce.deMicheli.m.no.muscle,
+                            labels = denoised.sce.deMicheli.m.no.muscle$cell_type)
+
+saveRDS(pred.deMicheli.m.no.muscle, file = "pred_deMicheli_m_no_muscle")
+
+## Dell'Orso
+pred.dellOrso.m <- SingleR(test = denoised.sce.m,
+                           assay.type.test = "logcounts",
+                           ref = denoised.sce.dellOrso.m.no.pm,
+                           labels = denoised.sce.dellOrso.m.no.pm$cell_type)
+
+saveRDS(pred.dellOrso.m.no.pm, file = "./../saved/R_objects/pred_dellOrso_m_no_pm")
 ```
 
 #### 4.2.3 Inspect predictions
