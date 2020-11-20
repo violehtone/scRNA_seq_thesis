@@ -124,37 +124,37 @@ all.markers.deMicheli.df <- data.table("d0_mature_skeletal_muscle" = unique(unli
 write.csv(all.markers.deMicheli.df, file ="./../saved/tables/all_markers_deMicheli.csv")
 
 # Examine the expression of the marker genes for each label in the test dataset
-pdf("./../saved/figures/heatmap_deMicheli_d0_muscle.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_d0_muscle.pdf")
 plotHeatmap(denoised.sce,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_d0_musc.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_d0_musc.pdf")
 plotHeatmap(denoised.sce,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_d5_muscle.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_d5_muscle.pdf")
 plotHeatmap(denoised.sce,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_d5_musc.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_d5_musc.pdf")
 plotHeatmap(denoised.sce,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_d7_muscle.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_d7_muscle.pdf")
 plotHeatmap(denoised.sce,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_d7_musc.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_d7_musc.pdf")
 plotHeatmap(denoised.sce,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
@@ -223,37 +223,37 @@ dev.off()
 all.markers.deMicheli <- metadata(pred.deMicheli.cc.genes)$de.genes
 
 # Examine the expression of the marker genes for each label in the test dataset
-pdf("./../saved/figures/heatmap_deMicheli_cc_genes_d0_muscle.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_cc_genes_d0_muscle.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_cc_genes_d0_musc.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_cc_genes_d0_musc.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_cc_genes_d5_muscle.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_cc_genes_d5_muscle.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_cc_genes_d5_musc.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_cc_genes_d5_musc.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_cc_genes_d7_muscle.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_cc_genes_d7_muscle.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
             fontsize_row = 2)
 dev.off()
-pdf("./../saved/figures/heatmap_deMicheli_cc_genes_d7_musc.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_cc_genes_d7_musc.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_deMicheli",
             features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
@@ -572,7 +572,7 @@ dev.off()
 all.markers.dellOrso <- metadata(pred.dellOrso)$de.genes
 
 # Examine the expression of the marker genes for each label in the test dataset
-pdf("./../saved/figures/heatmap_dellOrso_homeostatic_muscs.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_homeostatic_muscs.pdf")
 plotHeatmap(denoised.sce, 
             order_columns_by="cell_type_dellOrso",
             features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
@@ -580,14 +580,14 @@ plotHeatmap(denoised.sce,
 dev.off()
 
 
-pdf("./../saved/figures/heatmap_dellOrso_inj_60h_muscs.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_inj_60h_muscs.pdf")
 plotHeatmap(denoised.sce, 
             order_columns_by="cell_type_dellOrso",
             features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
             fontsize_row = 2)
 dev.off()
 
-pdf("./../saved/figures/heatmap_dellOrso_primary_mb.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_primary_mb.pdf")
 plotHeatmap(denoised.sce, 
             order_columns_by="cell_type_dellOrso",
             features=unique(unlist(all.markers.dellOrso$Primary_MB)),
@@ -652,7 +652,7 @@ dev.off()
 all.markers.dellOrso <- metadata(pred.dellOrso.cc.genes)$de.genes
 
 # Examine the expression of the marker genes for each label in the test dataset
-pdf("./../saved/figures/heatmap_dellOrso_cc_genes_homeostatic_muscs.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_cc_genes_homeostatic_muscs.pdf")
 plotHeatmap(denoised.sce.cc.genes, 
             order_columns_by="cell_type_dellOrso",
             features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
@@ -660,14 +660,14 @@ plotHeatmap(denoised.sce.cc.genes,
 dev.off()
 
 
-pdf("./../saved/figures/heatmap_dellOrso_cc_genes_inj_60h_muscs.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_cc_genes_inj_60h_muscs.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_dellOrso",
             features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
             fontsize_row = 2)
 dev.off()
 
-pdf("./../saved/figures/heatmap_dellOrso_cc_genes_primary_mb.pdf")
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_cc_genes_primary_mb.pdf")
 plotHeatmap(denoised.sce.cc.genes,
             order_columns_by="cell_type_dellOrso",
             features=unique(unlist(all.markers.dellOrso$Primary_MB)),
