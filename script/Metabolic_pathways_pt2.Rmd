@@ -523,7 +523,7 @@ expr_sel.dellOrso.pathway <- scale_quantile(expression.dellOrso.pathway[, gene_s
 ########################################
 # Remove primary myoblast cells and define expression and group objects
 primary.mbs <- sce.dellOrso.module$cell_type == "Primary_MB"
-sce.dellOrso.module.f <- sce.dellOrso.module[, !muscle.cells.module]
+sce.dellOrso.module.f <- sce.dellOrso.module[, !primary.mbs]
 expression.dellOrso.module.f <- as.matrix(t(logcounts(sce.dellOrso.module.f)))
 group_name.dellOrso.module.f <- as.factor(sce.dellOrso.module.f$cell_type)
 
@@ -540,7 +540,7 @@ expr_sel.dellOrso.module.f <- scale_quantile(expression.dellOrso.module.f[, gene
 #########################################
 # Remove primary myoblast cells and define expression and group objects
 primary.mbs <- sce.dellOrso.pathway$cell_type == "Primary_MB"
-sce.dellOrso.pathway.f <- sce.dellOrso.pathway[, !muscle.cells.pathway]
+sce.dellOrso.pathway.f <- sce.dellOrso.pathway[, !primary.mbs]
 expression.dellOrso.pathway.f <- as.matrix(t(logcounts(sce.dellOrso.pathway.f)))
 group_name.dellOrso.pathway.f <- as.factor(sce.dellOrso.pathway.f$cell_type)
 
@@ -550,6 +550,7 @@ modules.dellOrso.pathway.f <- readRDS("./../saved/R_objects/modules_dellOrso_pat
 gimp.dellOrso.pathway.f$qvalue <- p.adjust(p = gimp.dellOrso.pathway.f$pvalue, method = "BH")
 gene_sel.dellOrso.pathway.f <- gimp.dellOrso.pathway.f$gene[gimp.dellOrso.pathway.f$qvalue < .05]
 expr_sel.dellOrso.pathway.f <- scale_quantile(expression.dellOrso.pathway.f[, gene_sel.dellOrso.pathway.f])
+
 ```
 
 
@@ -1059,10 +1060,6 @@ p.dellOrso.pathways.f
 dev.off()
 
 pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_pathways_f_names.pdf")
-p.dellOrso.pathways.names.f
-dev.off()
-
-jpeg("./../saved/figures/gimp_heatmap_dellOrso_metabolic_pathways_f_names.jpeg")
 p.dellOrso.pathways.names.f
 dev.off()
 ```
