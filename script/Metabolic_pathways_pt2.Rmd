@@ -23,11 +23,10 @@ library(SingleCellExperiment)
 library(stats)
 library(data.table)
 library(dplyr)
-
-
 library(gridExtra)
 library(ggplot2)
 library(gplots)
+library(scran)
 ```
 
 ### 1.2 Load pre-calculated data
@@ -1337,3 +1336,101 @@ venn.pathways.f <- venn(data = list(primary_data = modules.primary.pathway$featu
 # Print the intersections between datasets
 print(attr(venn.pathways.f ,"intersections"))
 ```
+
+## 5. DE modules / pathways between the primary data samples
+### 5.1 DE modules
+**T-test**
+```{r de-modules-primary-data-ttest}
+marker.modules <- findMarkers(sce.primary.module,
+                              groups = sce.primary.module$sample,
+                              lfc = log2(1.5))
+
+# Choose markers for control sample
+control.marker.modules <- marker.modules[["control"]]
+
+# Save marker information to .csv file
+write.csv(control.marker.modules, file = "./../saved/tables/control_marker_metabolic_modules.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.marker.modules[control.marker.modules$Top <= 6,]
+
+# Extract the marker effect sizes
+logFCs <- getMarkerEffects(best.set)
+
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Metabolic marker modules (t-test): Control vs. other samples (metabolic genes)", fontsize_row = 12)
+```
+
+**WMW test**
+```{r de-modules-primary-data-wmwtest}
+# Find markers by sample
+marker.modules.wmw <- findMarkers(sce.primary.module,
+                              groups = sce.primary.module$sample,
+                              lfc = log2(1.5),
+                              test = "wilcox")
+
+# Choose markers for control sample
+control.markers.modules.wmw <- marker.modules.wmw[["control"]]
+
+# Save marker information to .csv file
+write.csv(control.markers.modules.wmw, file = "./../saved/tables/control_marker_metabolic_modules_wmw.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.markers.modules.wmw[control.markers.modules.wmw$Top <= 6,]
+
+# Extract the area under curves
+AUCs <- getMarkerEffects(best.set, prefix="AUC")
+
+# Plot results in a heatmap
+pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Metabolic marker modules (wmw): Control vs. other samples")
+```
+
+
+### 5.1 DE pathways
+```{r de-pathways-primary-data-ttest}
+marker.pathways <- findMarkers(sce.primary.pathway,
+                              groups = sce.primary.pathway$sample,
+                              lfc = log2(1.5))
+
+# Choose markers for control sample
+control.marker.pathways <- marker.pathways[["control"]]
+
+# Save marker information to .csv file
+write.csv(control.marker.pathways, file = "./../saved/tables/control_marker_metabolic_pathways.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.marker.pathways[control.marker.pathways$Top <= 6,]
+
+# Extract the marker effect sizes
+logFCs <- getMarkerEffects(best.set)
+
+pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "Metabolic marker pathways (t-test): Control vs. other samples (metabolic genes)", fontsize_row = 12)
+```
+
+**WMW test**
+```{r de-pathways-primary-data-wmwtest}
+# Find markers by sample
+marker.pathways.wmw <- findMarkers(sce.primary.pathway,
+                                  groups = sce.primary.pathway$sample,
+                                  lfc = log2(1.5),
+                                  test = "wilcox")
+
+# Choose markers for control sample
+control.markers.pathways.wmw <- marker.pathways.wmw[["control"]]
+
+# Save marker information to .csv file
+write.csv(control.markers.pathways.wmw, file = "./../saved/tables/control_marker_metabolic_pathways_wmw.csv")
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
+best.set <- control.markers.pathways.wmw[control.markers.pathways.wmw$Top <= 6,]
+
+# Extract the area under curves
+AUCs <- getMarkerEffects(best.set, prefix="AUC")
+
+# Plot results in a heatmap
+pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Metabolic marker pathways (wmw): Control vs. other samples")
+```
+
+
+
+
+
