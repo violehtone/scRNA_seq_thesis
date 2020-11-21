@@ -27,6 +27,7 @@ library(gridExtra)
 library(ggplot2)
 library(gplots)
 library(scran)
+library(pheatmap)
 ```
 
 ### 1.2 Load pre-calculated data
