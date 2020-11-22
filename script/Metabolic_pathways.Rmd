@@ -26,6 +26,7 @@ The aggregation of gene expression values into modules / pathways, and the subse
 ```{r load-packages, message=FALSE}
 library(SCORPIUS)
 library(scran)
+library(scater)
 library(SingleCellExperiment)
 library(dplyr)
 library(SingleR)
@@ -903,6 +904,10 @@ table(Label=pred.deMicheli.m$labels, Removed=to.remove)
 
 # Delta distribution
 plotScoreDistribution(results = pred.deMicheli.m, show = "delta.med")
+
+# Markers
+all.markers.deMicheli <- metadata(pred.deMicheli.m)$de.genes
+denoised.sce.m$cell_type_deMicheli.m <- pred.deMicheli.m$labels
 ```
 
 **Dell'Orso**
@@ -916,7 +921,90 @@ table(Label=pred.dellOrso.m$labels, Removed=to.remove)
 
 # Delta distribution
 plotScoreDistribution(results = pred.dellOrso.m, show = "delta.med")
+
+# Markers
+all.markers.dellOrso <- metadata(pred.dellOrso.m)$de.genes
+denoised.sce.m$cell_type_dellOrso.m <- pred.dellOrso.m$labels
 ```
+
+
+**Pdf heatmaps**
+```{r create-pdf-files-of-gene-heatmaps-metabolic-genes, eval=FALSE}
+#########################
+# De Micheli predcitions
+#########################
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_metabolic_genes_d0muscle.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m",
+            features=unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
+            fontsize_row = 5)
+dev.off()
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_metabolic_genes_d0musc.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m",
+            features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_metabolic_genes_d5muscle.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m",
+            features=unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_metabolic_genes_d5musc.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m",
+            features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_metabolic_genes_d7muscle.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m",
+            features=unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_metabolic_genes_d7musc.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m",
+            features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+#######################
+# Dell'Orso predcitions
+#######################
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_hom.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_dellOrso.m",
+            features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+            fontsize_row = 5)
+dev.off()
+
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_inj60.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_dellOrso.m",
+            features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+            fontsize_row = 5)
+dev.off()
+
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_pmb.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_dellOrso.m",
+            features=unique(unlist(all.markers.dellOrso$Primary_MB)),
+            fontsize_row = 5)
+dev.off()
+```
+
+
 
 
 ### 4.2 Cell annotation: Without mature skeletal muscle and primary myoblasts
@@ -925,6 +1013,13 @@ plotScoreDistribution(results = pred.dellOrso.m, show = "delta.med")
 # Load prediction objects
 pred.deMicheli.m.no.muscle <- readRDS("./../saved/R_objects/pred_deMicheli_m_no_muscle")
 pred.dellOrso.m.no.pm <- readRDS("./../saved/R_objects/pred_dellOrso_m_no_pm")
+
+# Filter muscle / pm cells
+muscle_cells <- denoised.sce.deMicheli.m$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type == "d7_mature_skeletal_muscle"
+denoised.sce.deMicheli.m.no.muscle <- denoised.sce.deMicheli.m[, !muscle_cells]
+
+primary_mbs <- denoised.sce.dellOrso.m$cell_type == "Primary_MB"
+denoised.sce.dellOrso.m.no.pm <- denoised.sce.dellOrso.m[, !primary_mbs]
 ```
 
 #### 4.2.2 Predict cell types (optional)
@@ -977,6 +1072,10 @@ table(Label=pred.deMicheli.m.no.muscle$labels, Removed=to.remove)
 
 # Delta distribution
 plotScoreDistribution(results = pred.deMicheli.m.no.muscle, show = "delta.med")
+
+# Markers
+all.markers.deMicheli <- metadata(pred.deMicheli.m.no.muscle)$de.genes
+denoised.sce.m$cell_type_deMicheli.m.f <- pred.deMicheli.m.no.muscle$labels
 ```
 
 **Dell'Orso**
@@ -990,7 +1089,63 @@ table(Label=pred.dellOrso.m.no.pm$labels, Removed=to.remove)
 
 # Delta distribution
 plotScoreDistribution(results = pred.dellOrso.m.no.pm, show = "delta.med")
+
+# Markers
+all.markers.dellOrso <- metadata(pred.dellOrso.m.no.pm)$de.genes
+denoised.sce.m$cell_type_dellOrso.m.f <- pred.dellOrso.m.no.pm$labels
 ```
+
+
+**Pdf heatmaps**
+```{r create-pdf-files-of-gene-heatmaps-metabolic-genes-no-muscle-or-pm, eval=FALSE}
+#########################
+# De Micheli predcitions
+#########################
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_filtered_metabolic_genes_d0musc.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m.f",
+            features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_filtered_metabolic_genes_d5musc.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m.f",
+            features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_filtered_metabolic_genes_d7musc.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_deMicheli.m.f",
+            features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+#######################
+# Dell'Orso predcitions
+#######################
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_filtered_metabolic_genes_hom.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_dellOrso.m.f",
+            features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+            fontsize_row = 5)
+dev.off()
+
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_filtered_metabolic_genes_inj60.pdf")
+plotHeatmap(denoised.sce.m,
+            order_columns_by="cell_type_dellOrso.m.f",
+            features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+            fontsize_row = 5)
+dev.off()
+```
+
+
+
+
+
 
 ### 4.3 Cell annotation: using only important genes
 #### 4.3.1 Load predictions
@@ -1005,9 +1160,12 @@ important.genes.dellOrso <- modules.dellOrso.m$feature
 
 # Subset these genes from the datasets
 primary.important.deMicheli <- denoised.sce.m[rownames(denoised.sce.m) %in% important.genes.deMicheli, ]
+print(rownames(primary.important.deMicheli))
+
 denoised.sce.deMicheli.important.genes <- denoised.sce.deMicheli.m[rownames(denoised.sce.deMicheli.m) %in% important.genes.deMicheli, ]
 
 primary.important.dellOrso <- denoised.sce.m[rownames(denoised.sce.m) %in% important.genes.dellOrso, ]
+print(rownames(primary.important.dellOrso))
 denoised.sce.dellOrso.important.genes <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% important.genes.dellOrso, ]
 ```
 
@@ -1064,6 +1222,10 @@ table(Label=pred.deMicheli.important.genes$labels, Removed=to.remove)
 
 # Delta distribution
 plotScoreDistribution(results = pred.deMicheli.important.genes, show = "delta.med")
+
+# Markers
+all.markers.deMicheli <- metadata(pred.deMicheli.important.genes)$de.genes
+primary.important.deMicheli$cell_type_deMicheli <- pred.deMicheli.important.genes$labels
 ```
 
 **Dell'Orso**
@@ -1077,6 +1239,87 @@ table(Label=pred.dellOrso.important.genes$labels, Removed=to.remove)
 
 # Delta distribution
 plotScoreDistribution(results = pred.dellOrso.important.genes, show = "delta.med")
+
+# Markers
+all.markers.dellOrso <- metadata(pred.dellOrso.important.genes)$de.genes
+primary.important.dellOrso$cell_type_dellOrso <- pred.dellOrso.important.genes$labels
+```
+
+
+**Save PDFs**
+```{r create-pdf-files-of-gene-heatmaps-important-genes, eval=FALSE}
+#########################
+# De Micheli predcitions
+#########################
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_important_genes_d0muscle.pdf")
+plotHeatmap(primary.important.deMicheli,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_mature_skeletal_muscle)),
+            fontsize_row = 5)
+dev.off()
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_important_genes_d0musc.pdf")
+plotHeatmap(primary.important.deMicheli,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d0_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_important_genes_d5muscle.pdf")
+plotHeatmap(primary.important.deMicheli,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_mature_skeletal_muscle)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_important_genes_d5musc.pdf")
+plotHeatmap(primary.important.deMicheli,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d5_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_important_genes_d7muscle.pdf")
+plotHeatmap(primary.important.deMicheli,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_mature_skeletal_muscle)),
+            fontsize_row = 5)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_deMicheli_important_genes_d7musc.pdf")
+plotHeatmap(primary.important.deMicheli,
+            order_columns_by="cell_type_deMicheli",
+            features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
+            fontsize_row = 5)
+dev.off()
+
+#######################
+# Dell'Orso predcitions
+#######################
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_important_genes_hom.pdf")
+plotHeatmap(primary.important.dellOrso,
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+            fontsize_row = 5)
+dev.off()
+
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_important_genes_inj60.pdf")
+plotHeatmap(primary.important.dellOrso,
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+            fontsize_row = 5)
+dev.off()
+
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_important_genes_pmb.pdf")
+plotHeatmap(primary.important.dellOrso,
+            order_columns_by="cell_type_dellOrso",
+            features=unique(unlist(all.markers.dellOrso$Primary_MB)),
+            fontsize_row = 5)
+dev.off()
 ```
 
 
