@@ -452,7 +452,7 @@ modules.primary.m <- extract_modules(expr_sel.primary.m,
 
 ### 3.1.3 Visualize gene importances
 **Make a trajectory heatmap**
-```{r primary-data-gimp-modules-metabolic-genes}
+```{r primary-data-gimp-modules-metabolic-genes, eval=FALSE}
 draw_trajectory_heatmap(expr_sel.primary.m, 
                         time = traj.primary$time,
                         progression_group = group_name.primary.m,
@@ -521,7 +521,7 @@ modules.deMicheli.m <- extract_modules(expr_sel.deMicheli.m,
 
 ##### 3.2.1.2 Visualize gene importances
 **Make a trajectory heatmap**
-```{r deMicheli-gimp-modules-metabolic-genes}
+```{r deMicheli-gimp-modules-metabolic-genes, eval=FALSE}
 draw_trajectory_heatmap(expr_sel.deMicheli.m, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli.m,
@@ -598,7 +598,7 @@ saveRDS(modules.deMicheli.m, file = "./../saved/R_objects/modules_deMicheli_m_no
 
 ##### 3.2.2.2 Visualize gene importances
 **Make a trajectory heatmap**
-```{r visualization-deMicheli-gimp-without-skeletal-muscle}
+```{r visualization-deMicheli-gimp-without-skeletal-muscle, eval=FALSE}
 draw_trajectory_heatmap(expr_sel.deMicheli.m.f, 
                         time = traj.deMicheli.f.time,
                         progression_group = group_name.deMicheli.m.f,
@@ -669,7 +669,7 @@ modules.dellOrso.m <- extract_modules(expr_sel.dellOrso.m,
 
 ##### 3.3.1.2 Visualize gene importances
 **Make a trajectory heatmap**
-```{r dellOrso-gimp-modules-metabolic-genes}
+```{r dellOrso-gimp-modules-metabolic-genes, eval=FALSE}
 draw_trajectory_heatmap(expr_sel.dellOrso.m, 
                         time = reverse_trajectory(traj.dellOrso)$time,
                         progression_group = group_name.dellOrso.m,
@@ -749,7 +749,7 @@ saveRDS(modules.dellOrso.m, file = "./../saved/R_objects/modules_dellOrso_m_no_p
 
 ##### 3.3.2.2 Visualize gene importances
 **Make a trajectory heatmap**
-```{r dellOrso-gimp-modules-metabolic-genes-no-pm}
+```{r dellOrso-gimp-modules-metabolic-genes-no-pm, eval=FALSE}
 draw_trajectory_heatmap(expr_sel.dellOrso.m.f, 
                         time = traj.dellOrso.f.time,
                         progression_group = group_name.dellOrso.m.f,
@@ -967,7 +967,7 @@ tab.dellOrso.m
 
 #### 4.2.4 Diagnostic plots
 **De Micheli**
-```{r deMicheli-annotation-diagnostic-plots-metabolic-genes-no-muscle, eval=FALSE}
+```{r deMicheli-annotation-diagnostic-plots-metabolic-genes-no-muscle}
 # Score heatmap
 plotScoreHeatmap(pred.deMicheli.m.no.muscle, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
 
@@ -980,7 +980,7 @@ plotScoreDistribution(results = pred.deMicheli.m.no.muscle, show = "delta.med")
 ```
 
 **Dell'Orso**
-```{r dellOrso-annotation-diagnostic-plots-metabolic-genes-no-pm, eval=FALSE}
+```{r dellOrso-annotation-diagnostic-plots-metabolic-genes-no-pm}
 # Score heatmap
 plotScoreHeatmap(pred.dellOrso.m.no.pm, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
 
