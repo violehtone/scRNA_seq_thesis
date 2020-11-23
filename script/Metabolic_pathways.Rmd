@@ -899,7 +899,7 @@ tab.dellOrso.m
 plotScoreHeatmap(pred.deMicheli.m, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.deMicheli.m, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.deMicheli.m, min.diff.next = 0.1)
 table(Label=pred.deMicheli.m$labels, Removed=to.remove)
 
 # Delta distribution
@@ -916,7 +916,7 @@ denoised.sce.m$cell_type_deMicheli.m <- pred.deMicheli.m$labels
 plotScoreHeatmap(pred.dellOrso.m, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.dellOrso.m, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.dellOrso.m, min.diff.next = 0.1)
 table(Label=pred.dellOrso.m$labels, Removed=to.remove)
 
 # Delta distribution
@@ -1067,7 +1067,7 @@ tab.dellOrso.m
 plotScoreHeatmap(pred.deMicheli.m.no.muscle, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.deMicheli.m.no.muscle, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.deMicheli.m.no.muscle, min.diff.next = 0.1)
 table(Label=pred.deMicheli.m.no.muscle$labels, Removed=to.remove)
 
 # Delta distribution
@@ -1084,7 +1084,7 @@ denoised.sce.m$cell_type_deMicheli.m.f <- pred.deMicheli.m.no.muscle$labels
 plotScoreHeatmap(pred.dellOrso.m.no.pm, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.dellOrso.m.no.pm, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.dellOrso.m.no.pm, min.diff.next = 0.1)
 table(Label=pred.dellOrso.m.no.pm$labels, Removed=to.remove)
 
 # Delta distribution
@@ -1217,7 +1217,7 @@ tab.dellOrso.m.important
 plotScoreHeatmap(pred.deMicheli.important.genes, annotation_col = as.data.frame(colData(primary.important.deMicheli)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.deMicheli.important.genes, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.deMicheli.important.genes, min.diff.next = 0.1)
 table(Label=pred.deMicheli.important.genes$labels, Removed=to.remove)
 
 # Delta distribution
@@ -1234,7 +1234,7 @@ primary.important.deMicheli$cell_type_deMicheli <- pred.deMicheli.important.gene
 plotScoreHeatmap(pred.dellOrso.important.genes, annotation_col = as.data.frame(colData(primary.important.dellOrso)[, "sample", drop = FALSE]), width = 10)
 
 # Remove low-quality cells
-to.remove <- pruneScores(pred.dellOrso.important.genes, min.diff.med = 0.2)
+to.remove <- pruneScores(pred.dellOrso.important.genes, min.diff.next = 0.1)
 table(Label=pred.dellOrso.important.genes$labels, Removed=to.remove)
 
 # Delta distribution
