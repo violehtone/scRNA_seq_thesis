@@ -1308,7 +1308,7 @@ if(!exists("modules.dellOrso.pathway.f")) {modules.dellOrso.pathway.f <- readRDS
 
 venn.modules <- venn(data = list(primary_data = modules.primary.module$feature,
                                  de_Micheli_data = modules.deMicheli.module$feature,
-                                 dellOrso_data = modules.dellOrso.module$feature))
+                                 dellOrso_data = modules.dellOrso.module.f$feature))
 
 # Print the intersections between datasets
 print(attr(venn.modules ,"intersections"))
@@ -1316,7 +1316,7 @@ print(attr(venn.modules ,"intersections"))
 
 venn.pathways <- venn(data = list(primary_data = modules.primary.pathway$feature,
                                  de_Micheli_data = modules.deMicheli.pathway$feature,
-                                 dellOrso_data = modules.dellOrso.pathway$feature))
+                                 dellOrso_data = modules.dellOrso.module.f$feature))
 
 # Print the intersections between datasets
 print(attr(venn.pathways ,"intersections"))

@@ -859,7 +859,7 @@ pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main
 ```{r load-singleR-predictions-metabolic-genes}
 # Load prediction objects
 pred.deMicheli.m <- readRDS("./../saved/R_objects/pred_deMicheli_m")
-pred.dellOrso.m <- readRDS("./../saved/R_objects/pred_dellOrso_m")
+#pred.dellOrso.m <- readRDS("./../saved/R_objects/pred_dellOrso_m")
 ```
 
 #### 4.1.2 Predict cell types (optional)
@@ -873,12 +873,12 @@ pred.deMicheli.m <- SingleR(test = denoised.sce.m,
 saveRDS(pred.deMicheli.m, file = "./../saved/R_objects/pred_deMicheli_m")
 
 ## Dell'Orso
-pred.dellOrso.m <- SingleR(test = denoised.sce.m,
-                                  assay.type.test = "logcounts",
-                                  ref = denoised.sce.dellOrso.m,
-                                  labels = denoised.sce.dellOrso.m$cell_type)
-
-saveRDS(pred.dellOrso.m, file = "./../saved/R_objects/pred_dellOrso_m")
+# pred.dellOrso.m <- SingleR(test = denoised.sce.m,
+#                                   assay.type.test = "logcounts",
+#                                   ref = denoised.sce.dellOrso.m,
+#                                   labels = denoised.sce.dellOrso.m$cell_type)
+# 
+# saveRDS(pred.dellOrso.m, file = "./../saved/R_objects/pred_dellOrso_m")
 ```
 
 #### 4.1.3 Inspect predictions
@@ -888,8 +888,8 @@ tab.deMicheli.m <- t(table(pred.deMicheli.m$pruned.labels, denoised.sce.m$sample
 tab.deMicheli.m
 
 # Dell'Orso
-tab.dellOrso.m <- t(table(pred.dellOrso.m$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
-tab.dellOrso.m
+# tab.dellOrso.m <- t(table(pred.dellOrso.m$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+# tab.dellOrso.m
 ```
 
 #### 4.1.4 Diagnostic plots
@@ -911,7 +911,7 @@ denoised.sce.m$cell_type_deMicheli.m <- pred.deMicheli.m$labels
 ```
 
 **Dell'Orso**
-```{r dellOrso-annotation-diagnostic-plots-metabolic-genes}
+```{r dellOrso-annotation-diagnostic-plots-metabolic-genes, eval=FALSE}
 # Score heatmap
 plotScoreHeatmap(pred.dellOrso.m, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
 
@@ -982,26 +982,26 @@ dev.off()
 #######################
 # Dell'Orso predcitions
 #######################
-pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_hom.pdf")
-plotHeatmap(denoised.sce.m,
-            order_columns_by="cell_type_dellOrso.m",
-            features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
-            fontsize_row = 5)
-dev.off()
-
-pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_inj60.pdf")
-plotHeatmap(denoised.sce.m,
-            order_columns_by="cell_type_dellOrso.m",
-            features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
-            fontsize_row = 5)
-dev.off()
-
-pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_pmb.pdf")
-plotHeatmap(denoised.sce.m,
-            order_columns_by="cell_type_dellOrso.m",
-            features=unique(unlist(all.markers.dellOrso$Primary_MB)),
-            fontsize_row = 5)
-dev.off()
+# pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_hom.pdf")
+# plotHeatmap(denoised.sce.m,
+#             order_columns_by="cell_type_dellOrso.m",
+#             features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+#             fontsize_row = 5)
+# dev.off()
+# 
+# pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_inj60.pdf")
+# plotHeatmap(denoised.sce.m,
+#             order_columns_by="cell_type_dellOrso.m",
+#             features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+#             fontsize_row = 5)
+# dev.off()
+# 
+# pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_pmb.pdf")
+# plotHeatmap(denoised.sce.m,
+#             order_columns_by="cell_type_dellOrso.m",
+#             features=unique(unlist(all.markers.dellOrso$Primary_MB)),
+#             fontsize_row = 5)
+# dev.off()
 ```
 
 
@@ -1141,9 +1141,6 @@ plotHeatmap(denoised.sce.m,
             fontsize_row = 5)
 dev.off()
 ```
-
-
-
 
 
 
