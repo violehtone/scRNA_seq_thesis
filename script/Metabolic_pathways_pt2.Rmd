@@ -1341,7 +1341,7 @@ print(attr(venn.pathways.f ,"intersections"))
 ## 5. DE modules / pathways between the primary data samples
 ### 5.1 DE modules
 **T-test**
-```{r de-modules-primary-data-ttest}
+```{r de-modules-primary-data-ttest, eval=FALSE}
 marker.modules <- findMarkers(sce.primary.module,
                               groups = sce.primary.module$sample,
                               lfc = log2(1.5))
@@ -1401,7 +1401,7 @@ pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main
 
 ### 5.1 DE pathways
 **T-test**
-```{r de-pathways-primary-data-ttest}
+```{r de-pathways-primary-data-ttest, eval=FALSE}
 marker.pathways <- findMarkers(sce.primary.pathway,
                               groups = sce.primary.pathway$sample,
                               lfc = log2(1.5))

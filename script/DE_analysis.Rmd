@@ -40,7 +40,7 @@ denoised.sce.cc$cluster.cc <- denoised.sce$cluster.cc
 ## 1. Primary data marker genes
 ### 1.1 Pairwise comparisons with t-test
 **Markers by sample: Control**
-```{r de-genes-primary-data-samples}
+```{r de-genes-primary-data-samples, eval=FALSE}
 # Find markers by sample
 markers.primary <- findMarkers(denoised.sce, 
                                groups = denoised.sce$sample,
@@ -63,7 +63,7 @@ pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), show_rownames = TRUE, show_c
 ```
 
 **Markers by cluster**
-```{r de-genes-primary-data-clusters}
+```{r de-genes-primary-data-clusters, eval=FALSE}
 # Find markers by sample
 markers.primary.clust <- findMarkers(denoised.sce, 
                                groups = denoised.sce$cluster,
@@ -86,7 +86,7 @@ for(cluster in unique(denoised.sce$cluster)) {
 ```
 
 **Markers by cell cycle corrected clusters**
-```{r de-genes-primary-data-clusters-cc}
+```{r de-genes-primary-data-clusters-cc, eval=FALSE}
 # Find markers by sample
 markers.primary.clust.cc <- findMarkers(denoised.sce, 
                                groups = denoised.sce$cluster.cc,

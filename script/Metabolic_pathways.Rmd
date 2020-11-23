@@ -811,7 +811,7 @@ print(attr(v.table.f ,"intersections"))
 
 ### 3.5   DE analysis of the shared metabolic genes with high importance in predicting the ordering of cells on trajectories
 **T-test**
-```{r de-analysis-of-metabolic-gimp-genes-ttest}
+```{r de-analysis-of-metabolic-gimp-genes-ttest, eval=FALSE}
 # Get list of important genes from the Venn diagram
 important.m.genes <- attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
 
@@ -1327,7 +1327,7 @@ dev.off()
 ## 5. Differential expression (DE) analysis with metabolic genes
 ### 5.1 Marker genes: Control vs. Cap samples
 **Using t-test**
-```{r marker-genes-metabolic-primary-data}
+```{r marker-genes-metabolic-primary-data, eval=FALSE}
 markers.primary <- findMarkers(denoised.sce.m,
                                groups = denoised.sce.m$sample,
                                lfc = log2(1.5))
