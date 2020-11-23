@@ -111,21 +111,34 @@ colpalette.primary["cap50_r8h"] <- "#FFFF33" # set purple -> yellow
 
 
 #### 2.1.1 Trajectory inference with all genes
-```{r primary-data-traj-inference}
-# Create expression and sample objects
-expression.primary <- as.matrix(t(logcounts(denoised.sce)))
+```{r primary-data-traj-inference, warning=FALSE, message=FALSE}
+# Load / create expression object
+try(expression.primary <- readRDS("./../saved/R_objects/expression_primary"), silent = TRUE)
+
+if(!exists("expression.primary")) {
+  expression.primary <- as.matrix(t(logcounts(denoised.sce)))
+  saveRDS(expression.primary, file = "./../saved/R_objects/expression_primary")
+}
+
+# Define group names
 group_name.primary <- as.factor(denoised.sce$sample)
 
-# Trajectory inference
-set.seed(123)
-space.primary <- reduce_dimensionality(expression.primary, dist = "spearman", ndim = 2)
-set.seed(123)
-traj.primary <- infer_trajectory(space.primary)
-traj.primary <- reverse_trajectory(traj.primary)
+# Load / compute reduced dimensions
+try(space.primary <- readRDS("./../saved/R_objects/space_primary"), silent = TRUE)
+if(!exists("space.primary")) {
+  set.seed(123)
+  space.primary <- reduce_dimensionality(expression.primary, dist = "spearman", ndim = 2)
+  saveRDS(space.primary, file = "./../saved/R_objects/space_primary")
+}
 
-# Save space and trajectory objects
-saveRDS(space.primary, file = "./../saved/R_objects/space_primary")
-saveRDS(traj.primary, file = "./../saved/R_objects/traj_primary")
+# Trajectory inference
+try(traj.primary <- readRDS("./../saved/R_objects/traj_primary"), silent = TRUE)
+if(!exists("traj.primary")) {
+  set.seed(123)
+  traj.primary <- infer_trajectory(space.primary)
+  traj.primary <- reverse_trajectory(traj.primary)
+  saveRDS(traj.primary, file = "./../saved/R_objects/traj_primary")
+}
 
 # Plot the trajectory
 draw_trajectory_plot(space = space.primary, 
@@ -210,7 +223,7 @@ for(gene in names(prog.groups)) {
 gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
                         marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
                         marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
-                        ncol = 5)
+                        ncol = 3)
 ```
 
 **EXTRA: Trajectory inference with all genes (but only Control, Cap50, and Cap50_r16h groups)**
@@ -275,7 +288,7 @@ for(gene in names(prog.groups)) {
 gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
                         marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
                         marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
-                        ncol = 5)
+                        ncol = 3)
 ```
 
 
@@ -405,7 +418,7 @@ for(gene in names(prog.groups)) {
 gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
                         marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
                         marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
-                        ncol = 5)
+                        ncol = 3)
 ```
 
 
@@ -475,7 +488,7 @@ for(gene in names(prog.groups)) {
 gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
                         marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
                         marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
-                        ncol = 5)
+                        ncol = 3)
 ```
 
 
@@ -750,7 +763,7 @@ gridExtra::grid.arrange(marker.gene.plots$pax7, marker.gene.plots$hes1,
                         marker.gene.plots$ccnd1, marker.gene.plots$ccnd2,
                         marker.gene.plots$myog, marker.gene.plots$tnnt2,
                         marker.gene.plots$cdkn1a, marker.gene.plots$cdkn1b,
-                        marker.gene.plots$gas1, ncol = 5)
+                        marker.gene.plots$gas1, ncol = 3)
 ```
 
 
