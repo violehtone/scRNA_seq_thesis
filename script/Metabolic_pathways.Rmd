@@ -43,24 +43,22 @@ library(ggplot2)
 ### 1.2 Load pre-calculated data
 **Single Cell Experiments**
 ```{r load-denoised-sce-all-genes, eval=FALSE}
-# Load pre-processed sce objects
+# Load pre-processed sce objects (used for computing the SCEs containing only metabolic genes)
 denoised.sce <- readRDS("./../saved/R_objects/denoised_sce")
 denoised.sce.deMicheli <- readRDS("./../saved/R_objects/denoised_sce_deMicheli")
 denoised.sce.dellOrso <- readRDS("./../saved/R_objects/denoised_sce_dellOrso")
 ```
 
 
-```{r load-objects}
+```{r load-metabolic-sce-objects}
 # Load datasets with metabolic genes only
 denoised.sce.m <- readRDS("./../saved/R_objects/denoised_sce_m")
 denoised.sce.deMicheli.m <- readRDS("./../saved/R_objects/denoised_sce_deMicheli_m")
 denoised.sce.dellOrso.m <- readRDS("./../saved/R_objects/denoised_sce_dellOrso_m")
 
-# Define group names for trajectories
-group_name.primary.m <- as.factor(denoised.sce.m$sample)
-group_name.deMicheli.m <- as.factor(denoised.sce.deMicheli.m$cell_type)
-group_name.dellOrso.m <- as.factor(denoised.sce.dellOrso.m$cell_type)
-
+# Filter primary myoblasts from the dellOrso data
+primary_mbs.m <- denoised.sce.dellOrso.m$cell_type == "Primary_MB"
+denoised.sce.dellOrso.m.f <- denoised.sce.dellOrso.m[, !denoised.sce.dellOrso.m$cell_type == "Primary_MB"]
 ```
 
 **Trajectories**
@@ -68,12 +66,17 @@ group_name.dellOrso.m <- as.factor(denoised.sce.dellOrso.m$cell_type)
 # Load pre-calculated trajectory objects
 traj.primary <- readRDS("./../saved/R_objects/traj_primary")
 traj.deMicheli <- readRDS("./../saved/R_objects/traj_deMicheli")
-traj.dellOrso <- readRDS("./../saved/R_objects/traj_dellOrso")
+traj.dellOrso <- readRDS("./../saved/R_objects/traj_dellOrso_f")
+
+# Define group names for trajectories
+group_name.primary.m <- as.factor(denoised.sce.m$sample)
+group_name.deMicheli.m <- as.factor(denoised.sce.deMicheli.m$cell_type)
+group_name.dellOrso.m <- as.factor(denoised.sce.dellOrso.m.f$cell_type)
 ```
 
 
-### 1.2 Build trajectories for datasets (Optional)
-#### 1.2.1 Primary data
+### 1.3 Build trajectories for datasets (Optional)
+#### 1.3.1 Primary data
 ```{r trajectory-primary-data, eval=FALSE}
 # Create expression and sample objects
 expression.primary <- as.matrix(t(logcounts(denoised.sce)))
@@ -87,7 +90,7 @@ traj.primary <- infer_trajectory(space.primary)
 traj.primary <- reverse_trajectory(traj.primary)
 ```
 
-#### 1.2.2 De Micheli data
+#### 1.3.2 De Micheli data
 ```{r trajectory-deMicheli, eval=FALSE}
 # Create expression and sample objects
 expression.deMicheli <- as.matrix(t(logcounts(denoised.sce.deMicheli)))
@@ -101,23 +104,21 @@ traj.deMicheli <- infer_trajectory(space.deMicheli)
 traj.deMicheli <- reverse_trajectory(traj.deMicheli)
 ```
 
-#### 1.2.3 Dell'Orso data
+#### 1.3.3 Dell'Orso data
 ```{r trajectory-dellOrso, eval=FALSE}
 # Create expression and sample objects
-expression.dellOrso <- as.matrix(t(logcounts(denoised.sce.dellOrso)))
-group_name.dellOrso <- as.factor(denoised.sce.dellOrso$cell_type)
+expression.dellOrso.f <- as.matrix(t(logcounts(denoised.sce.dellOrso.f)))
+group_name.dellOrso.f <- as.factor(denoised.sce.dellOrso.f$cell_type)
 
 # Trajectory building
 set.seed(123)
-space.dellOrso <- reduce_dimensionality(expression.dellOrso, dist = "spearman", ndim = 2)
+space.dellOrso <- reduce_dimensionality(expression.dellOrso.f, dist = "spearman", ndim = 2)
 set.seed(123)
 traj.dellOrso <- infer_trajectory(space.dellOrso)
-traj.dellOrso <- reverse_trajectory(traj.dellOrso)
 ```
 
 
 ## 2. Mapping of KEGG modules & pathways to the datasets
-
 ### 2.1 Fetch KEGG modules & pathway information
 #### 2.1.2 Fetch KEGG information from pre-computed files
 ```{r load-fetched-KEGG-information}
@@ -381,21 +382,6 @@ expr_sel.deMicheli.m.f <- scale_quantile(expression.deMicheli.m.f[, gene_sel.deM
 group_name.deMicheli.m.f <- as.factor(denoised.sce.deMicheli.m.f$cell_type)
 traj.deMicheli.f.time <- traj.deMicheli$time[names(traj.deMicheli$time) %in% colnames(denoised.sce.deMicheli.m.f)]
 
-  
-#############################
-# Dell'Orso data: all cells
-#############################
-# Read gimp & modules from a file
-gimp.dellOrso.m <- readRDS("./../saved/R_objects/gimp_dellOrso_m")
-modules.dellOrso.m <- readRDS("./../saved/R_objects/modules_dellOrso_m")
-
-# Create expression and sample objects
-gimp.dellOrso.m$qvalue <- p.adjust(p = gimp.dellOrso.m$pvalue, method = "BH")
-gene_sel.dellOrso.m <- gimp.dellOrso.m$gene[gimp.dellOrso.m$qvalue < .05]
-
-if(!exists("expression.dellOrso.m")) {expression.dellOrso.m <- as.matrix(t(logcounts(denoised.sce.dellOrso.m)))}
-expr_sel.dellOrso.m <- scale_quantile(expression.dellOrso.m[, gene_sel.dellOrso.m])
-
 ###########################################
 # Dell'Orso data: without primary myoblasts
 ###########################################
@@ -407,20 +393,33 @@ modules.dellOrso.m.f <- readRDS("./../saved/R_objects/modules_dellOrso_m_no_prim
 gimp.dellOrso.m.f$qvalue <- p.adjust(p = gimp.dellOrso.m.f$pvalue, method = "BH")
 gene_sel.dellOrso.m.f <- gimp.dellOrso.m.f$gene[gimp.dellOrso.m.f$qvalue < .05]
 
-if(!exists("expression.dellOrso.m.f")) {
-  primary_mbs.m <- denoised.sce.dellOrso.m$cell_type == "Primary_MB"
-  denoised.sce.dellOrso.m.f <- denoised.sce.dellOrso.m[, !primary_mbs.m]
-  expression.dellOrso.m.f <- as.matrix(t(logcounts(denoised.sce.dellOrso.m.f)))
-  }
+if(!exists("expression.dellOrso.m.f")) {expression.dellOrso.m.f <- as.matrix(t(logcounts(denoised.sce.dellOrso.m.f)))}
 expr_sel.dellOrso.m.f <- scale_quantile(expression.dellOrso.m.f[, gene_sel.dellOrso.m.f])
 group_name.dellOrso.m.f <- as.factor(denoised.sce.dellOrso.m.f$cell_type)
-traj.dellOrso.f.time <- traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(denoised.sce.dellOrso.m.f)]
+```
 
+**Save gimp / module information into csv files**
+```{r save-gimp-and-module-into-csv, eval=FALSE}
+# Primary data
+write.csv(gimp.primary.m[gimp.primary.m$gene %in% gene_sel.primary.m, ], file = "./../saved/tables/gimp_primary_m.csv")
+write.csv(modules.primary.m, file = "./../saved/tables/modules_primary_m.csv")
+
+# De Micheli data: all cells
+write.csv(gimp.deMicheli.m[gimp.deMicheli.m$gene %in% gene_sel.deMicheli.m, ], file = "./../saved/tables/gimp_deMicheli_m.csv")
+write.csv(modules.deMicheli.m, file = "./../saved/tables/modules_deMicheli_m.csv")
+
+# De Micheli data: without mature skeletal muscle
+write.csv(gimp.deMicheli.m.f[gimp.deMicheli.m.f$gene %in% gene_sel.deMicheli.m.f, ], file = "./../saved/tables/gimp_deMicheli_m_f.csv")
+write.csv(modules.deMicheli.m.f, file = "./../saved/tables/modules_deMicheli_m_f.csv")
+
+# Dell'Orso data: without primary myoblasts
+write.csv(gimp.dellOrso.m.f[gimp.dellOrso.m.f$gene %in% gene_sel.dellOrso.m.f, ], file = "./../saved/tables/gimp_dellOrso_m_f.csv")
+write.csv(modules.dellOrso.m.f, file = "./../saved/tables/modules_dellOrso_m_f.csv")
 ```
 
 
-### 3.1 Primary data
-### 3.1.2 Compute gene importances
+### 3.2 Primary data
+### 3.2.1 Compute gene importances
 ```{r gimp-modules-primary-metabolic-genes, eval=FALSE}
 # Read trajectory from a file (if not defined)
 if(!exists("traj.primary")) {
@@ -450,10 +449,9 @@ modules.primary.m <- extract_modules(expr_sel.primary.m,
 #saveRDS(modules.primary.m, "./../saved/R_objects/modules_primary_m")
 ```
 
-
-### 3.1.3 Visualize gene importances
+### 3.2.3 Visualize gene importances
 **Make a trajectory heatmap**
-```{r primary-data-gimp-modules-metabolic-genes, eval=FALSE}
+```{r primary-data-gimp-modules-metabolic-genes}
 draw_trajectory_heatmap(expr_sel.primary.m, 
                         time = traj.primary$time,
                         progression_group = group_name.primary.m,
@@ -487,9 +485,9 @@ dev.off()
 ```
 
 
-### 3.2 De Micheli data
-#### 3.2.1 Gimp: All cell types
-##### 3.2.1.1 Compute gene importances
+### 3.3 De Micheli data
+#### 3.3.1 Gimp: All cell types
+##### 3.3.1.1 Compute gene importances
 ```{r gimp-modules-deMicheli-metabolic-genes, eval=FALSE}
 # Read trajectory from a file (if not defined)
 if(!exists("traj.deMicheli")) {
@@ -520,9 +518,9 @@ modules.deMicheli.m <- extract_modules(expr_sel.deMicheli.m,
 #saveRDS(modules.deMicheli.m, "./../saved/R_objects/modules_deMicheli_m")
 ```
 
-##### 3.2.1.2 Visualize gene importances
+##### 3.3.1.2 Visualize gene importances
 **Make a trajectory heatmap**
-```{r deMicheli-gimp-modules-metabolic-genes, eval=FALSE}
+```{r deMicheli-gimp-modules-metabolic-genes}
 draw_trajectory_heatmap(expr_sel.deMicheli.m, 
                         time = traj.deMicheli$time,
                         progression_group = group_name.deMicheli.m,
@@ -556,8 +554,8 @@ draw_trajectory_heatmap(expr_sel.deMicheli.m,
 dev.off()
 ```
 
-#### 3.2.2 Gimp: Without mature skeletal muscle
-##### 3.2.2.1 Compute gene importances
+#### 3.3.2 Gimp: Without mature skeletal muscle
+##### 3.3.2.1 Compute gene importances
 ```{r gimp-modules-deMicheli-metabolic-genes-no-muscle, eval=FALSE}
 muscle_cells <- denoised.sce.deMicheli$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli$cell_type == "d7_mature_skeletal_muscle"
 denoised.sce.deMicheli.f <- denoised.sce.deMicheli[, !muscle_cells]
@@ -597,9 +595,9 @@ saveRDS(modules.deMicheli.m, file = "./../saved/R_objects/modules_deMicheli_m_no
 ```
 
 
-##### 3.2.2.2 Visualize gene importances
+##### 3.3.2.2 Visualize gene importances
 **Make a trajectory heatmap**
-```{r visualization-deMicheli-gimp-without-skeletal-muscle, eval=FALSE}
+```{r visualization-deMicheli-gimp-without-skeletal-muscle}
 draw_trajectory_heatmap(expr_sel.deMicheli.m.f, 
                         time = traj.deMicheli.f.time,
                         progression_group = group_name.deMicheli.m.f,
@@ -635,80 +633,9 @@ dev.off()
 ```
 
 
-### 3.3 Dell'Orso data
-#### 3.3.1 Gimp: All cell types
-##### 3.3.1.1 Compute gene importances
-```{r gimp-modules-dellOrso-metabolic-genes, eval=FALSE}
-# Read trajectory from a file (if not defined)
-if(!exists("traj.dellOrso")) {
-  traj.dellOrso <- readRDS("./../saved/R_objects/traj_dellOrso")
-}
-
-# Create expression and sample objects
-expression.dellOrso.m <- as.matrix(t(logcounts(denoised.sce.dellOrso.m)))
-group_name.dellOrso.m <- as.factor(denoised.sce.dellOrso.m$cell_type)
-
-# Gene importances
-gimp.dellOrso.m <- gene_importances(x = expression.dellOrso.m,
-                                    time = traj.dellOrso$time,
-                                    num_permutations = 10,
-                                    num_threads = 8)
-
-gimp.dellOrso.m$qvalue <- p.adjust(p = gimp.dellOrso.m$pvalue, method = "BH")
-gene_sel.dellOrso.m <- gimp.dellOrso.m$gene[gimp.dellOrso.m$qvalue < .05]
-expr_sel.dellOrso.m <- scale_quantile(expression.dellOrso.m[, gene_sel.dellOrso.m])
-
-#saveRDS(gimp.dellOrso.m, file = "./../saved/R_objects/gimp_dellOrso_m")
-
-# Extract modules
-modules.dellOrso.m <- extract_modules(expr_sel.dellOrso.m,
-                                      time = traj.dellOrso$time,
-                                      verbose = FALSE)
-
-#saveRDS(modules.dellOrso.m, "./../saved/R_objects/modules_dellOrso_m")
-```
-
-##### 3.3.1.2 Visualize gene importances
-**Make a trajectory heatmap**
-```{r dellOrso-gimp-modules-metabolic-genes, eval=FALSE}
-draw_trajectory_heatmap(expr_sel.dellOrso.m, 
-                        time = reverse_trajectory(traj.dellOrso)$time,
-                        progression_group = group_name.dellOrso.m,
-                        modules = modules.dellOrso.m,
-                        show_labels_row = TRUE,
-                        fontsize_row = 5,
-                        fontsize = 4)
-```
-
-
-**Save as pdf**
-```{r dellOrso-gimp-modules-metabolic-genes-pdf, eval=FALSE}
-# Gimp
-pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_genes.pdf")
-draw_trajectory_heatmap(expr_sel.dellOrso.m, 
-                        time = traj.dellOrso$time,
-                        progression_group = group_name.dellOrso.m,
-                        show_labels_row = TRUE,
-                        fontsize_row = 5,
-                        fontsize = 4)
-dev.off()
-
-# Modules
-pdf("./../saved/figures/modules_heatmap_dellOrso_metabolic_genes.pdf")
-draw_trajectory_heatmap(expr_sel.dellOrso.m, 
-                        time = reverse_trajectory(traj.dellOrso)$time,
-                        progression_group = group_name.dellOrso.m,
-                        modules = modules.dellOrso.m,
-                        show_labels_row = TRUE,
-                        fontsize_row = 5,
-                        fontsize = 4)
-dev.off()
-```
-
-
-#### 3.3.2 Gimp: Without primary myoblasts
-##### 3.3.2.1 Compute gene importances
-#### 5.2.2 Compute gene importances (optional)
+### 3.4 Dell'Orso data
+#### 3.4.1 Gimp: Without primary myoblasts
+##### 3.4.1.1 Compute gene importances (optional)
 ```{r gimp-modules-dellOrso-metabolic-genes-without-pm, eval=FALSE}
 # Subset PMs from both datasets
 primary_mbs <- denoised.sce.dellOrso$cell_type == "Primary_MB"
@@ -745,14 +672,13 @@ modules.dellOrso.m <- extract_modules(expr_sel.dellOrso.m,
                                        verbose = FALSE)
 
 saveRDS(modules.dellOrso.m, file = "./../saved/R_objects/modules_dellOrso_m_no_primaryMB")
-
 ```
 
-##### 3.3.2.2 Visualize gene importances
+##### 3.4.1.2 Visualize gene importances
 **Make a trajectory heatmap**
-```{r dellOrso-gimp-modules-metabolic-genes-no-pm, eval=FALSE}
+```{r dellOrso-gimp-modules-metabolic-genes-no-pm}
 draw_trajectory_heatmap(expr_sel.dellOrso.m.f, 
-                        time = traj.dellOrso.f.time,
+                        time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso.m.f,
                         modules = modules.dellOrso.m.f,
                         show_labels_row = TRUE,
@@ -765,7 +691,7 @@ draw_trajectory_heatmap(expr_sel.dellOrso.m.f,
 # Gimp
 pdf("./../saved/figures/gimp_heatmap_dellOrso_metabolic_genes_no_PM.pdf")
 draw_trajectory_heatmap(expr_sel.dellOrso.m.f, 
-                        time = traj.dellOrso.f.time,
+                        time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso.m.f,
                         show_labels_row = TRUE,
                         fontsize_row = 5,
@@ -775,7 +701,7 @@ dev.off()
 # Modules
 pdf("./../saved/figures/modules_heatmap_dellOrso_metabolic_genes_no_PM.pdf")
 draw_trajectory_heatmap(expr_sel.dellOrso.m.f, 
-                        time = traj.dellOrso.f.time,
+                        time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso.m.f,
                         modules = modules.dellOrso.m.f,
                         show_labels_row = TRUE,
@@ -784,19 +710,18 @@ draw_trajectory_heatmap(expr_sel.dellOrso.m.f,
 dev.off()
 ```
 
-### 3.4 Comparison of metabolic genes between the datasets
+### 3.5 Comparison of metabolic genes between the datasets
 ```{r comparison-of-metabolic-genes-between-datasets}
 # Load metabolic genes if not defined
 if(!exists("modules.primary.m")) {modules.primary.m <- readRDS("./../saved/R_objects/modules_primary_m")}
 if(!exists("modules.deMicheli.m")) {modules.deMicheli.m <- readRDS("./../saved/R_objects/modules_deMicheli_m")}
-if(!exists("modules.dellOrso.m")) {modules.dellOrso.m <- readRDS("./../saved/R_objects/modules_dellOrso_m")}
 if(!exists("modules.deMicheli.m.f")) {modules.deMicheli.m.f <- readRDS("./../saved/R_objects/modules_deMicheli_m_no_muscle")}
 if(!exists("modules.dellOrso.m.f")) {modules.dellOrso.m.f <- readRDS("./../saved/R_objects/modules_dellOrso_m_no_primaryMB")}
 
 
 v.table <- venn(data = list(primary_data = modules.primary.m$feature,
                             de_Micheli_data = modules.deMicheli.m$feature,
-                            dellOrso_data = modules.dellOrso.m$feature))
+                            dellOrso_data = modules.dellOrso.m.f$feature))
 
 # Print the intersections between datasets
 print(attr(v.table ,"intersections"))
@@ -809,7 +734,7 @@ v.table.f <- venn(data = list(primary_data = modules.primary.m$feature,
 print(attr(v.table.f ,"intersections"))
 ```
 
-### 3.5   DE analysis of the shared metabolic genes with high importance in predicting the ordering of cells on trajectories
+### 3.6 DE analysis of the shared metabolic genes with high importance in predicting the ordering of cells on trajectories
 **T-test**
 ```{r de-analysis-of-metabolic-gimp-genes-ttest, eval=FALSE}
 # Get list of important genes from the Venn diagram
@@ -829,6 +754,8 @@ logFCs <- getMarkerEffects(control.markers.gimp)
 
 pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "DE analysis: Important metabolic marker genes (t-test): Control vs. other samples", fontsize_row = 12)
 ```
+
+
 **WMW test**
 ```{r de-analysis-of-metabolic-gimp-genes-wmwtest}
 # Get list of important genes from the Venn diagram
@@ -844,6 +771,9 @@ markers.primary.gimp <- findMarkers(denoised.sce.m,
 control.markers.gimp <- markers.primary.gimp[["control"]]
 control.markers.gimp <- control.markers.gimp[rownames(control.markers.gimp) %in% important.m.genes, ]
 
+# Save marker information to .csv file
+write.csv(control.markers.gimp, file = "./../saved/tables/control_marker_gimp.csv")
+
 # Extract the area under curves
 AUCs <- getMarkerEffects(control.markers.gimp, prefix="AUC")
 
@@ -852,14 +782,12 @@ pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main
 ```
 
 
-
 ## 4. SingleR cell annotations using only metabolic genes
 ### 4.1 Cell annotation: all cell types
 #### 4.1.1 Load pre-computed prediction objects
 ```{r load-singleR-predictions-metabolic-genes}
 # Load prediction objects
 pred.deMicheli.m <- readRDS("./../saved/R_objects/pred_deMicheli_m")
-#pred.dellOrso.m <- readRDS("./../saved/R_objects/pred_dellOrso_m")
 ```
 
 #### 4.1.2 Predict cell types (optional)
@@ -871,14 +799,6 @@ pred.deMicheli.m <- SingleR(test = denoised.sce.m,
                                    labels = denoised.sce.deMicheli.m$cell_type)
 
 saveRDS(pred.deMicheli.m, file = "./../saved/R_objects/pred_deMicheli_m")
-
-## Dell'Orso
-# pred.dellOrso.m <- SingleR(test = denoised.sce.m,
-#                                   assay.type.test = "logcounts",
-#                                   ref = denoised.sce.dellOrso.m,
-#                                   labels = denoised.sce.dellOrso.m$cell_type)
-# 
-# saveRDS(pred.dellOrso.m, file = "./../saved/R_objects/pred_dellOrso_m")
 ```
 
 #### 4.1.3 Inspect predictions
@@ -886,10 +806,6 @@ saveRDS(pred.deMicheli.m, file = "./../saved/R_objects/pred_deMicheli_m")
 # De Micheli
 tab.deMicheli.m <- t(table(pred.deMicheli.m$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.deMicheli.m
-
-# Dell'Orso
-# tab.dellOrso.m <- t(table(pred.dellOrso.m$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
-# tab.dellOrso.m
 ```
 
 #### 4.1.4 Diagnostic plots
@@ -909,24 +825,6 @@ plotScoreDistribution(results = pred.deMicheli.m, show = "delta.med")
 all.markers.deMicheli <- metadata(pred.deMicheli.m)$de.genes
 denoised.sce.m$cell_type_deMicheli.m <- pred.deMicheli.m$labels
 ```
-
-**Dell'Orso**
-```{r dellOrso-annotation-diagnostic-plots-metabolic-genes, eval=FALSE}
-# Score heatmap
-plotScoreHeatmap(pred.dellOrso.m, annotation_col = as.data.frame(colData(denoised.sce.m)[, "sample", drop = FALSE]), width = 10)
-
-# Remove low-quality cells
-to.remove <- pruneScores(pred.dellOrso.m, min.diff.next = 0.1)
-table(Label=pred.dellOrso.m$labels, Removed=to.remove)
-
-# Delta distribution
-plotScoreDistribution(results = pred.dellOrso.m, show = "delta.med")
-
-# Markers
-all.markers.dellOrso <- metadata(pred.dellOrso.m)$de.genes
-denoised.sce.m$cell_type_dellOrso.m <- pred.dellOrso.m$labels
-```
-
 
 **Pdf heatmaps**
 ```{r create-pdf-files-of-gene-heatmaps-metabolic-genes, eval=FALSE}
@@ -978,33 +876,7 @@ plotHeatmap(denoised.sce.m,
             features=unique(unlist(all.markers.deMicheli$d7_MuSCs_and_progenitors)),
             fontsize_row = 5)
 dev.off()
-
-#######################
-# Dell'Orso predcitions
-#######################
-# pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_hom.pdf")
-# plotHeatmap(denoised.sce.m,
-#             order_columns_by="cell_type_dellOrso.m",
-#             features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
-#             fontsize_row = 5)
-# dev.off()
-# 
-# pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_inj60.pdf")
-# plotHeatmap(denoised.sce.m,
-#             order_columns_by="cell_type_dellOrso.m",
-#             features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
-#             fontsize_row = 5)
-# dev.off()
-# 
-# pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_metabolic_genes_pmb.pdf")
-# plotHeatmap(denoised.sce.m,
-#             order_columns_by="cell_type_dellOrso.m",
-#             features=unique(unlist(all.markers.dellOrso$Primary_MB)),
-#             fontsize_row = 5)
-# dev.off()
 ```
-
-
 
 
 ### 4.2 Cell annotation: Without mature skeletal muscle and primary myoblasts
@@ -1017,9 +889,6 @@ pred.dellOrso.m.no.pm <- readRDS("./../saved/R_objects/pred_dellOrso_m_no_pm")
 # Filter muscle / pm cells
 muscle_cells <- denoised.sce.deMicheli.m$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type == "d7_mature_skeletal_muscle"
 denoised.sce.deMicheli.m.no.muscle <- denoised.sce.deMicheli.m[, !muscle_cells]
-
-primary_mbs <- denoised.sce.dellOrso.m$cell_type == "Primary_MB"
-denoised.sce.dellOrso.m.no.pm <- denoised.sce.dellOrso.m[, !primary_mbs]
 ```
 
 #### 4.2.2 Predict cell types (optional)
@@ -1027,9 +896,6 @@ denoised.sce.dellOrso.m.no.pm <- denoised.sce.dellOrso.m[, !primary_mbs]
 # Filter out primary MBs and mature skeletal muscle
 muscle_cells <- denoised.sce.deMicheli.m$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type == "d7_mature_skeletal_muscle"
 denoised.sce.deMicheli.m.no.muscle <- denoised.sce.deMicheli.m[, !muscle_cells]
-
-primary_mbs <- denoised.sce.dellOrso.m$cell_type == "Primary_MB"
-denoised.sce.dellOrso.m.no.pm <- denoised.sce.dellOrso.m[, !primary_mbs]
 
 
 # De Micheli
@@ -1043,8 +909,8 @@ saveRDS(pred.deMicheli.m.no.muscle, file = "pred_deMicheli_m_no_muscle")
 ## Dell'Orso
 pred.dellOrso.m <- SingleR(test = denoised.sce.m,
                            assay.type.test = "logcounts",
-                           ref = denoised.sce.dellOrso.m.no.pm,
-                           labels = denoised.sce.dellOrso.m.no.pm$cell_type)
+                           ref = denoised.sce.dellOrso.m.f,
+                           labels = denoised.sce.dellOrso.m.f$cell_type)
 
 saveRDS(pred.dellOrso.m.no.pm, file = "./../saved/R_objects/pred_dellOrso_m_no_pm")
 ```
@@ -1149,11 +1015,11 @@ dev.off()
 ```{r load-singleR-predictions-using-only-set-of-important-genes}
 # Load prediction objects
 pred.deMicheli.important.genes <- readRDS("./../saved/R_objects/pred_deMicheli_important_genes")
-pred.dellOrso.important.genes <- readRDS("./../saved/R_objects/pred_dellOrso_important_genes")
+pred.dellOrso.important.genes <- readRDS("./../saved/R_objects/pred_dellOrso_important_genes_f")
 
 # Get the sets of important genes
 important.genes.deMicheli <- modules.deMicheli.m$feature
-important.genes.dellOrso <- modules.dellOrso.m$feature
+important.genes.dellOrso <- modules.dellOrso.m.f$feature
 
 # Subset these genes from the datasets
 primary.important.deMicheli <- denoised.sce.m[rownames(denoised.sce.m) %in% important.genes.deMicheli, ]
@@ -1163,14 +1029,14 @@ denoised.sce.deMicheli.important.genes <- denoised.sce.deMicheli.m[rownames(deno
 
 primary.important.dellOrso <- denoised.sce.m[rownames(denoised.sce.m) %in% important.genes.dellOrso, ]
 print(rownames(primary.important.dellOrso))
-denoised.sce.dellOrso.important.genes <- denoised.sce.dellOrso.m[rownames(denoised.sce.dellOrso.m) %in% important.genes.dellOrso, ]
+denoised.sce.dellOrso.important.genes <- denoised.sce.dellOrso.m.f[rownames(denoised.sce.dellOrso.m) %in% important.genes.dellOrso, ]
 ```
 
 ### 4.3.2 Predict cell types (optional)
 ```{r predict-cell-types-using-only-set-of-important-genes, eval=FALSE}
 # Get the sets of important genes
 important.genes.deMicheli <- modules.deMicheli.m$feature
-important.genes.dellOrso <- modules.dellOrso.m$feature
+important.genes.dellOrso <- modules.dellOrso.m.f$feature
 
 # Subset these genes from the datasets
 primary.important.deMicheli <- denoised.sce.m[rownames(denoised.sce.m) %in% important.genes.deMicheli, ]
@@ -1192,7 +1058,7 @@ pred.dellOrso.important.genes <- SingleR(test = primary.important.dellOrso,
 
 # save prediction objects
 saveRDS(pred.deMicheli.important.genes, file = "./../saved/R_objects/pred_deMicheli_important_genes")
-saveRDS(pred.dellOrso.important.genes, file = "./../saved/R_objects/pred_dellOrso_important_genes")
+saveRDS(pred.dellOrso.important.genes, file = "./../saved/R_objects/pred_dellOrso_important_genes_f")
 
 ```
 
@@ -1202,7 +1068,7 @@ saveRDS(pred.dellOrso.important.genes, file = "./../saved/R_objects/pred_dellOrs
 tab.deMicheli.m.important <- t(table(pred.deMicheli.important.genes$pruned.labels, primary.important.deMicheli$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.deMicheli.m.important
 
-# Dell'Orso (only important genes)
+# Dell'Orso (only important genes, without primary myoblasts)
 tab.dellOrso.m.important <- t(table(pred.dellOrso.important.genes$pruned.labels, primary.important.dellOrso$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.dellOrso.m.important
 ```
@@ -1372,7 +1238,7 @@ pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main
 #### 5.2.1 De Micheli trajectory
 ```{r control-marker-genes-on-deMicheli-trajectory, eval=FALSE}
 # Control marker genes
-marker.genes.control <- rownames(control.markers.interesting)
+marker.genes.control <- rownames(best.set)
 
 marker.gene.plots <- list()
 
@@ -1403,7 +1269,7 @@ gridExtra::grid.arrange(marker.gene.plots$Cth, marker.gene.plots$Taldo1, marker.
 #### 5.2.2 Dell'Orso trajectory
 ```{r control-marker-genes-on-dellOrso-trajectory, eval=FALSE}
 # Control marker genes
-marker.genes.control <- rownames(control.markers.interesting)
+marker.genes.control <- rownames(best.set)
 
 marker.gene.plots <- list()
 
