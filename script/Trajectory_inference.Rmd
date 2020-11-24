@@ -491,6 +491,12 @@ gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker
                         ncol = 3)
 ```
 
+**Free space by removing primary data sce objects**
+```{r remove-primary-sces}
+remove(denoised.sce)
+remove(denoised.sce.cc)
+```
+
 
 ### 2.2 De Micheli et al. (2020) reference data
 #### 2.2.1 Trajectory inference with all genes
@@ -679,6 +685,12 @@ draw_trajectory_plot(space = space.deMicheli.cc,
         axis.title = element_text(size = 16))
 ```
 
+**Free space by removing deMicheli data sce objects**
+```{r remove-deMicheli-sces}
+remove(denoised.sce.deMicheli)
+remove(denoised.sce.deMicheli.cc)
+```
+
 
 ### 2.3 Dell'Orso et al. (2019) reference data
 #### 2.3.1 Trajectory inference with all genes
@@ -853,6 +865,7 @@ space.dellOrso.f <- reduce_dimensionality(expression.dellOrso.f, dist = "spearma
 set.seed(123)
 traj.dellOrso.f <- infer_trajectory(space.dellOrso.f)
 
+
 # plot trajectory
 draw_trajectory_plot(space = space.dellOrso.f, 
                      progression_group = group_name.dellOrso.f,
@@ -867,6 +880,14 @@ draw_trajectory_plot(space = space.dellOrso.f,
 ```
 
 
+**Free space by removing deMicheli data sce objects**
+```{r remove-dellOrso-sces}
+remove(denoised.sce.dellOrso)
+remove(denoised.sce.dellOrso.cc)
+remove(denoised.sce.dellOrso.f)
+```
+
+
 ## 3. Identifying candidate marker genes
 ### 3.1 Primary data
 #### 3.1.1 Load pre-calculated gene importance objects
@@ -878,6 +899,10 @@ modules <- readRDS("./../saved/R_objects/modules")
 gimp$qvalue <- p.adjust(p = gimp$pvalue, method = "BH")
 gene_sel <- gimp$gene[gimp$qvalue < .05]
 expr_sel <- scale_quantile(expression.primary[, gene_sel])
+
+# Write gimp & module into tables
+write.csv(gimp[gimp$gene %in% gene_sel, ], file = "./../saved/tables/gimp_primary.csv")
+write.csv(modules, file = "./../saved/tables/modules_primary.csv")
 ```
 
 #### 3.1.2 Calculate gene importances
@@ -934,6 +959,10 @@ modules.deMicheli <- readRDS("./../saved/R_objects/modules_deMicheli")
 gimp.deMicheli$qvalue <- p.adjust(p = gimp.deMicheli$pvalue, method = "BH")
 gene_sel.deMicheli <- gimp.deMicheli$gene[gimp.deMicheli$qvalue < .05]
 expr_sel.deMicheli <- scale_quantile(expression.deMicheli[, gene_sel.deMicheli])
+
+# Write gimp & module into tables
+write.csv(gimp.deMicheli[gimp.deMicheli$gene %in% gene_sel.deMicheli, ], file = "./../saved/tables/gimp_deMicheli.csv")
+write.csv(modules.deMicheli, file = "./../saved/tables/modules_deMicheli.csv")
 ```
 
 #### 3.2.2 Calculate gene importances
@@ -991,6 +1020,10 @@ modules.dellOrso <- readRDS("./../saved/R_objects/modules_dellOrso")
 gimp.dellOrso$qvalue <- p.adjust(gimp.dellOrso$pvalue, "BH", length(gimp.dellOrso$pvalue))
 gene_sel.dellOrso <- gimp.dellOrso$gene[gimp.dellOrso$qvalue < .05]
 expr_sel.dellOrso <- scale_quantile(expression.dellOrso[, gene_sel.dellOrso])
+
+# Write gimp & module into tables
+write.csv(gimp.dellOrso[gimp.dellOrso$gene %in% gene_sel.dellOrso, ], file = "./../saved/tables/gimp_dellOrso.csv")
+write.csv(modules.dellOrso, file = "./../saved/tables/modules_dellOrso.csv")
 ```
 
 ```{r load-marker-genes-dellOrso-without-PMs, eval=FALSE}
@@ -1001,6 +1034,10 @@ modules.dellOrso.f <- readRDS("./../saved/R_objects/modules_dellOrso_f")
 gimp.dellOrso.f$qvalue <- p.adjust(gimp.dellOrso.f$pvalue, "BH", length(gimp.dellOrso.f$pvalue))
 gene_sel.dellOrso.f <- gimp.dellOrso.f$gene[gimp.dellOrso.f$qvalue < .05]
 expr_sel.dellOrso.f <- scale_quantile(expression.dellOrso.f[, gene_sel.dellOrso.f])
+
+# Write gimp & module into tables
+write.csv(gimp.dellOrso.f[gimp.dellOrso.f$gene %in% gene_sel.dellOrso.f, ], file = "./../saved/tables/gimp_dellOrso_f.csv")
+write.csv(modules.dellOrso.f, file = "./../saved/tables/modules_dellOrso_f.csv")
 ```
 
 
