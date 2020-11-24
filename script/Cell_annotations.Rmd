@@ -519,15 +519,20 @@ dev.off()
 #### 3.1.1 Cell annotations
 **Load pre-calculated predictions (if available)**
 ```{r load-dellOrso-cell-type-predictions}
-# Load pre-saved prediction objects
+# Load pre-saved prediction objects (with and without PMs)
 pred.dellOrso <- readRDS("./../saved/R_objects/pred_dellOrso")
+pred.dellOrso.f <- readRDS("./../saved/R_objects/pred_dellOrso_f")
 
 # Assign cell types to primary data
 denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
+denoised.sce$cell_type_dellOrso_f <- pred.dellOrso.f$pruned.labels
 ```
 
 **Perform cell annotation using SingleR (optional)**
 ```{r dellOrso-cell-type-predictions, eval=FALSE}
+########################
+# With primary myoblasts
+########################
 pred.dellOrso <- SingleR(test = denoised.sce,
                          assay.type.test = "logcounts",
                          ref = denoised.sce.dellOrso,
@@ -536,11 +541,27 @@ pred.dellOrso <- SingleR(test = denoised.sce,
 # Assign cell types to primary data
 denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
 
-#saveRDS(pred.dellOrso, file = "./../saved/R_objects/pred_dellOrso")
+saveRDS(pred.dellOrso, file = "./../saved/R_objects/pred_dellOrso")
+
+###########################
+# Without primary myoblasts
+###########################
+
+# Filter out primary MBs
+denoised.sce.dellOrso.f <- denoised.sce.dellOrso[, denoised.sce.dellOrso$cell_type != "Primary_MB"]
+
+# SingleR prediction
+pred.dellOrso.f <- SingleR(test = denoised.sce,
+                         assay.type.test = "logcounts",
+                         ref = denoised.sce.dellOrso.f,
+                         labels = denoised.sce.dellOrso.f$cell_type)
+
+saveRDS(pred.dellOrso.f, file = "pred_dellOrso_f")
 ```
 
 
 #### 3.2.1 Diagnostic plots (pdf documents)
+##### 3.2.1.1 With primary myoblasts
 **diagnostics**
 ```{r dellOrso-annotation-diagnostic-plots}
 # Score heatmap
@@ -594,6 +615,55 @@ plotHeatmap(denoised.sce,
             fontsize_row = 2)
 dev.off()
 ```
+
+##### 3.2.1.1 Without primary myoblasts
+```{r dellOrso-annotation-diagnostic-plots-without-pm}
+# Score heatmap
+plotScoreHeatmap(pred.dellOrso.f,  annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
+
+# Remove low-quality cells
+to.remove <- pruneScores(pred.dellOrso.f, min.diff.next = 0.1)
+table(Label=pred.dellOrso.f$labels, Removed=to.remove)
+
+# Delta distribution
+plotScoreDistribution(pred.dellOrso.f, show = "delta.med")
+```
+
+
+**pdf document**
+```{r dellOrso-annotation-diagnostic-plots-without-pm-pdf, eval=FALSE}
+# Visualize the score matrix
+pdf("./../saved/figures/dellOrso_score_heatmap_f.pdf")
+plotScoreHeatmap(pred.dellOrso.f, 
+                 annotation_col = as.data.frame(colData(denoised.sce)[, "sample", drop = FALSE]))
+dev.off()
+
+# Delta distribution
+pdf("./../saved/figures/dellOrso_score_distribution_f.pdf")
+plotScoreDistribution(pred.dellOrso.f, show = "delta.med")
+dev.off()
+
+# Get marker genes
+all.markers.dellOrso <- metadata(pred.dellOrso.f)$de.genes
+
+# Examine the expression of the marker genes for each label in the test dataset
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_homeostatic_muscs_f.pdf")
+plotHeatmap(denoised.sce, 
+            order_columns_by="cell_type_dellOrso_f",
+            features=unique(unlist(all.markers.dellOrso$homeostatic_MuSCs)),
+            fontsize_row = 2)
+dev.off()
+
+
+pdf("./../saved/figures/cell_annotation_heatmap_dellOrso_inj_60h_muscs_f.pdf")
+plotHeatmap(denoised.sce, 
+            order_columns_by="cell_type_dellOrso_f",
+            features=unique(unlist(all.markers.dellOrso$inj_60h_MuSCs)),
+            fontsize_row = 2)
+dev.off()
+```
+
+
 
 ### 3.2 Without cell cycle genes
 #### 3.2.1 Cell annotations without cc genes using Dell'Orso dataset
@@ -723,10 +793,15 @@ table(pred.reference2$pruned.labels, denoised.sce.dellOrso$cell_type)
 # Inspection of predictions
 table(pred.deMicheli$pruned.labels)
 table(pred.dellOrso$labels)
+table(pred.dellOrso.f$labels)
+
 tab.deMicheli <- t(table(pred.deMicheli$pruned.labels, denoised.sce$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.dellOrso <- t(table(pred.dellOrso$pruned.labels, denoised.sce$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+tab.dellOrso.f <- t(table(pred.dellOrso.f$pruned.labels, denoised.sce$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
+
 tab.deMicheli
 tab.dellOrso
+tab.dellOrso.f
 
 ## 'melt' tables
 df.deMicheli <- melt(t(tab.deMicheli))
