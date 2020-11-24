@@ -178,6 +178,7 @@ remove(GSE126834_mb)
 **Note: the code chunks above for data loading and sce object creation are not executed (eval=FALSE) because the computation time is long so to speed-up things, we just load the sce files of the 3 datasets directly from the pre-saved files stored locally. In case you are running this script for the first time (and don't have the sce files ready), please ignore this code chunk and run all the chunks above.**
 
 ```{r shortcut-load-sce-files}
+# Raw sce objects
 sce <- readRDS("./../saved/R_objects/sce")
 sce.deMicheli <- readRDS("./../saved/R_objects/sce_deMicheli")
 sce.dellOrso <- readRDS("./../saved/R_objects/sce_dellOrso")
@@ -197,6 +198,15 @@ per cell quality metrics used:
 Outlier detection:
   - Outliers are detected based on median absolute deviation (MAD)
   - A value is considered an outlier if it is more than 3 MADs from the median
+
+**load qc sce files**
+```{r shortcut-load-qc-sce-files}
+# QC sce objects
+sce.f <- readRDS("./../saved/R_objects/sce_f")
+sce.deMicheli.f <- readRDS("./../saved/R_objects/sce_deMicheli_f")
+sce.dellOrso.f <- readRDS("./../saved/R_objects/sce_dellOrso_f")
+```
+
 
 ### 6.1 Primary data
 ```{r primary-data-qc}
@@ -290,6 +300,17 @@ discardSummary.cap50_r16h
 
 sce$discard <- c(discard.control,discard.cap50,discard.cap50_r4h,discard.cap50_r8h,discard.cap50_r16h)
 
+# Filter outliers
+sce.f <- sce[,sce$discard==FALSE]
+
+# Save filtered sce file
+#saveRDS(sce.f, file = "./../saved/R_objects/sce_f")
+```
+
+**Plot QC figures**
+```{r primary-qc-figures}
+sce$discard <- c(discard.control,discard.cap50,discard.cap50_r4h,discard.cap50_r8h,discard.cap50_r16h)
+
 # Plot QC metrics
 gridExtra::grid.arrange(
   plotColData(sce, x="sample", y="sum",colour_by = "discard",point_size=0.3) +
@@ -303,9 +324,6 @@ gridExtra::grid.arrange(
   ncol=1,
   top = "Primary data: QC metrics"
 )
-
-# Filter outliers
-sce.f <- sce[,sce$discard==FALSE]
 
 # Check for cell type enrichment in the discarded pool
 lost <- calculateAverage(counts(sce)[,c(discard.control,discard.cap50,discard.cap50_r4h,discard.cap50_r8h,discard.cap50_r16h)])
@@ -323,10 +341,9 @@ changed <- logFC > 1
 
 # Up in discarded
 rownames(sce)[changed]
-
-# Save filtered sce file
-#saveRDS(sce.f, file = "./../saved/R_objects/sce_f")
 ```
+
+
 
 ### 6.2 De Micheli et al. (2020) reference data
 ```{r de-micheli-qc}
@@ -458,6 +475,15 @@ sce.deMicheli$discard <- all_discards
 table(sce.deMicheli[, sce.deMicheli$discard == TRUE]$cell_annotation)
 table(sce.deMicheli$cell_annotation)
 
+# Filter outliers
+sce.deMicheli.f <- sce.deMicheli[, sce.deMicheli$discard == FALSE]
+
+# Save filtered sce file
+#saveRDS(sce.deMicheli.f, file = "./../saved/R_objects/sce_deMicheli_f")
+```
+
+**Plot QC figures**
+```{r deMicheli-qc-plots}
 # Plot Quality control metrics
 gridExtra::grid.arrange(
   plotColData(sce.deMicheli, x = "sampleID", y = "sum", colour_by = "discard", point_size = 0.3) +
@@ -477,9 +503,6 @@ gridExtra::grid.arrange(
   top = "De Micheli et al. - QC metrics"
 )
 
-# Filter outliers
-sce.deMicheli.f <- sce.deMicheli[, sce.deMicheli$discard == FALSE]
-
 # Check for cell type enrichments in the discarded pool
 lost <- calculateAverage(counts(sce.deMicheli)[, all_discards])
 kept <- calculateAverage(counts(sce.deMicheli)[, !all_discards])
@@ -497,10 +520,8 @@ changed <- logFC > 1
 
 # Up in discarded
 rownames(sce.deMicheli)[changed]
-
-# Save filtered sce file
-#saveRDS(sce.deMicheli.f, file = "./../saved/R_objects/sce_deMicheli_f")
 ```
+
 
 ### 6.3 Dell'Orso et al. (2019) reference data
 ```{r dellOrso-qc}
@@ -587,6 +608,15 @@ discardSummary.pmb
 
 sce.dellOrso$discard <- c(discard.hom1, discard.hom2, discard.inj1, discard.inj2, discard.pmb)
 
+# Filter outliers
+sce.dellOrso.f <- sce.dellOrso[, sce.dellOrso$discard == FALSE]
+
+# Save filtered sce file
+#saveRDS(sce.dellOrso.f, file = "./../saved/R_objects/sce_dellOrso_f")
+```
+
+**Plot QC figures**
+```{r dellOrso-qc-plots}
 # Plot QC metrics
 gridExtra::grid.arrange(
   plotColData(sce.dellOrso, x="sample", y="sum",colour_by = "discard",point_size=0.3) +
@@ -607,9 +637,6 @@ gridExtra::grid.arrange(
   top = "Dell'Orso et al.: QC metrics"
 )
 
-# Filter outliers
-sce.dellOrso.f <- sce.dellOrso[, sce.dellOrso$discard == FALSE]
-
 # Check for cell type enrichment in the discarded pool
 lost <- calculateAverage(counts(sce.dellOrso)[,c(discard.hom1, discard.hom2, discard.inj1, discard.inj2, discard.pmb)])
 kept <- calculateAverage(counts(sce.dellOrso)[,!c(discard.hom1, discard.hom2, discard.inj1, discard.inj2, discard.pmb)])
@@ -626,9 +653,13 @@ changed <- logFC > 1
 
 # Up in discarded
 rownames(sce.dellOrso)[changed]
+```
 
-# Save filtered sce file
-#saveRDS(sce.dellOrso.f, file = "./../saved/R_objects/sce_dellOrso_f")
+**Remove raw sce objects**
+```{r remove-raw-sce-objects}
+remove(sce)
+remove(sce.deMicheli)
+remove(sce.dellOrso)
 ```
 
 
@@ -641,8 +672,16 @@ Here we:
   - The size factor for each cell represents the estimate of the relative bias in that cell, so division of its counts by its size factor should remove that bias
   - Once size factors are computed, we use logNormCounts() to compute normalized exp. values for each cell
 
+**Load normalized sce objects**
+```{r shortcut-load-normalized-sce-files}
+# Normalized sce objects
+sce.n <- readRDS("./../saved/R_objects/sce_n")
+sce.deMicheli.n <- readRDS("./../saved/R_objects/sce_deMicheli_n")
+sce.dellOrso.n <- readRDS("./../saved/R_objects/sce_dellOrso_n")
+```
+
 ### 7.1 Primary data
-```{r primary-data-normalization}
+```{r primary-data-normalization, eval=FALSE}
 # Compute size factors
 sce.n <- sce.f
 lib.sf <- librarySizeFactors(sce.n)
@@ -656,21 +695,28 @@ sce.n <- computeSumFactors(sce.n, cluster=quickie)
 
 deconv.sf <- sizeFactors(sce.n)
 
-# Plot library size factor vs. deconvolution size factor
-plot(lib.sf, deconv.sf, xlab="Library size factor",
-     ylab="Deconvolution size factor", log='xy', pch=16, main = "Primary data: library size factor vs. deconvolution size factor")
-abline(a=0, b=1, col="red")
-
 # Compute log-normalized expression values for each cell
 sce.n <- logNormCounts(sce.n)
 
 # Save normalized data
-#saveRDS(sce.n, file = "./../saved/R_objects/sce_n")
+saveRDS(sce.n, file = "./../saved/R_objects/sce_n")
 
 ```
 
+**Normalization plots**
+```{r primary-data-normalization-plots}
+# Plot library size factor vs. deconvolution size factor
+lib.sf <- librarySizeFactors(sce.n)
+deconv.sf <- sizeFactors(sce.n)
+plot(lib.sf, deconv.sf, xlab="Library size factor",
+     ylab="Deconvolution size factor", log='xy', pch=16, main = "Primary data: library size factor vs. deconvolution size factor")
+abline(a=0, b=1, col="red")
+```
+
+
+
 ### 7.2 De Micheli et al. (2020) reference data
-```{r deMicheli-normalization}
+```{r deMicheli-normalization, eval=FALSE}
 # Compute size factors
 sce.deMicheli.n <- sce.deMicheli.f
 lib.sf.deMicheli <- librarySizeFactors(sce.deMicheli.n)
@@ -686,21 +732,28 @@ sce.deMicheli.n <- computeSumFactors(sce.deMicheli.n,
 deconv.sf.deMicheli <- sizeFactors(sce.deMicheli.n)
 summary(deconv.sf.deMicheli)
 
-# Plot library size factors vs. deconvolution size factor
-plot(lib.sf.deMicheli, deconv.sf.deMicheli, xlab="Library size factor",
-     ylab="Deconvolution size factor", log='xy', pch=16, main = "De Micheli et al.: library size factor vs. deconvolution size factor")
-abline(a=0, b=1, col="red")
-
 # Compute log-normalized expression values for each cell
 sce.deMicheli.n <- logNormCounts(sce.deMicheli.n)
 
 # Save normalized data
-#saveRDS(sce.deMicheli.n, file = "./../saved/R_objects/sce_deMicheli_n")
+saveRDS(sce.deMicheli.n, file = "./../saved/R_objects/sce_deMicheli_n")
+```
+
+**Normalization plots**
+```{r deMicheli-normalization-plots}
+# Plot library size factors vs. deconvolution size factor
+lib.sf.deMicheli <- librarySizeFactors(sce.deMicheli.n)
+deconv.sf.deMicheli <- sizeFactors(sce.deMicheli.n)
+plot(lib.sf.deMicheli, deconv.sf.deMicheli, xlab="Library size factor",
+     ylab="Deconvolution size factor", log='xy', pch=16, main = "De Micheli et al.: library size factor vs. deconvolution size factor")
+abline(a=0, b=1, col="red")
+
 ```
 
 
+
 ### 7.3 Dell'Orso et al. (2019) reference data
-```{r dellOrso-normalization}
+```{r dellOrso-normalization, eval=FALSE}
 # Compute size factors
 sce.dellOrso.n <- sce.dellOrso.f
 lib.sf.dellOrso <- librarySizeFactors(sce.dellOrso.n)
@@ -716,16 +769,28 @@ sce.dellOrso.n <- computeSumFactors(sce.dellOrso.n,
 deconv.sf.dellOrso <- sizeFactors(sce.dellOrso.n)
 summary(deconv.sf.dellOrso)
 
-# Plot library size factor vs. deconvolution size factor
-plot(lib.sf.dellOrso, deconv.sf.dellOrso, xlab="Library size factor",
-     ylab="Deconvolution size factor", log='xy', pch=16,  main = "Dell'Orso et al.: library size factor vs. deconvolution size factor")
-abline(a=0, b=1, col="red")
-
 # Compute log-normalized expression values for each cell
 sce.dellOrso.n <- logNormCounts(sce.dellOrso.n)
 
 # Save normalized data
-#saveRDS(sce.dellOrso.n, file = "./../saved/R_objects/sce_dellOrso_n")
+saveRDS(sce.dellOrso.n, file = "./../saved/R_objects/sce_dellOrso_n")
+```
+
+**Normalization plots**
+```{r dellOrso-normalization-plots}
+# Plot library size factor vs. deconvolution size factor
+lib.sf.dellOrso <- librarySizeFactors(sce.dellOrso.n)
+deconv.sf.dellOrso <- sizeFactors(sce.dellOrso.n)
+plot(lib.sf.dellOrso, deconv.sf.dellOrso, xlab="Library size factor",
+     ylab="Deconvolution size factor", log='xy', pch=16,  main = "Dell'Orso et al.: library size factor vs. deconvolution size factor")
+abline(a=0, b=1, col="red")
+```
+
+**Remove QC sce objects**
+```{r remove-qc-sce-objects}
+remove(sce.f)
+remove(sce.deMicheli.f)
+remove(sce.dellOrso.f)
 ```
 
 
@@ -735,28 +800,44 @@ The simplest approach to quantifying per-gene variation is to simply compute the
   - Once we have quantified the per-gene variation, the next step is to select the subset of HVGs to use in downstream analyses.
   - Here we select top 10% of the genes with the largest values for relevant variance metric
 
+**Load feature selection objects**
+```{r shortcut-load-feature-selection-objects}
+# Feature selection objects
+hvgs.data <- readRDS("./../saved/R_objects/hvgs_data")
+dec.data <- readRDS("./../saved/R_objects/dec_data")
+hvgs.deMicheli <- readRDS("./../saved/R_objects/hvgs_deMicheli")
+dec.deMicheli <- readRDS("./../saved/R_objects/dec_deMicheli")
+hvgs.dellOrso <- readRDS("./../saved/R_objects/hvgs_dellOrso")
+dec.dellOrso <- readRDS("./../saved/R_objects/dec_dellOrso")
+```
+
+
 ### 8.1 Primary data
-```{r primary-data-feature-selection}
+```{r primary-data-feature-selection, eval=FALSE}
 # Model per-gene variance
 dec.data <- modelGeneVar(sce.n)
-
-# Visualizing the fit
-fit1 <- metadata(dec.data)
-plot(fit1$mean, fit1$var, xlab = "Mean of log-expression",
-     ylab = "Variance of log-expression", main = "Primary data: variance vs. mean of log-expression")
-curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 
 # Define highly variable genes (HVGs)
 hvgs.data <- getTopHVGs(dec.data, prop = 0.1)
 
 # save HVGS and per-gene variance
-#saveRDS(hvgs.data, file = "./../saved/R_objects/hvgs_data")
-#saveRDS(dec.data, file = "./../saved/R_objects/dec_data")
+saveRDS(hvgs.data, file = "./../saved/R_objects/hvgs_data")
+saveRDS(dec.data, file = "./../saved/R_objects/dec_data")
+```
+
+**Feature selection plots**
+```{r primary-data-feature-selection-plot}
+# Visualizing the fit
+fit1 <- metadata(dec.data)
+plot(fit1$mean, fit1$var, xlab = "Mean of log-expression",
+     ylab = "Variance of log-expression", main = "Primary data: variance vs. mean of log-expression")
+curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 ```
 
 
+
 ### 8.2 De Micheli et al. (2020) reference data
-```{r deMicheli-feature-selection}
+```{r deMicheli-feature-selection, eval=FALSE}
 # Model per-gene variance (technical & biological variation)
 dec.deMicheli <- modelGeneVar(sce.deMicheli.n)
 
@@ -769,13 +850,21 @@ curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 hvgs.deMicheli <- getTopHVGs(dec.deMicheli, prop = 0.1)
 
 # save HVGS and per-gene variance
-#saveRDS(hvgs.deMicheli, file = "./../saved/R_objects/hvgs_deMicheli")
-#saveRDS(dec.deMicheli, file = "./../saved/R_objects/dec_deMicheli")
-
+saveRDS(hvgs.deMicheli, file = "./../saved/R_objects/hvgs_deMicheli")
+saveRDS(dec.deMicheli, file = "./../saved/R_objects/dec_deMicheli")
 ```
 
+**Feature selection plots**
+```{r deMicheli-feature-selection-plot}
+#Visualize the fit
+fit1 <- metadata(dec.deMicheli)
+plot(fit1$mean, fit1$var, xlab = "Mean of log-expression", ylab = "Variance of log-expression", main = "De Micheli et al.: variance vs. mean of log-expression")
+curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
+```
+
+
 ### 8.3 Dell'Orso et al. (2019) reference data
-```{r dellOrso-feature-selection}
+```{r dellOrso-feature-selection, eval=FALSE}
 # Model per-gene variance (technical & biological variation)
 dec.dellOrso <- modelGeneVar(sce.dellOrso.n)
 
@@ -788,8 +877,17 @@ curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 hvgs.dellOrso <- getTopHVGs(dec.dellOrso, prop = 0.1)
 
 # save HVGS and per-gene variance
-#saveRDS(hvgs.dellOrso, file = "./../saved/R_objects/hvgs_dellOrso")
-#saveRDS(dec.dellOrso, file = "./../saved/R_objects/dec_dellOrso")
+saveRDS(hvgs.dellOrso, file = "./../saved/R_objects/hvgs_dellOrso")
+saveRDS(dec.dellOrso, file = "./../saved/R_objects/dec_dellOrso")
+```
+
+
+**Feature selection plots**
+```{r dellOrso-feature-selection-plot}
+#Visualize the fit
+fit1 <- metadata(dec.dellOrso)
+plot(fit1$mean, fit1$var, xlab = "Mean of log-expression", ylab = "Variance of log-expression", main = "Dell'Orso et al.: variance vs. mean of log-expression")
+curve(fit1$trend(x), col = "dodgerblue", add = TRUE, lwd = 2)
 ```
 
 
@@ -898,10 +996,19 @@ Cell cycle scoring and regression is performed to inspect if the cell cycle phas
 
 We use two different methods for performing cell cycle correction. First, following a Seurat cell cycle correction (https://satijalab.org/seurat/v3.2/cell_cycle_vignette.html) and then, following a Bioconductor approach (https://osca.bioconductor.org/cell-cycle-assignment.html)
 
+**Load cell cycle correction objects**
+```{r load-cc-objects}
+# Cell cycle correction
+g2m.genes.mouse <- readRDS("./../saved/R_objects/g2m_genes_mouse")
+s.genes.mouse <- readRDS("./../saved/R_objects/s_genes_mouse")
+sce.cc <- readRDS("./../saved/R_objects/sce_cc")
+sce.deMicheli.cc <- readRDS("./../saved/R_objects/sce_deMicheli_cc")
+sce.dellOrso.cc <- readRDS("./../saved/R_objects/sce_dellOrso_cc")
+```
 
 
 ### 10.1 Prepare cell cycle markers and transform from human to mouse genes
-```{r cell-cycle-markers}
+```{r cell-cycle-markers, eval=FALSE}
 # Make mapping between human and mouse genes
 ensembl.human <- useMart("ensembl", dataset = "hsapiens_gene_ensembl")
 ensembl.mouse <- useMart("ensembl", dataset = "mmusculus_gene_ensembl")
@@ -937,15 +1044,15 @@ for(g in g2m.genes) {
   }
 }
 
-#saveRDS(g2m.genes.mouse, file = "./../saved/R_objects/g2m_genes_mouse")
-#saveRDS(s.genes.mouse, file = "./../saved/R_objects/s_genes_mouse")
-
+# Save mouse cell cycle phase gene objects
+saveRDS(g2m.genes.mouse, file = "./../saved/R_objects/g2m_genes_mouse")
+saveRDS(s.genes.mouse, file = "./../saved/R_objects/s_genes_mouse")
 ```
 
 
 
 ### 10.2 Primary data (Seurat cell cycle correction)
-```{r primary-data-cc1}
+```{r primary-data-cc, eval=FALSE}
 # Convert sce into Seurat object
 data <- as.Seurat(sce.n, counts = "counts", data = "logcounts")
 
@@ -992,8 +1099,11 @@ cc_corrected <- SummarizedExperiment(assays = list(scaled_logcounts = data@assay
 altExp(sce.cc, "CC_corrected", withColData = TRUE) <- cc_corrected
 
 # save sce object
-#saveRDS(sce.cc, file = "./../saved/R_objects/sce_cc")
+saveRDS(sce.cc, file = "./../saved/R_objects/sce_cc")
+```
 
+**Cell cycle regression plots**
+```{r primary-data-cc-plots}
 # Plot cell cycle phases for each sample as pie charts
 cc_vs_labels <- as.data.frame.matrix(table(altExp(sce.cc, "CC_corrected")$Phase, altExp(sce.cc, "CC_corrected")$sample))
 
@@ -1061,6 +1171,8 @@ gridExtra::grid.arrange(umap.uncorrected, umap.corrected, ncol = 2)
 ```
 
 
+
+
 ### 10.3 Reference datasets
 #### 10.3.1 Add cell annotations to reference datasets
 ```{r reference-data-cell-annotations}
@@ -1095,7 +1207,7 @@ sce.dellOrso.n$cell_type[pmb] <- "Primary_MB"
 
 
 #### 10.3.2 Cell cycle annotation & correction for reference datasets
-```{r ref-cellcycle-annotation}
+```{r ref-cellcycle-annotation, eval=FALSE}
 # Convert sce objects into Seurat objects
 deMicheli.seurat <- as.Seurat(sce.deMicheli.n, counts = "counts", data = "logcounts")
 dellOrso.seurat <- as.Seurat(sce.dellOrso.n, counts = "counts", data = "logcounts")
@@ -1143,9 +1255,12 @@ altExp(sce.deMicheli.cc, "CC_corrected", withColData = TRUE) <- cc_corrected.deM
 altExp(sce.dellOrso.cc, "CC_corrected", withColData = TRUE) <- cc_corrected.dellOrso
 
 # Save cc objects
-#saveRDS(sce.deMicheli.cc, file = "./../saved/R_objects/sce_deMicheli_cc")
-#saveRDS(sce.dellOrso.cc, file = "./../saved/R_objects/sce_dellOrso_cc")
+saveRDS(sce.deMicheli.cc, file = "./../saved/R_objects/sce_deMicheli_cc")
+saveRDS(sce.dellOrso.cc, file = "./../saved/R_objects/sce_dellOrso_cc")
+```
 
+**Dimensionality reduction plots**
+```{r ref-cellcycle-annotation-plots}
 # Plot cc phases for the datasets
 phases.deMicheli <- as.data.frame.matrix(table(sce.deMicheli.cc$Phase, sce.deMicheli.cc$cell_type))
 phases.dellOrso <- as.data.frame.matrix(table(sce.dellOrso.cc$Phase, sce.dellOrso.cc$cell_type))
@@ -1204,7 +1319,13 @@ sce.dellOrso.cc.corrected <- runUMAP(sce.dellOrso.cc.corrected, exprs_values = "
 umap.uncorrected.dellOrso <- plotUMAP(sce.dellOrso.cc.uncorrected, colour_by = "Phase") + ggtitle("Uncorrected Dell'Orso dataset: UMAP plot")
 umap.corrected.dellOrso <- plotUMAP(sce.dellOrso.cc.corrected, colour_by = "Phase") + ggtitle("CC corrected Dell'Orso dataset: UMAP plot")
 gridExtra::grid.arrange(umap.uncorrected.dellOrso, umap.corrected.dellOrso, ncol = 2)
+```
 
+**Remove normalized sce objects**
+```{r remove-normalized-sce-objects}
+remove(sce.n)
+remove(sce.deMicheli.n)
+remove(sce.dellOrso.n)
 ```
 
 
@@ -1212,19 +1333,24 @@ gridExtra::grid.arrange(umap.uncorrected.dellOrso, umap.corrected.dellOrso, ncol
   - PCA is performed on the log-normalized expression values by using runPCA() function
   - Remove PCs corresponding to technical noise
 
+**load dimensionality reduction objects**
+```{r shortcut-load-dimred-objects}
+# Dimensionality reduction
+denoised.sce <- readRDS("./../saved/R_objects/denoised_sce")
+denoised.sce.deMicheli <-readRDS("./../saved/R_objects/denoised_sce_deMicheli")
+denoised.sce.dellOrso <- readRDS("./../saved/R_objects/denoised_sce_dellOrso")
+```
+
+
 ### 11.1 Primary data
-```{r primary-data-dimension-reduction}
+```{r primary-data-dimension-reduction, eval=FALSE}
 # PCA for non-corrected and cc-corrected data
 set.seed(123)
 sce.cc <- runPCA(sce.cc, subset_row = hvgs.data, exprs_values = "logcounts", name = "PCA")
 set.seed(123)
 sce.cc <- runPCA(sce.cc, altexp = "CC_corrected", subset_row = hvgs.data, exprs_values = "scaled_logcounts", name = "PCA_cc")
 
-# Plot reduced dims
-plotReducedDim(sce.cc, dimred = "PCA", colour_by = "sample") + ggtitle("Primary data: PCA")
-sce.cc.corrected <- as(altExp(sce.cc, "CC_corrected"), "SingleCellExperiment")
-reducedDim(sce.cc.corrected, "PCA_cc") <- reducedDim(sce.cc, "PCA_cc")
-plotReducedDim(sce.cc.corrected, dimred = "PCA_cc", colour_by = "sample") + ggtitle("Primary data (cc corrected): PCA")
+saveRDS(sce.cc, file = "./../saved/R_objects/sce_cc")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
@@ -1232,29 +1358,34 @@ denoised.sce <- denoisePCA(sce.cc, technical = dec.data, subset.row = hvgs.data,
 sce.cc.corrected <- denoisePCA(sce.cc.corrected, technical = dec.data, assay.type = "scaled_logcounts")
 reducedDim(denoised.sce, "PCA_cc") <- reducedDim(sce.cc.corrected, "PCA")
 
+# Save the sce object
+saveRDS(denoised.sce, file = "./../saved/R_objects/denoised_sce")
+```
+
+
+**Dimensionality reduction plots**
+```{r primary-data-dimension-reduction-plots}
+# Plot reduced dims
+plotReducedDim(sce.cc, dimred = "PCA", colour_by = "sample") + ggtitle("Primary data: PCA")
+sce.cc.corrected <- as(altExp(sce.cc, "CC_corrected"), "SingleCellExperiment")
+reducedDim(sce.cc.corrected, "PCA_cc") <- reducedDim(sce.cc, "PCA_cc")
+plotReducedDim(sce.cc.corrected, dimred = "PCA_cc", colour_by = "sample") + ggtitle("Primary data (cc corrected): PCA")
+
 # Dimensions of denoised PCA
 ncol(reducedDim(denoised.sce, "PCA"))
 ncol(reducedDim(denoised.sce, "PCA_cc"))
-
-# Save the sce object
-#saveRDS(denoised.sce, file = "./../saved/R_objects/denoised_sce")
-
 ```
 
 
 ### 11.2 De Micheli et al. (2020) reference data
-```{r deMicheli-dimension-reduction}
+```{r deMicheli-dimension-reduction, eval=FALSE}
 # PCA for non-corrected and cc-corrected data
 set.seed(123)
 sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, subset_row = hvgs.deMicheli, exprs_values = "logcounts", name = "PCA")
 set.seed(123)
 sce.deMicheli.cc <- runPCA(sce.deMicheli.cc, altexp = "CC_corrected", subset_row = hvgs.deMicheli, exprs_values = "scaled_logcounts", name = "PCA_cc")
 
-# Plot reduced dims
-plotReducedDim(sce.deMicheli.cc, dimred = "PCA", colour_by = "cell_type")  + ggtitle("De Micheli data: PCA")
-sce.deMicheli.cc.corrected <- as(altExp(sce.deMicheli.cc, "CC_corrected"), "SingleCellExperiment")
-reducedDim(sce.deMicheli.cc.corrected, "PCA_cc") <- reducedDim(sce.deMicheli.cc, "PCA_cc")
-plotReducedDim(sce.deMicheli.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("De Micheli data (cc corrected): PCA")
+saveRDS(sce.deMicheli.cc, file = "./../saved/R_objects/sce_deMicheli_cc")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
@@ -1262,28 +1393,33 @@ denoised.sce.deMicheli <- denoisePCA(sce.deMicheli.cc, technical = dec.deMicheli
 sce.deMicheli.cc.corrected <- denoisePCA(sce.deMicheli.cc.corrected, technical = dec.deMicheli, assay.type = "scaled_logcounts")
 reducedDim(denoised.sce.deMicheli, "PCA_cc") <- reducedDim(sce.deMicheli.cc.corrected, "PCA")
 
+# Save sce object
+saveRDS(denoised.sce.deMicheli, file = "./../saved/R_objects/denoised_sce_deMicheli")
+```
+
+**Dimensionality reduction plots**
+```{r deMicheli-dimension-reduction-plots}
+# Plot reduced dims
+plotReducedDim(sce.deMicheli.cc, dimred = "PCA", colour_by = "cell_type")  + ggtitle("De Micheli data: PCA")
+sce.deMicheli.cc.corrected <- as(altExp(sce.deMicheli.cc, "CC_corrected"), "SingleCellExperiment")
+reducedDim(sce.deMicheli.cc.corrected, "PCA_cc") <- reducedDim(sce.deMicheli.cc, "PCA_cc")
+plotReducedDim(sce.deMicheli.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("De Micheli data (cc corrected): PCA")
+
 # Dimensions of denoised PCA
 ncol(reducedDim(denoised.sce.deMicheli, "PCA"))
 ncol(reducedDim(denoised.sce.deMicheli, "PCA_cc"))
-
-# Save sce object
-#saveRDS(denoised.sce.deMicheli, file = "./../saved/R_objects/denoised_sce_deMicheli")
 ```
 
+
 ### 11.3 Dell'Orso et al. (2019) reference data
-```{r dellOrso-dimension-reduction}
+```{r dellOrso-dimension-reduction, eval=FALSE}
 # Perform dimension reduction
 set.seed(123)
 sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, subset_row = hvgs.dellOrso,  exprs_values = "logcounts", name = "PCA")
 set.seed(123)
 sce.dellOrso.cc <- runPCA(sce.dellOrso.cc, altexp = "CC_corrected", subset_row = hvgs.dellOrso,  exprs_values = "scaled_logcounts", name = "PCA_cc")
 
-
-# Plot reduced dims
-plotReducedDim(sce.dellOrso.cc, dimred = "PCA", colour_by = "cell_type")+ ggtitle("Dell'Orso data: PCA")
-sce.dellOrso.cc.corrected <- as(altExp(sce.dellOrso.cc, "CC_corrected"), "SingleCellExperiment")
-reducedDim(sce.dellOrso.cc.corrected, "PCA_cc") <- reducedDim(sce.dellOrso.cc, "PCA_cc")
-plotReducedDim(sce.dellOrso.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("Dell'Orso data (cc corrected): PCA")
+saveRDS(sce.dellOrso.cc, file = "./../saved/R_objects/sce_dellOrso_cc")
 
 # Remove PCs corresponding to technical noise
 set.seed(123)
@@ -1291,12 +1427,21 @@ denoised.sce.dellOrso <- denoisePCA(sce.dellOrso.cc, technical = dec.dellOrso, s
 sce.dellOrso.cc.corrected <- denoisePCA(sce.dellOrso.cc.corrected, technical = dec.dellOrso, assay.type = "scaled_logcounts")
 reducedDim(denoised.sce.dellOrso, "PCA_cc") <- reducedDim(sce.dellOrso.cc.corrected, "PCA")
 
+# Save sce object
+saveRDS(denoised.sce.dellOrso, file = "./../saved/R_objects/denoised_sce_dellOrso")
+```
+
+**Dimensionality reduction plots**
+```{r dellOrso-dimension-reduction-plots}
+# Plot reduced dims
+plotReducedDim(sce.dellOrso.cc, dimred = "PCA", colour_by = "cell_type")+ ggtitle("Dell'Orso data: PCA")
+sce.dellOrso.cc.corrected <- as(altExp(sce.dellOrso.cc, "CC_corrected"), "SingleCellExperiment")
+reducedDim(sce.dellOrso.cc.corrected, "PCA_cc") <- reducedDim(sce.dellOrso.cc, "PCA_cc")
+plotReducedDim(sce.dellOrso.cc.corrected, dimred = "PCA_cc", colour_by = "cell_type") + ggtitle("Dell'Orso data (cc corrected): PCA")
+
 # Dimensions of denoised PCA
 ncol(reducedDim(denoised.sce.dellOrso, "PCA"))
 ncol(reducedDim(denoised.sce.dellOrso, "PCA_cc"))
-
-# Save sce object
-#saveRDS(denoised.sce.dellOrso, file = "./../saved/R_objects/denoised_sce_dellOrso")
 ```
 
 
