@@ -17,6 +17,9 @@ analyses also use the output of other downstream analyses as their input. The pi
  - **Metabolic_pathways**: Perform trajectory inference, cell type annotation, and DE analysis on a subset of metabolic genes (determined by KEGG)
  - **Metabolic_pathways_pt2**: Aggregate metabolic gene expression into module/pathway expression and compute the module/pathway importances on trajectories
 
+**Note!**: Running the scripts requires approximately ~25GB of RAM. Running this analysis pipeline is NOT recommended without sufficient computing capabilities.
+
+
 ### Data
 Three datasets are used in the pipeline of which one is our primary data and two other are used as reference datasets
 
