@@ -143,18 +143,20 @@ if(!exists("traj.primary")) {
 }
 
 # Plot the trajectory
-draw_trajectory_plot(space = space.primary, 
-                     progression_group = group_name.primary,
-                     progression_group_palette = colpalette.primary,
-                     path = traj.primary$path,
-                     point_size = 1,
-                     point_alpha = 0.5,
-                     contour = TRUE) +
-  ggtitle("Trajectory inference",
-          subtitle = "Primary dataset: All genes (ndim = 2) - Cell types") +
-  theme(plot.title = element_text(size = 20, face = "bold"),
-        plot.subtitle = element_text(size = 14),
-        axis.title = element_text(size = 16))
+p.primary <- draw_trajectory_plot(space = space.primary, 
+                                 progression_group = group_name.primary,
+                                 progression_group_palette = colpalette.primary,
+                                 path = traj.primary$path,
+                                 point_size = 1,
+                                 point_alpha = 0.5,
+                                 contour = TRUE) +
+              ggtitle("Trajectory inference",
+                      subtitle = "Primary dataset: All genes (ndim = 2) - Cell types") +
+              theme(plot.title = element_text(size = 20, face = "bold"),
+                    plot.subtitle = element_text(size = 14),
+                    axis.title = element_text(size = 16))
+
+p.primary
 
 # Plot by cc cluster
 draw_trajectory_plot(space = space.primary, 
@@ -336,19 +338,21 @@ set.seed(123)
 traj.primary.cc <- infer_trajectory(space.primary.cc)
 
 # Plot the trajectory
-draw_trajectory_plot(space = space.primary.cc, 
-                     progression_group = group_name.primary.cc,
-                     progression_group_palette = colpalette.primary,
-                     path = traj.primary.cc$path,
-                     point_size = 1,
-                     point_alpha = 0.4,
-                     contour = TRUE) +
-  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2) - samples") +
-  theme(plot.title = element_text(size = 20, face = "bold"),
-        plot.subtitle = element_text(size = 16),
-        legend.text = element_text(size = 16),
-        legend.title = element_text(size = 20, face = "bold"),
-        axis.title = element_text(size = 16))
+p.primary.cc <- draw_trajectory_plot(space = space.primary.cc, 
+                                     progression_group = group_name.primary.cc,
+                                     progression_group_palette = colpalette.primary,
+                                     path = traj.primary.cc$path,
+                                     point_size = 1,
+                                     point_alpha = 0.4,
+                                     contour = TRUE) +
+                  ggtitle("Trajectory inference", subtitle = "Primary dataset (cc corrected): HVGs (ndim = 2) - samples") +
+                  theme(plot.title = element_text(size = 20, face = "bold"),
+                        plot.subtitle = element_text(size = 16),
+                        legend.text = element_text(size = 16),
+                        legend.title = element_text(size = 20, face = "bold"),
+                        axis.title = element_text(size = 16))
+
+p.primary.cc
 
 # Plot by cluster
 draw_trajectory_plot(space = space.primary.cc, 
@@ -515,17 +519,19 @@ traj.deMicheli <- infer_trajectory(space.deMicheli)
 traj.deMicheli <- reverse_trajectory(traj.deMicheli)
 
 # Plot trajectory by cell types
-draw_trajectory_plot(space = space.deMicheli, 
-                     progression_group = group_name.deMicheli,
-                     path = traj.deMicheli$path,
-                     point_size = 1,
-                     point_alpha = 0.5,
-                     contour = TRUE) +
-  ggtitle("Trajectory inference",
-          subtitle = "De Micheli et al. dataset: All genes (ndim = 2) - Cell types") +
-  theme(plot.title = element_text(size = 20, face = "bold"),
-        plot.subtitle = element_text(size = 14),
-        axis.title = element_text(size = 16))
+p.deMicheli <- draw_trajectory_plot(space = space.deMicheli, 
+                                     progression_group = group_name.deMicheli,
+                                     path = traj.deMicheli$path,
+                                     point_size = 1,
+                                     point_alpha = 0.5,
+                                     contour = TRUE) +
+                  ggtitle("Trajectory inference",
+                          subtitle = "De Micheli et al. dataset: All genes (ndim = 2) - Cell types") +
+                  theme(plot.title = element_text(size = 20, face = "bold"),
+                        plot.subtitle = element_text(size = 14),
+                        axis.title = element_text(size = 16))
+
+p.deMicheli
 ```
 
 
@@ -869,16 +875,18 @@ traj.dellOrso.f <- infer_trajectory(space.dellOrso.f)
 
 
 # plot trajectory
-draw_trajectory_plot(space = space.dellOrso.f, 
-                     progression_group = group_name.dellOrso.f,
-                     path = traj.dellOrso.f$path,
-                     point_size = 1,
-                     point_alpha = 0.5,
-                     contour = TRUE) +
-  ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset: Without PMs, All genes (ndim = 2)") +
-  theme(plot.title = element_text(size = 20, face = "bold"),
-        plot.subtitle = element_text(size = 14),
-        axis.title = element_text(size = 16))
+p.dellOrso <- draw_trajectory_plot(space = space.dellOrso.f, 
+                                   progression_group = group_name.dellOrso.f,
+                                   path = traj.dellOrso.f$path,
+                                   point_size = 1,
+                                   point_alpha = 0.5,
+                                   contour = TRUE) +
+                ggtitle("Trajectory inference", subtitle = "Dell'Orso et al. dataset: Without PMs, All genes (ndim = 2)") +
+                theme(plot.title = element_text(size = 20, face = "bold"),
+                      plot.subtitle = element_text(size = 14),
+                      axis.title = element_text(size = 16))
+
+p.dellOrso
 ```
 
 
@@ -1129,3 +1137,15 @@ draw_trajectory_heatmap(expr_sel.dellOrso.f,
                         fontsize_row = 1)
 dev.off()
 ```
+
+
+
+## 4. Saving of trajectory plots as R objects
+```{r saving-of-traj-plots, eval=FALSE}
+# Save plots as R objects
+saveRDS(p.primary, "./../saved/R_objects/trajectory_plot_primary")
+saveRDS(p.primary.cc, "./../saved/R_objects/trajectory_plot_primary_cc")
+saveRDS(p.deMicheli, "./../saved/R_objects/trajectory_plot_deMicheli")
+saveRDS(p.dellOrso, "./../saved/R_objects/trajectory_plot_dellOrso_f")
+```
+
