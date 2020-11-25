@@ -13,7 +13,9 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 # Trajectory inference
-Here, we perform trajectory inference using Scorpius (https://github.com/rcannood/SCORPIUS)
+Here, we perform trajectory inference using Scorpius (https://github.com/rcannood/SCORPIUS). The aim is to computationally model the myogenic differentiation trajectory and to see if the cells in our primary data show trajectory-like progression from one cell state to another.
+
+Also, we identify genes that have high importance in predicting the ordering of cells along the trajectories.
 
 ## 1. Load packages and data
 ### 1.1 Load packages
