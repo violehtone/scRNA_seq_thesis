@@ -30,7 +30,6 @@ library(plyr)
 ```{r load-objects}
 # Load pre-processed sce objects
 denoised.sce <- readRDS("./../saved/R_objects/denoised_sce_clust")
-denoised.sce.deMicheli <- readRDS("./../saved/R_objects/denoised_sce_deMicheli")
 
 # Generate the CC corrected data
 denoised.sce.cc <- as(altExp(denoised.sce, "CC_corrected"), "SingleCellExperiment")
@@ -85,6 +84,7 @@ for(cluster in unique(denoised.sce$cluster)) {
 }
 ```
 
+
 **Markers by cell cycle corrected clusters**
 ```{r de-genes-primary-data-clusters-cc, eval=FALSE}
 # Find markers by sample
@@ -123,6 +123,11 @@ control.markers.wmw <- markers.primary.wmw[["control"]]
 
 # Save marker information to .csv file
 write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw.csv")
+
+# Print and save DE genes with fdr < 0.1 & Summary.AUC > 0.7
+de.genes <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.7), ]
+print(rownames(de.genes))
+write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw_filtered.csv")
 
 # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
 best.set <- control.markers.wmw[control.markers.wmw$Top <= 6,]
@@ -185,6 +190,10 @@ for(cluster in unique(denoised.sce$cluster.cc)) {
 
 ## 2. Ridgeline plots to inspect how the distribution of marker genes differs in the samples of primary and reference datasets
 ```{r ridge-plots, message=FALSE, warning=FALSE}
+# Load de Micheli data
+denoised.sce.deMicheli <- readRDS("./../saved/R_objects/denoised_sce_deMicheli")
+
+# Define interesting genes
 genes.primary = c("Pax7", "Myf5", "Myod1", "Cdh15", "Tnnt3", "Hes1", "Hes6", "Notch1", "Id1", "Id2", "Id3", "Wnt7b")
 genes.deMicheli = c("Pax7", "Myf5", "Myod1", "Myog", "Cdh15", "Tnnt3", "Hes1", "Heyl", "Hes6", "Notch1", "Notch2", "Notch3", "Id1", "Id2", "Id3", "Wnt2", "Wnt10b")
 
