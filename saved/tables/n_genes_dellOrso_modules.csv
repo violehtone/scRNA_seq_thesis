@@ -1,0 +1,47 @@
+"","module_name","n_genes"
+"mmu_M00009","Citrate cycle (TCA cycle, Krebs cycle) [PATH:mmu01100]",23
+"mmu_M00010","Citrate cycle, first carbon oxidation, oxaloacetate => 2-oxoglutarate [PATH:mmu01100]",9
+"mmu_M00004","Pentose phosphate pathway (Pentose phosphate cycle) [PATH:mmu01100]",11
+"mmu_M00048","Inosine monophosphate biosynthesis, PRPP + glutamine => IMP [PATH:mmu01100]",6
+"mmu_M00130","Inositol phosphate metabolism, PI=> PIP2 => Ins(1,4,5)P3 => Ins(1,3,4,5)P4 [PATH:mmu01100]",21
+"mmu_M00014","Glucuronate pathway (uronate pathway) [PATH:mmu01100]",13
+"mmu_M00129","Ascorbate biosynthesis, animals, glucose-1P => ascorbate [PATH:mmu01100]",11
+"mmu_M00065","GPI-anchor biosynthesis, core oligosaccharide [PATH:mmu01100]",16
+"mmu_M00092","Phosphatidylethanolamine (PE) biosynthesis, ethanolamine => PE [PATH:mmu01100]",7
+"mmu_M00049","Adenine ribonucleotide biosynthesis, IMP => ADP,ATP [PATH:mmu01100]",19
+"mmu_M00050","Guanine ribonucleotide biosynthesis IMP => GDP,GTP [PATH:mmu01100]",12
+"mmu_M00052","Pyrimidine ribonucleotide biosynthesis, UMP => UDP/UTP,CDP/CTP [PATH:mmu01100]",11
+"mmu_M00135","GABA biosynthesis, eukaryotes, putrescine => GABA [PATH:mmu01100]",9
+"mmu_M00892","UDP-N-acetyl-D-glucosamine biosynthesis, eukaryotes, glucose => UDP-GlcNAc [PATH:mmu01100]",12
+"mmu_M00011","Citrate cycle, second carbon oxidation, 2-oxoglutarate => oxaloacetate [PATH:mmu01100]",14
+"mmu_M00868","Heme biosynthesis, animals and fungi, glycine => heme [PATH:mmu01100]",9
+"mmu_M00015","Proline biosynthesis, glutamate => proline [PATH:mmu01100]",4
+"mmu_M00109","C21-Steroid hormone biosynthesis, progesterone => cortisol/cortisone [PATH:mmu01100]",3
+"mmu_M00032","Lysine degradation, lysine => saccharopine => acetoacetyl-CoA [PATH:mmu01100]",11
+"mmu_M00415","Fatty acid elongation in endoplasmic reticulum [PATH:mmu01100]",13
+"mmu_M00307","Pyruvate oxidation, pyruvate => acetyl-CoA [PATH:mmu01100]",5
+"mmu_M00047","Creatine pathway [PATH:mmu01100]",6
+"mmu_M00855","Glycogen degradation, glycogen => glucose-6P [PATH:mmu01100]",6
+"mmu_M00035","Methionine degradation [PATH:mmu01100]",10
+"mmu_M00118","Glutathione biosynthesis, glutamate => glutathione [PATH:mmu01100]",3
+"mmu_M00072","N-glycosylation by oligosaccharyltransferase [PATH:mmu01100]",7
+"mmu_M00003","Gluconeogenesis, oxaloacetate => fructose-6P [PATH:mmu01100]",18
+"mmu_M00006","Pentose phosphate pathway, oxidative phase, glucose 6P => ribulose 5P [PATH:mmu01100]",5
+"mmu_M00001","Glycolysis (Embden-Meyerhof pathway), glucose => pyruvate [PATH:mmu01100]",25
+"mmu_M00002","Glycolysis, core module involving three-carbon compounds [PATH:mmu01100]",11
+"mmu_M00005","PRPP biosynthesis, ribose 5P => PRPP [PATH:mmu01100]",3
+"mmu_M00055","N-glycan precursor biosynthesis [PATH:mmu01100]",14
+"mmu_M00095","C5 isoprenoid biosynthesis, mevalonate pathway [PATH:mmu01100]",11
+"mmu_M00020","Serine biosynthesis, glycerate-3P => serine [PATH:mmu01100]",3
+"mmu_M00085","Fatty acid elongation in mitochondria [PATH:mmu01100]",6
+"mmu_M00128","Ubiquinone biosynthesis, eukaryotes, 4-hydroxybenzoate + polyprenyl-PP => ubiquinol [PATH:mmu01100]",5
+"mmu_M00554","Nucleotide sugar biosynthesis, galactose => UDP-galactose [PATH:mmu01100]",2
+"mmu_M00632","Galactose degradation, Leloir pathway, galactose => alpha-D-glucose-1P [PATH:mmu01100]",4
+"mmu_M00066","Lactosylceramide biosynthesis [PATH:mmu01100]",2
+"mmu_M00549","Nucleotide sugar biosynthesis, glucose => UDP-glucose [PATH:mmu01100]",8
+"mmu_M00862","beta-Oxidation, peroxisome, tri/dihydroxycholestanoyl-CoA => choloyl/chenodeoxycholoyl-CoA [PATH:mmu01100]",3
+"mmu_M00133","Polyamine biosynthesis, arginine => agmatine => putrescine => spermidine [PATH:mmu01100]",5
+"mmu_M00873","Fatty acid biosynthesis in mitochondria, animals [PATH:mmu01100]",7
+"mmu_M00141","C1-unit interconversion, eukaryotes [PATH:mmu01100]",6
+"mmu_M00069","Glycosphingolipid biosynthesis, ganglio series, LacCer => GT3 [PATH:mmu01100]",3
+"mmu_M00134","Polyamine biosynthesis, arginine => ornithine => putrescine [PATH:mmu01100]",3

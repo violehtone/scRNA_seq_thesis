@@ -1,0 +1,30 @@
+"","module_name","n_genes"
+"mmu_M00009","Citrate cycle (TCA cycle, Krebs cycle) [PATH:mmu01100]",23
+"mmu_M00004","Pentose phosphate pathway (Pentose phosphate cycle) [PATH:mmu01100]",11
+"mmu_M00007","Pentose phosphate pathway, non-oxidative phase, fructose 6P => ribose 5P [PATH:mmu01100]",5
+"mmu_M00048","Inosine monophosphate biosynthesis, PRPP + glutamine => IMP [PATH:mmu01100]",6
+"mmu_M00094","Ceramide biosynthesis [PATH:mmu01100]",12
+"mmu_M00099","Sphingosine biosynthesis [PATH:mmu01100]",16
+"mmu_M00092","Phosphatidylethanolamine (PE) biosynthesis, ethanolamine => PE [PATH:mmu01100]",7
+"mmu_M00049","Adenine ribonucleotide biosynthesis, IMP => ADP,ATP [PATH:mmu01100]",19
+"mmu_M00135","GABA biosynthesis, eukaryotes, putrescine => GABA [PATH:mmu01100]",9
+"mmu_M00101","Cholesterol biosynthesis, squalene 2,3-epoxide => cholesterol [PATH:mmu01100]",10
+"mmu_M00892","UDP-N-acetyl-D-glucosamine biosynthesis, eukaryotes, glucose => UDP-GlcNAc [PATH:mmu01100]",12
+"mmu_M00011","Citrate cycle, second carbon oxidation, 2-oxoglutarate => oxaloacetate [PATH:mmu01100]",14
+"mmu_M00036","Leucine degradation, leucine => acetoacetate + acetyl-CoA [PATH:mmu01100]",13
+"mmu_M00118","Glutathione biosynthesis, glutamate => glutathione [PATH:mmu01100]",3
+"mmu_M00003","Gluconeogenesis, oxaloacetate => fructose-6P [PATH:mmu01100]",18
+"mmu_M00078","Heparan sulfate degradation [PATH:mmu01100]",8
+"mmu_M00006","Pentose phosphate pathway, oxidative phase, glucose 6P => ribulose 5P [PATH:mmu01100]",5
+"mmu_M00090","Phosphatidylcholine (PC) biosynthesis, choline => PC [PATH:mmu01100]",6
+"mmu_M00001","Glycolysis (Embden-Meyerhof pathway), glucose => pyruvate [PATH:mmu01100]",25
+"mmu_M00002","Glycolysis, core module involving three-carbon compounds [PATH:mmu01100]",11
+"mmu_M00854","Glycogen biosynthesis, glucose-1P => glycogen/starch [PATH:mmu01100]",5
+"mmu_M00367","C10-C20 isoprenoid biosynthesis, non-plant eukaryotes [PATH:mmu01100]",4
+"mmu_M00095","C5 isoprenoid biosynthesis, mevalonate pathway [PATH:mmu01100]",11
+"mmu_M00020","Serine biosynthesis, glycerate-3P => serine [PATH:mmu01100]",3
+"mmu_M00338","Cysteine biosynthesis, homocysteine + serine => cysteine [PATH:mmu01100]",2
+"mmu_M00549","Nucleotide sugar biosynthesis, glucose => UDP-glucose [PATH:mmu01100]",8
+"mmu_M00141","C1-unit interconversion, eukaryotes [PATH:mmu01100]",6
+"mmu_M00079","Keratan sulfate degradation [PATH:mmu01100]",5
+"mmu_M00083","Fatty acid biosynthesis, elongation [PATH:mmu01100]",2

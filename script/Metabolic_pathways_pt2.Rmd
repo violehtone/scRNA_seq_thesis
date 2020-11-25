@@ -534,7 +534,6 @@ write.csv(modules.primary.module, file = "./../saved/tables/modules_primary_kegg
 write.csv(gimp.primary.pathway, file = "./../saved/tables/gimp_primary_kegg_pathways.csv")
 write.csv(modules.primary.pathway, file = "./../saved/tables/modules_primary_kegg_pathways.csv")
 
-
 # De Micheli data: all cells - modules
 write.csv(gimp.deMicheli.module, file = "./../saved/tables/gimp_deMicheli_kegg_modules.csv")
 write.csv(modules.deMicheli.module, file = "./../saved/tables/modules_deMicheli_kegg_modules.csv")
@@ -1334,6 +1333,100 @@ AUCs <- getMarkerEffects(best.set, prefix="AUC")
 pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Important metabolic marker pathways (wmw): Control vs. other samples")
 ```
 
+### 6. Calculate the number of genes per each important module / pathway
+```{r count-number-of-genes-per-important-modules-and-pathways, eval=FALSE}
+############
+# Modules #
+############
+# Primary data - modules
+sce.primary.module.important <- sce.primary.module[(rownames(sce.primary.module) %in% modules.primary.module$feature), ]
+
+for(i in 1:nrow(sce.primary.module.important)) {
+  module.id <- rownames(sce.primary.module.important[i, ])
+  module.genes <- denoised.sce.m[grepl(module.id, rowData(denoised.sce.m)$module, fixed = TRUE), ] %>% rownames()
+  rowData(sce.primary.module.important[i, ])$n_genes <- length(module.genes)
+}
+
+# deMicheli data - modules (all cell types)
+sce.deMicheli.module.important <- sce.deMicheli.module[(rownames(sce.deMicheli.module) %in% modules.deMicheli.module$feature), ]
+
+for(i in 1:nrow(sce.deMicheli.module.important)) {
+  module.id <- rownames(sce.deMicheli.module.important[i, ])
+  module.genes <- denoised.sce.m[grepl(module.id, rowData(denoised.sce.m)$module, fixed = TRUE), ] %>% rownames()
+  rowData(sce.deMicheli.module.important[i, ])$n_genes <- length(module.genes)
+}
+
+# deMicheli data - modules (without mature muscle)
+sce.deMicheli.module.important.f <- sce.deMicheli.module.f[(rownames(sce.deMicheli.module.f) %in% modules.deMicheli.module.f$feature), ]
+
+for(i in 1:nrow(sce.deMicheli.module.important.f)) {
+  module.id <- rownames(sce.deMicheli.module.important.f[i, ])
+  module.genes <- denoised.sce.m[grepl(module.id, rowData(denoised.sce.m)$module, fixed = TRUE), ] %>% rownames()
+  rowData(sce.deMicheli.module.important.f[i, ])$n_genes <- length(module.genes)
+}
+
+# dellOrso data - modules (without PMs)
+sce.dellOrso.module.important <- sce.dellOrso.module.f[(rownames(sce.dellOrso.module.f) %in% modules.dellOrso.module.f$feature), ]
+
+for(i in 1:nrow(sce.dellOrso.module.important)) {
+  module.id <- rownames(sce.dellOrso.module.important[i, ])
+  module.genes <- denoised.sce.m[grepl(module.id, rowData(denoised.sce.m)$module, fixed = TRUE), ] %>% rownames()
+  rowData(sce.dellOrso.module.important[i, ])$n_genes <- length(module.genes)
+}
+
+############
+# Pathways #
+############
+# Primary data - pathways
+sce.primary.pathway.important <- sce.primary.pathway[(rownames(sce.primary.pathway) %in% modules.primary.pathway$feature), ]
+
+for(i in 1:nrow(sce.primary.pathway.important)) {
+  pathway.id <- rownames(sce.primary.pathway.important[i, ])
+  pathway.genes <- denoised.sce.m[grepl(pathway.id, rowData(denoised.sce.m)$pathway, fixed = TRUE), ] %>% rownames()
+  rowData(sce.primary.pathway.important[i, ])$n_genes <- length(pathway.genes)
+}
+
+# deMicheli data - pathways (all cell types)
+sce.deMicheli.pathway.important <- sce.deMicheli.pathway[(rownames(sce.deMicheli.pathway) %in% modules.deMicheli.pathway$feature), ]
+
+for(i in 1:nrow(sce.deMicheli.pathway.important)) {
+  pathway.id <- rownames(sce.deMicheli.pathway.important[i, ])
+  pathway.genes <- denoised.sce.m[grepl(pathway.id, rowData(denoised.sce.m)$pathway, fixed = TRUE), ] %>% rownames()
+  rowData(sce.deMicheli.pathway.important[i, ])$n_genes <- length(pathway.genes)
+}
+
+# deMicheli data - pathways (without mature muscle)
+sce.deMicheli.pathway.important.f <- sce.deMicheli.pathway.f[(rownames(sce.deMicheli.pathway.f) %in% modules.deMicheli.pathway.f$feature), ]
+
+for(i in 1:nrow(sce.deMicheli.pathway.important.f)) {
+  pathway.id <- rownames(sce.deMicheli.pathway.important.f[i, ])
+  pathway.genes <- denoised.sce.m[grepl(pathway.id, rowData(denoised.sce.m)$pathway, fixed = TRUE), ] %>% rownames()
+  rowData(sce.deMicheli.pathway.important.f[i, ])$n_genes <- length(pathway.genes)
+}
+
+# dellOrso data - pathways (without PMs)
+sce.dellOrso.pathway.important <- sce.dellOrso.pathway.f[(rownames(sce.dellOrso.pathway.f) %in% modules.dellOrso.pathway.f$feature), ]
+
+for(i in 1:nrow(sce.dellOrso.pathway.important)) {
+  pathway.id <- rownames(sce.dellOrso.pathway.important[i, ])
+  pathway.genes <- denoised.sce.m[grepl(pathway.id, rowData(denoised.sce.m)$pathway, fixed = TRUE), ] %>% rownames()
+  rowData(sce.dellOrso.pathway.important[i, ])$n_genes <- length(pathway.genes)
+}
+
+##############################
+# save results as csv tables #
+##############################
+# Pathways
+write.csv(rowData(sce.primary.pathway.important), file = "./../saved/tables/n_genes_primary_pathways.csv")
+write.csv(rowData(sce.deMicheli.pathway.important), file = "./../saved/tables/n_genes_deMicheli_pathways.csv")
+write.csv(rowData(sce.deMicheli.pathway.important.f), file = "./../saved/tables/n_genes_deMicheli_f_pathways.csv")
+write.csv(rowData(sce.dellOrso.pathway.important), file = "./../saved/tables/n_genes_dellOrso_pathways.csv")
+# Modules
+write.csv(rowData(sce.primary.module.important), file = "./../saved/tables/n_genes_primary_modules.csv")
+write.csv(rowData(sce.deMicheli.module.important), file = "./../saved/tables/n_genes_deMicheli_modules.csv")
+write.csv(rowData(sce.deMicheli.module.important.f), file = "./../saved/tables/n_genes_deMicheli_f_modules.csv")
+write.csv(rowData(sce.dellOrso.module.important), file = "./../saved/tables/n_genes_dellOrso_modules.csv")
+```
 
 
 
