@@ -14,19 +14,15 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 # Data preprocessing
 
-## Note
-**In case you are running this script for the first time, please remove the eval=FALSE from the code chunks below. Otherwise, if you already have the sce objects saved locally, please continue from the chunk "shortcut-load-sce-files" to speed up the process.**
-
 ## 1. Introduction
-This script is used for performing the data pre-processing of 3 scRNA-seq data sets.
-One dataset is primary data and the other two are used as reference datasets.
-Reference data sets:
-  - De Micheli et al. (2020): GSE143437 data set
-  - Dell'Orso et al. (2019): GSE126834 data set
+The aim of this script is to load and process 3 scRNA-seq datasets. One of the datasets is our primary data, which is not publicly available and the two others are reference datasets downloaded from Gene Expression Omnibus (GEO). The instructions for downloading the reference datasets are shown below:
 
-The data sets are available in NCBI GEO:
-  - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE126834
-  - https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE143437
+  - De Micheli et al. (2020): GSE143437 data set (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE143437)
+  - Dell'Orso et al. (2019): GSE126834 data set (https://www.ncbi.nlm.nih.gov/geo/query/acc.cgi?acc=GSE126834)
+
+This script requires a correct folder structure (shown on README.md) for it to function. Also, the evaluation of majority of the code chunks is se to FALSE to speeden up the computation times. Instead of computation, many parts of the script use pre-calculated R objects.
+
+**Note**: In case you are running this script for the first time, please compute the required R objects by running the code chunks needed to produce them.
 
 
 ## 2. Load packages
@@ -45,6 +41,7 @@ library(batchelor)
 library(igraph)
 ```
 
+
 ## 3. Utility functions
 ```{r utility-functions}
 firstColumnToRowNames <- function(data) {
@@ -53,8 +50,8 @@ firstColumnToRowNames <- function(data) {
   data <- data[, -1]
   return(data)
 }
-
 ```
+
 
 ## 4. Load data
 ### 4.1 Primary data
