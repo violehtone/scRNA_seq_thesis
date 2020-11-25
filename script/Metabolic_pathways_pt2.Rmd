@@ -527,36 +527,36 @@ expr_sel.dellOrso.pathway.f <- scale_quantile(expression.dellOrso.pathway.f[, ge
 **Save gimp / module information into csv files**
 ```{r save-gimp-and-module-into-csv, eval=FALSE}
 # Primary data - modules
-write.csv(gimp.primary.module[gimp.primary.module$gene %in% gene_sel.primary.module, ], file = "./../saved/tables/gimp_primary_kegg_modules.csv")
+write.csv(gimp.primary.module, file = "./../saved/tables/gimp_primary_kegg_modules.csv")
 write.csv(modules.primary.module, file = "./../saved/tables/modules_primary_kegg_modules.csv")
 
 # Primary data - pathways
-write.csv(gimp.primary.pathway[gimp.primary.pathway$gene %in% gene_sel.primary.pathway, ], file = "./../saved/tables/gimp_primary_kegg_pathways.csv")
+write.csv(gimp.primary.pathway, file = "./../saved/tables/gimp_primary_kegg_pathways.csv")
 write.csv(modules.primary.pathway, file = "./../saved/tables/modules_primary_kegg_pathways.csv")
 
 
 # De Micheli data: all cells - modules
-write.csv(gimp.deMicheli.module[gimp.deMicheli.module$gene %in% gene_sel.deMicheli.module, ], file = "./../saved/tables/gimp_deMicheli_kegg_modules.csv")
+write.csv(gimp.deMicheli.module, file = "./../saved/tables/gimp_deMicheli_kegg_modules.csv")
 write.csv(modules.deMicheli.module, file = "./../saved/tables/modules_deMicheli_kegg_modules.csv")
 
 # De Micheli data: all cells - pathways
-write.csv(gimp.deMicheli.pathway[gimp.deMicheli.pathway$gene %in% gene_sel.deMicheli.pathway, ], file = "./../saved/tables/gimp_deMicheli_kegg_pathways.csv")
+write.csv(gimp.deMicheli.pathway, file = "./../saved/tables/gimp_deMicheli_kegg_pathways.csv")
 write.csv(modules.deMicheli.pathway, file = "./../saved/tables/modules_deMicheli_kegg_pathways.csv")
 
 # De Micheli data: without mature skeletal muscle - modules
-write.csv(gimp.deMicheli.module.f[gimp.deMicheli.module.f$gene %in% gene_sel.deMicheli.module.f, ], file = "./../saved/tables/gimp_deMicheli_f_kegg_modules.csv")
+write.csv(gimp.deMicheli.module.f, file = "./../saved/tables/gimp_deMicheli_f_kegg_modules.csv")
 write.csv(modules.deMicheli.module.f, file = "./../saved/tables/modules_deMicheli_f_kegg_modules.csv")
 
 # De Micheli data: without mature skeletal muscle - pathways
-write.csv(gimp.deMicheli.pathway.f[gimp.deMicheli.pathway.f$gene %in% gene_sel.deMicheli.pathway.f, ], file = "./../saved/tables/gimp_deMicheli_f_kegg_pathways.csv")
+write.csv(gimp.deMicheli.pathway.f, file = "./../saved/tables/gimp_deMicheli_f_kegg_pathways.csv")
 write.csv(modules.deMicheli.pathway.f, file = "./../saved/tables/modules_deMicheli_f_kegg_pathways.csv")
 
 # Dell'Orso data: without primary myoblasts - modules
-write.csv(gimp.dellOrso.module.f[gimp.dellOrso.module.f$gene %in% gene_sel.dellOrso.module.f, ], file = "./../saved/tables/gimp_dellOrso_kegg_modules.csv")
+write.csv(gimp.dellOrso.module.f, file = "./../saved/tables/gimp_dellOrso_kegg_modules.csv")
 write.csv(modules.dellOrso.module.f, file = "./../saved/tables/modules_dellOrso_kegg_modules.csv")
 
 # Dell'Orso data: without primary myoblasts - pathways
-write.csv(gimp.dellOrso.pathway.f[gimp.dellOrso.pathway.f$gene %in% gene_sel.dellOrso.pathway.f, ], file = "./../saved/tables/gimp_dellOrso_kegg_pathways.csv")
+write.csv(gimp.dellOrso.pathway.f, file = "./../saved/tables/gimp_dellOrso_kegg_pathways.csv")
 write.csv(modules.dellOrso.pathway.f, file = "./../saved/tables/modules_dellOrso_kegg_pathways.csv")
 ```
 
