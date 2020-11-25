@@ -48,7 +48,7 @@ dim(denoised.sce.dellOrso.m)
 ```{r load-trajectories}
 traj.primary <- readRDS("./../saved/R_objects/traj_primary")
 traj.deMicheli <- readRDS("./../saved/R_objects/traj_deMicheli")
-traj.dellOrso <- readRDS("./../saved/R_objects/traj_dellOrso")
+traj.dellOrso <- readRDS("./../saved/R_objects/traj_dellOrso_f")
 ```
 
 **Aggregated sce objects**
@@ -742,7 +742,6 @@ saveRDS(modules.deMicheli.pathway, file = "./../saved/R_objects/modules_deMichel
 # Filter out PMs
 primary_mbs.module <- sce.dellOrso.module$cell_type == "Primary_MB"
 sce.dellOrso.module <- sce.dellOrso.module[, !primary_mbs.module]
-traj.dellOrso.time.module <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.module)]
 
 # Create expression and sample objects
 expression.dellOrso.module <- as.matrix(t(logcounts(sce.dellOrso.module)))
@@ -750,7 +749,7 @@ group_name.dellOrso.module <- as.factor(sce.dellOrso.module$sample)
 
 # Compute gene importances
 gimp.dellOrso.module <- gene_importances(x = expression.dellOrso.module,
-                                        time = traj.dellOrso.time.module,
+                                        time = traj.dellOrso$time,
                                         num_permutations = 10,
                                         num_threads = 8)
 
@@ -762,7 +761,7 @@ saveRDS(gimp.dellOrso.module, file = "./../saved/R_objects/gimp_dellOrso_module_
 
 # Extract modules
 modules.dellOrso.module <- extract_modules(expr_sel.dellOrso.module,
-                                          time = traj.dellOrso.time.module,
+                                          time = traj.dellOrso$time,
                                           verbose = FALSE)
 
 saveRDS(modules.dellOrso.module, file = "./../saved/R_objects/modules_dellOrso_module_no_pm")
@@ -774,7 +773,6 @@ saveRDS(modules.dellOrso.module, file = "./../saved/R_objects/modules_dellOrso_m
 # Filter out PMs
 primary_mbs.pathway <- sce.dellOrso.pathway$cell_type == "Primary_MB"
 sce.dellOrso.pathway <- sce.dellOrso.pathway[, !primary_mbs.pathway]
-traj.dellOrso.time.pathway <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.pathway)]
 
 # Create expression and sample objects
 expression.dellOrso.pathway <- as.matrix(t(logcounts(sce.dellOrso.pathway)))
@@ -782,7 +780,7 @@ group_name.dellOrso.pathway <- as.factor(sce.dellOrso.pathway$sample)
 
 # Compute gene importances
 gimp.dellOrso.pathway <- gene_importances(x = expression.dellOrso.pathway,
-                                        time = traj.dellOrso.time.pathway,
+                                        time = traj.dellOrso$time,
                                         num_permutations = 10,
                                         num_threads = 8)
 
@@ -794,7 +792,7 @@ saveRDS(gimp.dellOrso.pathway, file = "./../saved/R_objects/gimp_dellOrso_pathwa
 
 # Extract modules
 modules.dellOrso.pathway <- extract_modules(expr_sel.dellOrso.pathway,
-                                          time = traj.dellOrso.time.pathway,
+                                          time = traj.dellOrso$time,
                                           verbose = FALSE)
 
 saveRDS(modules.dellOrso.pathway, file = "./../saved/R_objects/modules_dellOrso_pathway_no_pm")
@@ -1067,16 +1065,13 @@ dev.off()
 
 #### 4.3.7 Dell'Orso data - modules (without PMs)
 ```{r trajectory-heatmap-dellOrso-data-modules-no-PMs}
-# define time without PMs
-traj.dellOrso.time.module.f <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.module.f)]
-
 # Define annotation row
 ann.row <- as.data.frame(rowData(sce.dellOrso.module.f)[rownames(sce.dellOrso.module.f) %in% colnames(expr_sel.dellOrso.module.f), , drop=FALSE])
 ann.row$module_name <- as.factor(ann.row$module_name)
 
 # Draw heatmap
 p.dellOrso.modules.f <- draw_trajectory_heatmap(expr_sel.dellOrso.module.f, 
-                        time = traj.dellOrso.time.module.f,
+                        time = traj.dellOrso$time,
                         progression_group = group_name.dellOrso.module.f,
                         modules = modules.dellOrso.module.f,
                         show_labels_row = TRUE,
@@ -1099,21 +1094,18 @@ dev.off()
 
 #### 4.3.8 Dell'Orso data - pathways (without PMs)
 ```{r trajectory-heatmap-dellOrso-data-pathways-no-PMs}
-# define time without PMs
-traj.dellOrso.time.pathway.f <-  traj.dellOrso$time[names(traj.dellOrso$time) %in% colnames(sce.dellOrso.pathway.f)]
-
 # Define annotation row
 ann.row <- as.data.frame(rowData(sce.dellOrso.pathway.f)[rownames(sce.dellOrso.pathway.f) %in% colnames(expr_sel.dellOrso.pathway.f), , drop=FALSE])
 ann.row$pathway_name <- as.factor(ann.row$pathway_name)
 
 # Draw heatmap
 p.dellOrso.pathways.f <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway.f, 
-                        time = traj.dellOrso.time.pathway.f,
-                        progression_group = group_name.dellOrso.pathway.f,
-                        modules = modules.dellOrso.pathway.f,
-                        show_labels_row = TRUE,
-                        fontsize_row = 5,
-                        fontsize = 4)
+                                                 time = traj.dellOrso$time,
+                                                 progression_group = group_name.dellOrso.pathway.f,
+                                                 modules = modules.dellOrso.pathway.f,
+                                                 show_labels_row = TRUE,
+                                                 fontsize_row = 5,
+                                                 fontsize = 4)
 
 p.dellOrso.pathways.f
 
@@ -1133,7 +1125,7 @@ modules.dellOrso.pathway.name.f$feature <- rowData(sce.dellOrso.pathway.importan
 
 ## Make the plot
 p.dellOrso.pathways.names.f <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway.name.f, 
-                                                        time = traj.dellOrso.time.pathway.f,
+                                                        time = traj.dellOrso$time,
                                                         progression_group = group_name.dellOrso.pathway.f,
                                                         modules = modules.dellOrso.pathway.name.f,
                                                         show_labels_row = TRUE,
@@ -1171,6 +1163,14 @@ if(!exists("modules.deMicheli.pathway.f")) {modules.deMicheli.pathway.f <- readR
 if(!exists("modules.dellOrso.module.f")) {modules.dellOrso.module.f <- readRDS("./../saved/R_objects/modules_dellOrso_module_no_pm")}
 if(!exists("modules.dellOrso.pathway.f")) {modules.dellOrso.pathway.f <- readRDS("./../saved/R_objects/modules_dellOrso_pathway_no_pm")}
 
+# Get pathway name information
+pathway.names.primary <- rowData(sce.primary.pathway[(rownames(sce.primary.pathway) %in% modules.primary.pathway$feature),])
+pathway.names.deMicheli.f <- rowData(sce.deMicheli.pathway.f[(rownames(sce.deMicheli.pathway.f) %in% modules.deMicheli.pathway.f$feature),])
+pathway.names.dellOrso.f <- rowData(sce.dellOrso.pathway.f[(rownames(sce.dellOrso.pathway.f) %in% modules.dellOrso.pathway.f$feature),])
+
+################
+# Venn diagrams
+################
 venn.modules <- venn(data = list(primary_data = modules.primary.module$feature,
                                  de_Micheli_data = modules.deMicheli.module$feature,
                                  dellOrso_data = modules.dellOrso.module.f$feature))
@@ -1180,28 +1180,40 @@ print(attr(venn.modules ,"intersections"))
 
 
 venn.pathways <- venn(data = list(primary_data = modules.primary.pathway$feature,
-                                 de_Micheli_data = modules.deMicheli.pathway$feature,
-                                 dellOrso_data = modules.dellOrso.pathway.f$feature))
+                                  de_Micheli_data = modules.deMicheli.pathway$feature,
+                                  dellOrso_data = modules.dellOrso.pathway.f$feature))
 
 # Print the intersections between datasets
 print(attr(venn.pathways ,"intersections"))
 
 
 venn.modules.f <- venn(data = list(primary_data = modules.primary.module$feature,
-                                 de_Micheli_data = modules.deMicheli.module.f$feature,
-                                 dellOrso_data = modules.dellOrso.module.f$feature))
+                                   de_Micheli_data = modules.deMicheli.module.f$feature,
+                                   dellOrso_data = modules.dellOrso.module.f$feature))
 
 # Print the intersections between datasets
 print(attr(venn.modules.f ,"intersections"))
 
 
 venn.pathways.f <- venn(data = list(primary_data = modules.primary.pathway$feature,
-                                 de_Micheli_data = modules.deMicheli.pathway.f$feature,
-                                 dellOrso_data = modules.dellOrso.pathway.f$feature))
+                                    de_Micheli_data = modules.deMicheli.pathway.f$feature,
+                                    dellOrso_data = modules.dellOrso.pathway.f$feature))
+
+# By pathway names
+venn.pathways.f.names <- venn(data = list(primary_data = pathway.names.primary$pathway_name,
+                                          de_Micheli_data = pathway.names.deMicheli.f$pathway_name,
+                                          dellOrso_data = pathway.names.dellOrso.f$pathway_name))
+
 
 # Print the intersections between datasets
 print(attr(venn.pathways.f ,"intersections"))
+print(attr(venn.pathways.f.names ,"intersections"))
 ```
+
+
+
+
+
 
 ## 5. DE modules / pathways between the primary data samples
 ### 5.1 DE modules
