@@ -13,7 +13,10 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 # Marker gene detection
-Here, we perform marker gene detection to identify differentially expressed (DE) genes between samples in the datasets
+This script performs DE analysis between the control and the cap samples and between the clusters. We use pairwise Wilcoxon Mann Whitney (WMW) test to test for DE and use the following thresholds: Log-fold-change >= Log2(1.5), AUC >= 0.8, and FDR <= 0.1.
+
+The aim is to identify which genes drive separation between the clusters identifies by the **Clustering.Rmd** script.
+
 
 ## 1. Load packages and data
 ### 1.1 Load packages
@@ -124,8 +127,8 @@ control.markers.wmw <- markers.primary.wmw[["control"]]
 # Save marker information to .csv file
 write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw.csv")
 
-# Print and save DE genes with fdr < 0.1 & Summary.AUC > 0.7
-de.genes <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.7), ]
+# Print and save DE genes with fdr <= 0.1 & Summary.AUC >= 0.8
+de.genes <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.8), ]
 print(rownames(de.genes))
 write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw_filtered.csv")
 
@@ -133,10 +136,14 @@ write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wm
 best.set <- control.markers.wmw[control.markers.wmw$Top <= 6,]
 
 # Extract the area under curves
-AUCs <- getMarkerEffects(best.set, prefix="AUC")
+AUCs.best <- getMarkerEffects(best.set, prefix="AUC")
+AUCs.de <- getMarkerEffects(de.genes, prefix="AUC")
 
 # Plot results in a heatmap
-pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples")
+pheatmap(AUCs.best, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples (Top 6)")
+pheatmap(AUCs.de, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples (FDR <= 0.1 & AUC >= 0.8)")
+
+
 ```
 
 **Markers by cluster**
