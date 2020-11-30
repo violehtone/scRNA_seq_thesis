@@ -13,7 +13,7 @@ setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 ```
 
 # Marker gene detection
-This script performs DE analysis between the control and the cap samples and between the clusters. We use pairwise Wilcoxon Mann Whitney (WMW) test to test for DE and use the following thresholds: Log-fold-change >= Log2(1.5), AUC >= 0.8, and FDR <= 0.1.
+This script performs DE analysis between the control and the cap samples and between the clusters. We use pairwise Wilcoxon Mann Whitney (WMW) test to test for DE and use the following thresholds: Log-fold-change >= Log2(1.5), and FDR <= 0.1 and AUCs of >= 0.7/0.8 for strong upregulation and AUC of 0.2-0.3 for strong downregulation.
 
 The aim is to identify which genes drive separation between the clusters identifies by the **Clustering.Rmd** script.
 
@@ -125,6 +125,10 @@ markers.primary.wmw <- findMarkers(denoised.sce,
 control.markers.wmw <- markers.primary.wmw[["control"]]
 cap50.markers.wmw <- markers.primary.wmw[["cap50"]]
 
+# Flip the direction of up / down regulation
+control.markers.wmw <- data.frame(as.data.frame(control.markers.wmw)[1:3], apply(control.markers.wmw[4:8], 2, function(x) {abs(1-x)}))
+cap50.markers.wmw <- data.frame(as.data.frame(cap50.markers.wmw)[1:3], apply(cap50.markers.wmw[4:8], 2, function(x) {abs(1-x)}))
+
 # Save marker information to .csv file
 write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw.csv")
 write.csv(cap50.markers.wmw, file = "./../saved/tables/cap50_marker_genes_wmw.csv")
@@ -135,7 +139,6 @@ de.genes.control <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (cont
 print(rownames(de.genes.control))
 write.csv(de.genes.control, file = "./../saved/tables/control_marker_genes_wmw_filtered.csv")
 
-
 strong.de.genes.control <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.8 |control.markers.wmw$summary.AUC <= 0.2), ]
 print(rownames(strong.de.genes.control))
 write.csv(strong.de.genes.control, file = "./../saved/tables/control_marker_genes_wmw_filtered_strong.csv")
@@ -145,16 +148,13 @@ de.genes.cap50 <- cap50.markers.wmw[(cap50.markers.wmw$FDR <= 0.1) & (cap50.mark
 print(rownames(de.genes.cap50))
 write.csv(de.genes.cap50, file = "./../saved/tables/cap50_marker_genes_wmw_filtered.csv")
 
-
 strong.de.genes.cap50 <- cap50.markers.wmw[(cap50.markers.wmw$FDR <= 0.1) & (cap50.markers.wmw$summary.AUC >= 0.8 |cap50.markers.wmw$summary.AUC <= 0.2), ]
 print(rownames(strong.de.genes.cap50))
 write.csv(strong.de.genes.cap50, file = "./../saved/tables/cap50_marker_genes_wmw_filtered_strong.csv")
 
-
 # Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control / cap50 sample
 best.set.control <- control.markers.wmw[control.markers.wmw$Top <= 6,]
 best.set.cap50 <- cap50.markers.wmw[cap50.markers.wmw$Top <= 6,]
-
 
 # Extract the area under curves
 ## Control
@@ -292,21 +292,24 @@ sce.deMicheli.f <- denoised.sce.deMicheli[, denoised.sce.deMicheli$cell_type %in
 sce.deMicheli.f$cell_type <- revalue(sce.deMicheli.f$cell_type, c("d0_MuSCs_and_progenitors" = "Day 0", "d5_MuSCs_and_progenitors" = "Day 5"))
 seurat.deMicheli <- as.Seurat(sce.deMicheli.f)
 Idents(seurat.deMicheli) <- "cell_type"
-ridge.deMicheli <- RidgePlot(seurat.deMicheli, features = genes.deMicheli, ncol = 2)
+ridge.deMicheli <- RidgePlot(seurat.deMicheli, features = genes.deMicheli)
 
 # Primary data
 seurat.primary <- as.Seurat(denoised.sce)
 Idents(seurat.primary) <- "sample"
-ridge.primary <- RidgePlot(seurat.primary, features = genes.primary, ncol = 2)
+ridge.primary <- RidgePlot(seurat.primary, features = genes.primary)
+
+ridge.deMicheli
+ridge.primary
 ```
 
 **Save ridge line plots as pdf**
 ```{r ridge-plots-pdf, eval=FALSE}
-pdf("./../saved/figures/ridge_plot_primary.pdf", width = 10, height = 25)
+pdf("./../saved/figures/ridge_plot_primary.pdf", width = 15, height = 10)
 ridge.primary
 dev.off()
 
-pdf("./../saved/figures/ridge_plot_deMicheli.pdf", width = 10, height = 25)
+pdf("./../saved/figures/ridge_plot_deMicheli.pdf", width = 15, height = 10)
 ridge.deMicheli
 dev.off()
 ```
