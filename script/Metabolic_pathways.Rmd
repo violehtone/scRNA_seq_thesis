@@ -1221,6 +1221,9 @@ markers.primary.wmw <- findMarkers(denoised.sce.m,
 # Choose markers for control sample
 control.markers.wmw <- markers.primary.wmw[["control"]]
 
+# Flip the direction of up / down regulation
+control.markers.wmw <- data.frame(as.data.frame(control.markers.wmw)[1:3], apply(control.markers.wmw[4:8], 2, function(x) {abs(1-x)}))
+
 # Save marker information to .csv file
 write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_metabolic_genes_wmw.csv")
 
