@@ -113,7 +113,7 @@ for(cluster in unique(denoised.sce$cluster.cc)) {
 
 
 ### 1.2 Pairwise comparisons with Wilcoxon rank sum (Wilcoxon-Mann-Whitney, wmw)  test
-**Markers by sample: Control**
+**Markers by sample: Control & Cap50 samples**
 ```{r de-genes-primary-data-samples-wmw}
 # Find markers by sample
 markers.primary.wmw <- findMarkers(denoised.sce, 
@@ -121,30 +121,111 @@ markers.primary.wmw <- findMarkers(denoised.sce,
                                    lfc = log2(1.5),
                                    test = "wilcox")
 
-# Choose markers for control sample
+# Choose markers for control & cap50 samples
 control.markers.wmw <- markers.primary.wmw[["control"]]
+cap50.markers.wmw <- markers.primary.wmw[["cap50"]]
 
 # Save marker information to .csv file
 write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw.csv")
+write.csv(cap50.markers.wmw, file = "./../saved/tables/cap50_marker_genes_wmw.csv")
 
-# Print and save DE genes with fdr <= 0.1 & Summary.AUC >= 0.8
-de.genes <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.8), ]
-print(rownames(de.genes))
-write.csv(control.markers.wmw, file = "./../saved/tables/control_marker_genes_wmw_filtered.csv")
+# Print and save DE genes with FDR and summary.AUC thresholds
+## Control
+de.genes.control <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.7 |control.markers.wmw$summary.AUC <= 0.3), ]
+print(rownames(de.genes.control))
+write.csv(de.genes.control, file = "./../saved/tables/control_marker_genes_wmw_filtered.csv")
 
-# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control sample
-best.set <- control.markers.wmw[control.markers.wmw$Top <= 6,]
+
+strong.de.genes.control <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.8 |control.markers.wmw$summary.AUC <= 0.2), ]
+print(rownames(strong.de.genes.control))
+write.csv(strong.de.genes.control, file = "./../saved/tables/control_marker_genes_wmw_filtered_strong.csv")
+
+## Cap 50
+de.genes.cap50 <- cap50.markers.wmw[(cap50.markers.wmw$FDR <= 0.1) & (cap50.markers.wmw$summary.AUC >= 0.7 |cap50.markers.wmw$summary.AUC <= 0.3), ]
+print(rownames(de.genes.cap50))
+write.csv(de.genes.cap50, file = "./../saved/tables/cap50_marker_genes_wmw_filtered.csv")
+
+
+strong.de.genes.cap50 <- cap50.markers.wmw[(cap50.markers.wmw$FDR <= 0.1) & (cap50.markers.wmw$summary.AUC >= 0.8 |cap50.markers.wmw$summary.AUC <= 0.2), ]
+print(rownames(strong.de.genes.cap50))
+write.csv(strong.de.genes.cap50, file = "./../saved/tables/cap50_marker_genes_wmw_filtered_strong.csv")
+
+
+# Subset top 6 genes (ranked by p -value) from each pairwise comparison involving control / cap50 sample
+best.set.control <- control.markers.wmw[control.markers.wmw$Top <= 6,]
+best.set.cap50 <- cap50.markers.wmw[cap50.markers.wmw$Top <= 6,]
+
 
 # Extract the area under curves
-AUCs.best <- getMarkerEffects(best.set, prefix="AUC")
-AUCs.de <- getMarkerEffects(de.genes, prefix="AUC")
+## Control
+AUCs.best.control <- getMarkerEffects(best.set.control, prefix="AUC")
+AUCs.de.control <- getMarkerEffects(de.genes.control, prefix="AUC")
+AUCs.de.strong.control <- getMarkerEffects(strong.de.genes.control, prefix="AUC")
+
+AUCs.de.control <- AUCs.de.control[, c("cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")]
+AUCs.de.strong.control <- AUCs.de.strong.control[, c("cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")]
+
+## Cap50
+AUCs.best.cap50 <- getMarkerEffects(best.set.cap50, prefix="AUC")
+AUCs.de.cap50 <- getMarkerEffects(de.genes.cap50, prefix="AUC")
+AUCs.de.strong.cap50 <- getMarkerEffects(strong.de.genes.cap50, prefix="AUC")
+
+AUCs.de.cap50 <- AUCs.de.cap50[, c("cap50_r4h", "cap50_r8h", "cap50_r16h", "control")]
+AUCs.de.strong.cap50 <- AUCs.de.strong.cap50[, c("cap50_r4h", "cap50_r8h", "cap50_r16h", "control")]
+
 
 # Plot results in a heatmap
-pheatmap(AUCs.best, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples (Top 6)")
-pheatmap(AUCs.de, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples (FDR <= 0.1 & AUC >= 0.8)")
+## Control
+pheatmap(AUCs.best.control, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples (Top 6)")
+pheatmap(AUCs.de.strong.control, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples (FDR <= 0.2 & AUC >= 0.8 | AUC <= 0.2)", fontsize_row = 3)
 
-
+## Cap50
+pheatmap(AUCs.best.cap50, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): cap50 vs. other samples (Top 6)")
+pheatmap(AUCs.de.strong.cap50, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): cap50 vs. other samples (FDR <= 0.2 & AUC >= 0.8 | AUC <= 0.2)", fontsize_row = 3)
 ```
+
+
+**Save heatmaps in pdf format**
+```{r save-de-genes-in-pdf-format, eval=FALSE}
+# Save plot as pdf
+## Control
+p.de.control <- pheatmap(AUCs.de.control, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21),
+                         main = "Marker genes (wmw): Control vs. other samples (FDR <= 0.1 & AUC >= 0.7 | AUC <= 0.3)",
+                         fontsize_row = 7, cluster_cols = F)
+
+p.de.strong.control <- pheatmap(AUCs.de.strong.control, breaks=seq(0, 1, length.out=21),
+                                color=viridis::viridis(21), main = "Marker genes (wmw): Control vs. other samples (FDR <= 0.1 & AUC >= 0.8 | AUC <= 0.2)",
+                                fontsize_row = 7, cluster_cols = F)
+
+
+pdf("./../saved/figures/de_genes_heatmap_control.pdf", width = 7, height = 45)
+p.de.control
+dev.off()
+
+pdf("./../saved/figures/de_genes_strong_heatmap_control.pdf", width = 7, height = 15)
+p.de.strong.control
+dev.off()
+
+## Cap50
+## cap50
+p.de.cap50 <- pheatmap(AUCs.de.cap50, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21),
+                         main = "Marker genes (wmw): cap50 vs. other samples (FDR <= 0.1 & AUC >= 0.7 | AUC <= 0.3)",
+                         fontsize_row = 7, cluster_cols = F)
+
+p.de.strong.cap50 <- pheatmap(AUCs.de.strong.cap50, breaks=seq(0, 1, length.out=21),
+                                color=viridis::viridis(21), main = "Marker genes (wmw): cap50 vs. other samples (FDR <= 0.1 & AUC >= 0.8 | AUC <= 0.2)",
+                                fontsize_row = 7, cluster_cols = F)
+
+
+pdf("./../saved/figures/de_genes_heatmap_cap50.pdf", width = 7, height = 45)
+p.de.cap50
+dev.off()
+
+pdf("./../saved/figures/de_genes_strong_heatmap_cap50.pdf", width = 7, height = 15)
+p.de.strong.cap50
+dev.off()
+```
+
 
 **Markers by cluster**
 ```{r de-genes-primary-data-cluster-wmw}
@@ -169,6 +250,7 @@ for(cluster in unique(denoised.sce$cluster)) {
   pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = paste("Marker genes (wmw): cluster:", cluster))
 }
 ```
+
 
 **Markers by cell cycle corrected clusters**
 ```{r de-genes-primary-data-cluster-wmw-cc}
