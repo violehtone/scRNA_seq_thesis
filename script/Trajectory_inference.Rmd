@@ -1142,10 +1142,25 @@ dev.off()
 
 ## 4. Saving of trajectory plots as R objects
 ```{r saving-of-traj-plots, eval=FALSE}
-# Save plots as R objects
+# Save plots as R objects without titles
+p.primary <- p.primary + ggtitle("", subtitle = "") + theme(legend.text = element_text(size = 16),
+                                                            legend.title = element_text(size = 20, face = "bold"),
+                                                            axis.title = element_text(size = 16))
+
 saveRDS(p.primary, "./../saved/R_objects/trajectory_plot_primary")
+
+p.primary.cc <- p.primary.cc + ggtitle("", subtitle = "")
 saveRDS(p.primary.cc, "./../saved/R_objects/trajectory_plot_primary_cc")
+
+p.deMicheli <- p.deMicheli + ggtitle("", subtitle = "") + theme(legend.text = element_text(size = 16),
+                                                                legend.title = element_text(size = 20, face = "bold"),
+                                                                axis.title = element_text(size = 16))
+
 saveRDS(p.deMicheli, "./../saved/R_objects/trajectory_plot_deMicheli")
+
+p.dellOrso <- p.dellOrso + ggtitle("", subtitle = "") + theme(legend.text = element_text(size = 16),
+                                                              legend.title = element_text(size = 20, face = "bold"),
+                                                              axis.title = element_text(size = 16))
 saveRDS(p.dellOrso, "./../saved/R_objects/trajectory_plot_dellOrso_f")
 ```
 
