@@ -63,6 +63,10 @@ denoised.sce.dellOrso.cc.genes <- denoised.sce.dellOrso[!(rownames(denoised.sce.
 # Load pre-saved prediction objects
 pred.deMicheli <- readRDS("./../saved/R_objects/pred_deMicheli")
 
+# Print the de genes used
+de.genes.pred.deMicheli <- metadata(pred.deMicheli)$common.genes
+print(de.genes.pred.deMicheli)
+
 # Assign cell types to primary data
 denoised.sce$cell_type_deMicheli <- pred.deMicheli$pruned.labels
 ```
@@ -438,6 +442,10 @@ table(denoised.sce$sample, pred.segments.d5$pruned.labels)
 ```{r load-singleR-annotation-d5-segments}
 pred.segments.d5 <- readRDS("./../saved/R_objects/pred_segments_d5")
 
+# Print the de genes used
+de.genes.pred.segments.d5 <- metadata(pred.segments.d5)$common.genes
+print(de.genes.pred.segments.d5)
+
 # Inspect the predictions
 tab.deMicheli.d5 <- table(denoised.sce$sample, pred.segments.d5$pruned.labels)
 ```
@@ -522,6 +530,13 @@ dev.off()
 # Load pre-saved prediction objects (with and without PMs)
 pred.dellOrso <- readRDS("./../saved/R_objects/pred_dellOrso")
 pred.dellOrso.f <- readRDS("./../saved/R_objects/pred_dellOrso_f")
+
+# Print the de genes used
+de.genes.pred.dellOrso <- metadata(pred.dellOrso)$common.genes
+print(de.genes.pred.dellOrso)
+
+de.genes.pred.dellOrso.f <- metadata(pred.dellOrso.f)$common.genes
+print(de.genes.pred.dellOrso.f)
 
 # Assign cell types to primary data
 denoised.sce$cell_type_dellOrso <- pred.dellOrso$pruned.labels
@@ -745,6 +760,13 @@ plotHeatmap(denoised.sce.cc.genes,
 dev.off()
 ```
 
+### 3.3 Save the DE genes used in SingleR predictions as .csv file
+```{r save-singler-de-genes-used-as-csv-file, eval=FALSE}
+write.csv(de.genes.pred.deMicheli, file = "./../saved/tables/de_genes_pred_deMicheli.csv")
+write.csv(de.genes.pred.segments.d5, file = "./../saved/tables/de_genes_pred_deMicheli_segments_d5MuSCs.csv")
+write.csv(de.genes.pred.dellOrso, file = "./../saved/tables/de_genes_pred_dellOrso.csv")
+write.csv(de.genes.pred.dellOrso.f, file = "./../saved/tables/de_genes_pred_dellOrso_no_pm.csv")
+```
 
 
 ## 4. Prediction of De Micheli cell types from Dell'Orso cell types and vice versa
