@@ -226,6 +226,39 @@ p.umap.cc
 dev.off()
 ```
 
+**Save UMAP plots as R objects (without titles)**
+```{r save-umap-plots-as-r-objects, eval=FALSE}
+p.umap.notitle <- plotReducedDim(denoised.sce, 
+                         colour_by = "cluster",
+                         text_by = "sample",
+                         dimred = "UMAP",
+                         point_alpha = 0.4,
+                         point_size = 1) +
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 16, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
+
+
+p.umap.notitle.cc <- plotReducedDim(denoised.sce.cc, 
+                            colour_by = "cluster.cc",
+                            text_by = "sample",
+                            dimred = "UMAP_cc",
+                            point_alpha = 0.4,
+                            point_size = 1) +
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(title = "Cluster", override.aes = list(size = 5, alpha = 1)))
+
+
+saveRDS(p.umap.notitle, file = "./../saved/R_objects/clustering_umap_plot")
+saveRDS(p.umap.notitle.cc, file = "./../saved/R_objects/clustering_umap_plot_cc")
+
+```
+
 
 
 ## 4. Clustering comparison
