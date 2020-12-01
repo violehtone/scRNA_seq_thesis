@@ -187,6 +187,15 @@ pheatmap(AUCs.de.strong.cap50, breaks=seq(0, 1, length.out=21), color=viridis::v
 
 **Save heatmaps in pdf format**
 ```{r save-de-genes-in-pdf-format, eval=FALSE}
+# Save as R object
+very.strong.de.genes.control <- control.markers.wmw[(control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.85 |control.markers.wmw$summary.AUC <= 0.15), ]
+AUCs.de.very.strong.control <- getMarkerEffects(very.strong.de.genes.control, prefix="AUC")
+AUCs.de.very.strong.control <- AUCs.de.very.strong.control[, c("cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")]
+
+p.de.strong.control.r <- pheatmap(AUCs.de.very.strong.control, breaks=seq(0, 1, length.out=21),
+                                color=viridis::viridis(21), cluster_cols = F)
+saveRDS(p.de.strong.control.r, file = "./../saved/R_objects/de_genes_plot_control")
+
 # Save plot as pdf
 ## Control
 p.de.control <- pheatmap(AUCs.de.control, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21),
