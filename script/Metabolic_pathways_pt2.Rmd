@@ -1164,8 +1164,15 @@ if(!exists("modules.dellOrso.pathway.f")) {modules.dellOrso.pathway.f <- readRDS
 
 # Get pathway name information
 pathway.names.primary <- rowData(sce.primary.pathway[(rownames(sce.primary.pathway) %in% modules.primary.pathway$feature),])
+pathway.names.deMicheli <- rowData(sce.deMicheli.pathway[(rownames(sce.deMicheli.pathway) %in% modules.deMicheli.pathway$feature),])
 pathway.names.deMicheli.f <- rowData(sce.deMicheli.pathway.f[(rownames(sce.deMicheli.pathway.f) %in% modules.deMicheli.pathway.f$feature),])
 pathway.names.dellOrso.f <- rowData(sce.dellOrso.pathway.f[(rownames(sce.dellOrso.pathway.f) %in% modules.dellOrso.pathway.f$feature),])
+
+# Get module name information
+module.names.primary <- rowData(sce.primary.module[(rownames(sce.primary.module) %in% modules.primary.module$feature),])
+module.names.deMicheli <- rowData(sce.deMicheli.module[(rownames(sce.deMicheli.module) %in% modules.deMicheli.module$feature),])
+module.names.deMicheli.f <- rowData(sce.deMicheli.module.f[(rownames(sce.deMicheli.module.f) %in% modules.deMicheli.module.f$feature),])
+module.names.dellOrso.f <- rowData(sce.dellOrso.module.f[(rownames(sce.dellOrso.module.f) %in% modules.dellOrso.module.f$feature),])
 
 ################
 # Venn diagrams
@@ -1182,8 +1189,13 @@ venn.pathways <- venn(data = list(primary_data = modules.primary.pathway$feature
                                   de_Micheli_data = modules.deMicheli.pathway$feature,
                                   dellOrso_data = modules.dellOrso.pathway.f$feature))
 
+venn.pathways.names <- venn(data = list(primary_data = pathway.names.primary$pathway_name,
+                                          de_Micheli_data = pathway.names.deMicheli$pathway_name,
+                                          dellOrso_data = pathway.names.dellOrso.f$pathway_name))
+
 # Print the intersections between datasets
 print(attr(venn.pathways ,"intersections"))
+print(attr(venn.pathways.names ,"intersections"))
 
 
 venn.modules.f <- venn(data = list(primary_data = modules.primary.module$feature,
@@ -1198,7 +1210,6 @@ venn.pathways.f <- venn(data = list(primary_data = modules.primary.pathway$featu
                                     de_Micheli_data = modules.deMicheli.pathway.f$feature,
                                     dellOrso_data = modules.dellOrso.pathway.f$feature))
 
-# By pathway names
 venn.pathways.f.names <- venn(data = list(primary_data = pathway.names.primary$pathway_name,
                                           de_Micheli_data = pathway.names.deMicheli.f$pathway_name,
                                           dellOrso_data = pathway.names.dellOrso.f$pathway_name))
@@ -1207,6 +1218,55 @@ venn.pathways.f.names <- venn(data = list(primary_data = pathway.names.primary$p
 # Print the intersections between datasets
 print(attr(venn.pathways.f ,"intersections"))
 print(attr(venn.pathways.f.names ,"intersections"))
+
+###########################################
+# Lists of all important modules / pathways
+###########################################
+# Modules
+all.shared.modules <- c(attr(venn.modules ,"intersections")$`primary_data:dellOrso_data`,
+                        attr(venn.modules ,"intersections")$`primary_data:de_Micheli_data`,
+                        attr(venn.modules ,"intersections")$`de_Micheli_data:dellOrso_data`,
+                        attr(venn.modules ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`) %>% unique()
+
+print(length(all.shared.modules))
+print(toString(all.shared.modules))
+
+# Modules (without muscle)
+all.shared.modules.f <- c(attr(venn.modules.f ,"intersections")$`primary_data:dellOrso_data`,
+                        attr(venn.modules.f ,"intersections")$`primary_data:de_Micheli_data`,
+                        attr(venn.modules.f ,"intersections")$`de_Micheli_data:dellOrso_data`,
+                        attr(venn.modules.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`) %>% unique()
+
+print(length(all.shared.modules.f))
+print(toString(all.shared.modules.f))
+
+# All unique pathways
+combined.modules <-c(all.shared.modules, all.shared.modules.f) %>% unique()
+print(combined.modules %>% length())
+print(combined.modules %>% toString())
+
+# Pathways
+all.shared.pathways <- c(attr(venn.pathways ,"intersections")$`primary_data:dellOrso_data`,
+                        attr(venn.pathways ,"intersections")$`primary_data:de_Micheli_data`,
+                        attr(venn.pathways ,"intersections")$`de_Micheli_data:dellOrso_data`,
+                        attr(venn.pathways ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`) %>% unique()
+
+print(length(all.shared.pathways))
+print(toString(all.shared.pathways))
+
+# Pathways (without muscle)
+all.shared.pathways.f <- c(attr(venn.pathways.f ,"intersections")$`primary_data:dellOrso_data`,
+                        attr(venn.pathways.f ,"intersections")$`primary_data:de_Micheli_data`,
+                        attr(venn.pathways.f ,"intersections")$`de_Micheli_data:dellOrso_data`,
+                        attr(venn.pathways.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`) %>% unique()
+
+print(length(all.shared.pathways.f))
+print(toString(all.shared.pathways.f))
+
+# All unique pathways
+combined.pathways <-c(all.shared.pathways, all.shared.pathways.f) %>% unique()
+print(combined.pathways %>% length())
+print(combined.pathways %>% toString())
 ```
 
 
@@ -1429,5 +1489,60 @@ write.csv(rowData(sce.dellOrso.module.important), file = "./../saved/tables/n_ge
 ```
 
 
+### 7. Plot the important shared pathways in trajectory heatmaps
+```{r filter-important-pathways-from-trajectory-heatmaps}
+# Primary data
+expr_sel.primary.pathway.important <- expr_sel.primary.pathway[, colnames(expr_sel.primary.pathway) %in% combined.pathways]
+pathway.mapping <- rowData(sce.primary.pathway[rownames(sce.primary.pathway) %in% colnames(expr_sel.primary.pathway.important)], )
+pathway.mapping <- pathway.mapping[colnames(expr_sel.primary.pathway.important), ]
+colnames(expr_sel.primary.pathway.important) <- pathway.mapping
+
+p.primary.pathways.important <- draw_trajectory_heatmap(expr_sel.primary.pathway.important,
+                                                        time = traj.primary$time,
+                                                        progression_group = group_name.primary.pathway,
+                                                        show_labels_row = TRUE)
+
+# De Micheli (all cell types)
+expr_sel.deMicheli.pathway.important <- expr_sel.deMicheli.pathway[, colnames(expr_sel.deMicheli.pathway) %in% combined.pathways]
+pathway.mapping <- rowData(sce.deMicheli.pathway[rownames(sce.deMicheli.pathway) %in% colnames(expr_sel.deMicheli.pathway.important)], )
+pathway.mapping <- pathway.mapping[colnames(expr_sel.deMicheli.pathway.important), ]
+colnames(expr_sel.deMicheli.pathway.important) <- pathway.mapping
+
+p.deMicheli.pathways.important <- draw_trajectory_heatmap(expr_sel.deMicheli.pathway.important,
+                                                        time = traj.deMicheli$time,
+                                                        progression_group = group_name.deMicheli.pathway,
+                                                        show_labels_row = TRUE)
+
+# De Micheli (without muscle cells)
+expr_sel.deMicheli.pathway.important.f <- expr_sel.deMicheli.pathway.f[, colnames(expr_sel.deMicheli.pathway.f) %in% combined.pathways]
+pathway.mapping <- rowData(sce.deMicheli.pathway.f[rownames(sce.deMicheli.pathway.f) %in% colnames(expr_sel.deMicheli.pathway.important.f)], )
+pathway.mapping <- pathway.mapping[colnames(expr_sel.deMicheli.pathway.important.f), ]
+colnames(expr_sel.deMicheli.pathway.important.f) <- pathway.mapping
+
+traj.deMicheli.time.pathway.f <-  traj.deMicheli$time[names(traj.deMicheli$time) %in% colnames(sce.deMicheli.pathway.f)]
+
+p.deMicheli.pathways.important.f <- draw_trajectory_heatmap(expr_sel.deMicheli.pathway.important.f,
+                                                            time = traj.deMicheli.time.pathway.f,
+                                                            progression_group = group_name.deMicheli.pathway.f,
+                                                            show_labels_row = TRUE)
+
+# Dell'Orso (without PMs)
+expr_sel.dellOrso.pathway.important.f <- expr_sel.dellOrso.pathway.f[, colnames(expr_sel.dellOrso.pathway.f) %in% combined.pathways]
+pathway.mapping <- rowData(sce.dellOrso.pathway.f[rownames(sce.dellOrso.pathway.f) %in% colnames(expr_sel.dellOrso.pathway.important.f)], )
+pathway.mapping <- pathway.mapping[colnames(expr_sel.dellOrso.pathway.important.f), ]
+colnames(expr_sel.dellOrso.pathway.important.f) <- pathway.mapping
+
+p.dellOrso.pathways.important.f <- draw_trajectory_heatmap(expr_sel.dellOrso.pathway.important.f,
+                                                            time = reverse_trajectory(traj.dellOrso)$time,
+                                                            progression_group = group_name.dellOrso.pathway.f,
+                                                            show_labels_row = TRUE)
+```
+**save heatmaps as R objects**
+```{r save-traj-heatmaps-as-R-objects, eval=FALSE}
+saveRDS(p.primary.pathways.important, file = "./../saved/R_objects/plot_primary_pathways_important")
+saveRDS(p.deMicheli.pathways.important, file = "./../saved/R_objects/plot_deMicheli_pathways_important")
+saveRDS(p.deMicheli.pathways.important.f, file = "./../saved/R_objects/plot_deMicheli_pathways_important_f")
+saveRDS(p.dellOrso.pathways.important.f, file = "./../saved/R_objects/plot_dellOrso_pathways_important")
+```
 
 
