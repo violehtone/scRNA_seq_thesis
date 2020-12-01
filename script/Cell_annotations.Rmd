@@ -385,7 +385,8 @@ df.values <- data.frame(segment = c(1:10),
                                 max(ordered_chunks.d5[[8]]),
                                 max(ordered_chunks.d5[[9]]),
                                 max(ordered_chunks.d5[[10]])))
-df.values
+
+print(df.values)
 
 # Label cells by their segment
 denoised.sce.deMicheli$segment.d5[colnames(denoised.sce.deMicheli) %in% names(ordered_chunks.d5[[1]])] <- "segment_1"
@@ -477,11 +478,11 @@ denoised.sce.deMicheli$primary.cells[other.cells] <- "other_cell_types"
 prog.group <- as.factor(denoised.sce.deMicheli$primary.cells)
 
 # Define a custom color palette (black / green)
-colpalette <- c('primary_data_cells' ="#009900",
-                'other_cell_types' = "#404040")
+colpalette <- c('primary_data_cells' ="#DC143C", ##009900
+                'other_cell_types' = "#A9A9A9") ##404040
 
 # Draw trajectory plot
-draw_trajectory_plot(space = space.deMicheli, 
+traj.plot.d5 <- draw_trajectory_plot(space = space.deMicheli, 
                      progression_group = prog.group,
                      progression_group_palette = colpalette,
                      path = traj.deMicheli$path,
@@ -491,8 +492,13 @@ draw_trajectory_plot(space = space.deMicheli,
   ggtitle("Trajectory inference",
           subtitle = "De Micheli et al. trajectory: Primary data cells shown on trajectory") +
   theme(plot.title = element_text(size = 20, face = "bold"),
-        plot.subtitle = element_text(size = 14),
-        axis.title = element_text(size = 16))
+                     plot.subtitle = element_text(size = 16),
+                     legend.text = element_text(size = 16),
+                     legend.title = element_text(size = 20, face = "bold"),
+                     axis.title = element_text(size = 16))
+
+traj.plot.d5
+
 ```
 
 ##### 2.3.2.4 Gene importances for Day 5 MuSCs
@@ -828,19 +834,29 @@ tab.dellOrso.f
 ## 'melt' tables
 df.deMicheli <- melt(t(tab.deMicheli))
 colnames(df.deMicheli) <- c("cell_type", "sample", "count")
+
 df.dellOrso <- melt(t(tab.dellOrso))
 colnames(df.dellOrso) <- c("cell_type", "sample", "count")
+
+df.dellOrso.f <- melt(t(tab.dellOrso.f))
+colnames(df.dellOrso.f) <- c("cell_type", "sample", "count")
 
 # Add missing cell types
 df.deMicheli.missing.rows <- data.frame("cell_type" = c(rep("d0_MuSCs_and_progenitors", 5), rep("d0_mature_skeletal_muscle", 5), rep("d7_mature_skeletal_muscle", 5)),
                                         "sample" = rep(c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"), 3),
                                         "count" = rep(0, 15))
+
 df.dellOrso.missing.rows <- data.frame("cell_type" = rep("homeostatic_MuSCs", 5),
+                                       "sample" = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"),
+                                       "count" = rep(0, 5))
+
+df.dellOrso.missing.rows.f <- data.frame("cell_type" = rep("Primary_MB", 5),
                                        "sample" = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"),
                                        "count" = rep(0, 5))
 
 df.deMicheli <- rbind(df.deMicheli, df.deMicheli.missing.rows)
 df.dellOrso <- rbind(df.dellOrso, df.dellOrso.missing.rows)
+df.dellOrso.f <- rbind(df.dellOrso.f, df.dellOrso.missing.rows.f)
 
 # De Micheli balloon plot
 balloon.deMicheli <- ggballoonplot(df.deMicheli, x = "sample", y = "cell_type", size = "count",
@@ -854,8 +870,16 @@ balloon.dellOrso <- ggballoonplot(df.dellOrso, x = "sample", y = "cell_type", si
   scale_fill_viridis_c(option = "C") +
   ggtitle("Dell'Orso et al. reference dataset: Mapping of primary data cells shown in a balloonplot")
 
+# Dell Orso balloon plot (without PMs)
+balloon.dellOrso.f <- ggballoonplot(df.dellOrso.f, x = "sample", y = "cell_type", size = "count",
+              fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("Dell'Orso et al. reference dataset: Mapping of primary data cells shown in a balloonplot")
+
 balloon.deMicheli
 balloon.dellOrso
+balloon.dellOrso.f
+
 ```
 
 
@@ -919,4 +943,18 @@ balloon.segments
 balloon.segments.d5
 
 ```
+
+## 6 Save cell annotation plots as R objects
+```{r save-plots-as-r-objects, eval=FALSE}
+# Balloon plots
+saveRDS(balloon.deMicheli + ggtitle("", subtitle = ""), file = "./../saved/R_objects/plot_balloon_deMicheli")
+saveRDS(balloon.dellOrso + ggtitle("", subtitle = ""), file = "./../saved/R_objects/plot_balloon_dellOrso")
+saveRDS(balloon.dellOrso.f + ggtitle("", subtitle = ""), file = "./../saved/R_objects/plot_balloon_dellOrso_f")
+saveRDS(balloon.segments + ggtitle("", subtitle = ""), file = "./../saved/R_objects/plot_balloon_segments")
+saveRDS(balloon.segments.d5 + ggtitle("", subtitle = ""), file = "./../saved/R_objects/plot_balloon_segments_d5")
+
+# Trajectories
+saveRDS(traj.plot.d5 + ggtitle("", subtitle = ""), file = "./../saved/R_objects/plot_cell_annotation_trajectory_d5")
+```
+
 
