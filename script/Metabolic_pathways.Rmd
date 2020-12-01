@@ -732,13 +732,45 @@ v.table.f <- venn(data = list(primary_data = modules.primary.m$feature,
 
 # Print the intersections between datasets
 print(attr(v.table.f ,"intersections"))
+
+# Shared genes between both Venn diagrams
+all.shared.m.genes <- c(attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`, 
+                        attr(v.table ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`) %>% unique()
+
+print(all.shared.m.genes %>% toString())
+
+# Genes shared with at least two trajectories
+every.shared.gene <- c(attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`,
+                       attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data`,
+                       attr(v.table.f ,"intersections")$`primary_data:dellOrso_data`,
+                       attr(v.table.f ,"intersections")$`de_Micheli_data:dellOrso_data`,
+                       attr(v.table ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`,
+                       attr(v.table ,"intersections")$`primary_data:de_Micheli_data`,
+                       attr(v.table ,"intersections")$`primary_data:dellOrso_data`,
+                       attr(v.table ,"intersections")$`de_Micheli_data:dellOrso_data`) %>% unique()
+
+print(length(every.shared.gene))
+print(every.shared.gene %>% toString())
+
+
+# Save Venn diagrams as R objects
+#saveRDS(v.table, file = "./../saved/R_objects/venn_metabolic_genes")
+#saveRDS(v.table.f, file = "./../saved/R_objects/venn_metabolic_genes_f")
 ```
 
 ### 3.6 DE analysis of the shared metabolic genes with high importance in predicting the ordering of cells on trajectories
 **T-test**
 ```{r de-analysis-of-metabolic-gimp-genes-ttest, eval=FALSE}
 # Get list of important genes from the Venn diagram
-important.m.genes <- attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+important.m.genes <- c(attr(v.table ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`,
+                       attr(v.table ,"intersections")$`primary_data:de_Micheli_data`,
+                       attr(v.table ,"intersections")$`primary_data:dellOrso_data`)
+
+important.m.genes.f <- c(attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`,
+                       attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data`,
+                       attr(v.table.f ,"intersections")$`primary_data:dellOrso_data`)
+
+all.important.genes <- c(important.m.genes, important.m.genes.f)
 
 # Compute gene importances
 markers.primary.gimp <- findMarkers(denoised.sce.m,
@@ -747,7 +779,14 @@ markers.primary.gimp <- findMarkers(denoised.sce.m,
 
 # Choose markers for control sample
 control.markers.gimp <- markers.primary.gimp[["control"]]
-control.markers.gimp <- control.markers.gimp[rownames(control.markers.gimp) %in% important.m.genes, ]
+control.markers.gimp <- control.markers.gimp[rownames(control.markers.gimp) %in% all.important.genes, ]
+
+# Inspect most upregulated and downregulated genes
+control.markers.gimp.up <- control.markers.gimp[control.markers.gimp$summary.AUC >= 0.7, ]
+control.markers.gimp.down <- control.markers.gimp[control.markers.gimp$summary.AUC <= 0.3, ]
+
+print(control.markers.gimp.up %>% rownames() %>% toString())
+print(control.markers.gimp.down %>% rownames() %>% toString())
 
 # Extract the marker effect sizes
 logFCs <- getMarkerEffects(control.markers.gimp)
@@ -759,7 +798,15 @@ pheatmap(logFCs, breaks=seq(-5, 5, length.out=101), main = "DE analysis: Importa
 **WMW test**
 ```{r de-analysis-of-metabolic-gimp-genes-wmwtest}
 # Get list of important genes from the Venn diagram
-important.m.genes <- attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`
+important.m.genes <- c(attr(v.table ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`,
+                       attr(v.table ,"intersections")$`primary_data:de_Micheli_data`,
+                       attr(v.table ,"intersections")$`primary_data:dellOrso_data`)
+
+important.m.genes.f <- c(attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data:dellOrso_data`,
+                       attr(v.table.f ,"intersections")$`primary_data:de_Micheli_data`,
+                       attr(v.table.f ,"intersections")$`primary_data:dellOrso_data`)
+
+all.important.genes <- c(important.m.genes, important.m.genes.f)
 
 # Compute gene importances
 markers.primary.gimp <- findMarkers(denoised.sce.m,
@@ -769,16 +816,34 @@ markers.primary.gimp <- findMarkers(denoised.sce.m,
 
 # Choose markers for control sample
 control.markers.gimp <- markers.primary.gimp[["control"]]
-control.markers.gimp <- control.markers.gimp[rownames(control.markers.gimp) %in% important.m.genes, ]
+control.markers.gimp <- control.markers.gimp[rownames(control.markers.gimp) %in% all.important.genes, ]
+
+# Flip the direction of up / down regulation
+control.markers.gimp <- data.frame(as.data.frame(control.markers.gimp)[1:3], apply(control.markers.gimp[4:8], 2, function(x) {abs(1-x)}))
 
 # Save marker information to .csv file
 write.csv(control.markers.gimp, file = "./../saved/tables/control_marker_gimp.csv")
 
+# Apply FDR threshold
+de.genes.gimp <- control.markers.gimp[(control.markers.gimp$FDR <= 0.1), ]
+
+de.genes.gimp.up <- de.genes.gimp[de.genes.gimp$summary.AUC >= 0.7, ]
+de.genes.gimp.down <- de.genes.gimp[de.genes.gimp$summary.AUC <= 0.3, ]
+
+print(de.genes.gimp.up %>% rownames() %>% toString())
+print(de.genes.gimp.down %>% rownames() %>% toString())
+
 # Extract the area under curves
-AUCs <- getMarkerEffects(control.markers.gimp, prefix="AUC")
+AUCs <- getMarkerEffects(de.genes.gimp, prefix="AUC")
+AUCs <- AUCs[, c("cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")]
 
 # Plot results in a heatmap
-pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "DE analysis: Important metabolic marker genes (WMW test): Control vs. other samples")
+de.important.m.genes <- pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "DE analysis: Important metabolic marker genes (WMW test):\nControl vs. other samples", cluster_cols = FALSE)
+
+de.important.m.genes
+
+# Save as R object
+#saveRDS(de.important.m.genes, file = "./../saved/R_objects/plot_de_important_m_genes")
 ```
 
 
@@ -788,6 +853,10 @@ pheatmap(AUCs, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main
 ```{r load-singleR-predictions-metabolic-genes}
 # Load prediction objects
 pred.deMicheli.m <- readRDS("./../saved/R_objects/pred_deMicheli_m")
+
+# Print the de genes used
+de.genes.pred.deMicheli.m <- metadata(pred.deMicheli.m)$common.genes
+print(de.genes.pred.deMicheli.m)
 ```
 
 #### 4.1.2 Predict cell types (optional)
@@ -807,6 +876,34 @@ saveRDS(pred.deMicheli.m, file = "./../saved/R_objects/pred_deMicheli_m")
 tab.deMicheli.m <- t(table(pred.deMicheli.m$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.deMicheli.m
 ```
+
+**balloon plots**
+```{r balloon-plot-pred-deMicheli-m}
+df.deMicheli.m <- melt(t(tab.deMicheli.m))
+colnames(df.deMicheli.m) <- c("cell_type", "sample", "count")
+
+df.deMicheli.m.missing.rows <- data.frame("cell_type" = c(rep("d0_MuSCs_and_progenitors", 5),
+                                                        rep("d0_mature_skeletal_muscle", 5),
+                                                        rep("d7_mature_skeletal_muscle", 5),
+                                                        rep("d7_MuSCs_and_progenitors", 5)),
+                                        "sample" = rep(c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"), 4),
+                                        "count" = rep(0, 20))
+
+df.deMicheli.m <- rbind(df.deMicheli.m, df.deMicheli.m.missing.rows)
+
+balloon.deMicheli.m <- ggballoonplot(df.deMicheli.m, x = "sample", y = "cell_type", size = "count",
+                                   fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("De Micheli et al. reference dataset: Mapping of primary data cells")
+
+
+balloon.deMicheli.m
+
+# Save as R object
+saveRDS(balloon.deMicheli.m, file = "./../saved/R_objects/plot_balloon_deMicheli_m")
+```
+
+
 
 #### 4.1.4 Diagnostic plots
 **De Micheli**
@@ -885,6 +982,13 @@ dev.off()
 # Load prediction objects
 pred.deMicheli.m.no.muscle <- readRDS("./../saved/R_objects/pred_deMicheli_m_no_muscle")
 pred.dellOrso.m.no.pm <- readRDS("./../saved/R_objects/pred_dellOrso_m_no_pm")
+
+# Print the de genes used
+de.genes.pred.deMicheli.m.no.muscle <- metadata(pred.deMicheli.m.no.muscle)$common.genes
+print(de.genes.pred.deMicheli.m.no.muscle)
+
+de.genes.pred.dellOrso.m.no.pm <- metadata(pred.dellOrso.m.no.pm)$common.genes
+print(de.genes.pred.dellOrso.m.no.pm)
 
 # Filter muscle / pm cells
 muscle_cells <- denoised.sce.deMicheli.m$cell_type == "d0_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type =="d5_mature_skeletal_muscle" | denoised.sce.deMicheli.m$cell_type == "d7_mature_skeletal_muscle"
@@ -1016,6 +1120,13 @@ dev.off()
 # Load prediction objects
 pred.deMicheli.important.genes <- readRDS("./../saved/R_objects/pred_deMicheli_important_genes")
 pred.dellOrso.important.genes <- readRDS("./../saved/R_objects/pred_dellOrso_important_genes_f")
+
+# Print the de genes used
+de.genes.pred.deMicheli.important.genes <- metadata(pred.deMicheli.important.genes)$common.genes
+print(de.genes.pred.deMicheli.important.genes)
+
+de.genes.pred.dellOrso.important.genes <- metadata(pred.dellOrso.important.genes)$common.genes
+print(de.genes.pred.dellOrso.important.genes)
 
 # Get the sets of important genes
 important.genes.deMicheli <- modules.deMicheli.m$feature
@@ -1185,6 +1296,14 @@ plotHeatmap(primary.important.dellOrso,
 dev.off()
 ```
 
+### 4.4 Save the DE genes used in SingleR predictions as .csv file
+```{r save-singler-de-genes-used-as-csv-file, eval=FALSE}
+write.csv(de.genes.pred.deMicheli.m, file = "./../saved/tables/de_genes_pred_deMicheli_m.csv")
+write.csv(de.genes.pred.deMicheli.m.no.muscle, file = "./../saved/tables/de_genes_pred_deMicheli_m_no_muscle.csv")
+write.csv(de.genes.pred.dellOrso.m.no.pm, file = "./../saved/tables/de_genes_pred_dellOrso_m_no_pm.csv")
+write.csv(de.genes.pred.deMicheli.important.genes, file = "./../saved/tables/de_genes_pred_deMicheli_important_genes.csv")
+write.csv(pred.dellOrso.important.genes, file = "./../saved/tables/de_genes_pred_dellOrso_important_genes.csv")
+```
 
 
 ## 5. Differential expression (DE) analysis with metabolic genes
@@ -1299,3 +1418,4 @@ gridExtra::grid.arrange(marker.gene.plots$Cth, marker.gene.plots$Taldo1, marker.
                         marker.gene.plots$Eno3, marker.gene.plots$Atp6v1g1, marker.gene.plots$Hgsnat, marker.gene.plots$Atp6v0b, marker.gene.plots$Hexa, marker.gene.plots$Uap1l1,
                         marker.gene.plots$Aldh2, ncol = 4)
 ```
+
