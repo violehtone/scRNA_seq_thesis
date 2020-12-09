@@ -224,13 +224,19 @@ for(gene in names(prog.groups)) {
 }
 
 # Plot the results
-gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1, marker.gene.plots$tnnt2, marker.gene.plots$tnnt3, marker.gene.plots$pax7, 
-                        marker.gene.plots$hes1, marker.gene.plots$myf5, marker.gene.plots$myod, marker.gene.plots$ccne1, marker.gene.plots$eifs,
-                        marker.gene.plots$ccnd1, marker.gene.plots$ccnd2, marker.gene.plots$myog, marker.gene.plots$cdkn1a, marker.gene.plots$gas1,
-                        ncol = 3)
+p.marker.gene.plots <- gridExtra::grid.arrange(marker.gene.plots$cdh15, marker.gene.plots$tnnt1,
+                                               marker.gene.plots$tnnt2, marker.gene.plots$tnnt3,
+                                               marker.gene.plots$pax7, marker.gene.plots$hes1,
+                                               marker.gene.plots$myf5, marker.gene.plots$myod,
+                                               marker.gene.plots$ccne1, marker.gene.plots$eifs,
+                                               marker.gene.plots$ccnd1, marker.gene.plots$ccnd2,
+                                               marker.gene.plots$myog, marker.gene.plots$cdkn1a,
+                                               marker.gene.plots$gas1, ncol = 2)
+
+p.marker.gene.plots
 ```
 
-**EXTRA: Trajectory inference with all genes (but only Control, Cap50, and Cap50_r16h groups)**
+**Trajectory inference with all genes (but only Control, Cap50, and Cap50_r16h groups)**
 ```{r primary-data-traj-inference-filtered}
 # Create expression and sample objects
 denoised.sce.f <- denoised.sce[, denoised.sce$sample %in% c("control", "cap50", "cap50_r16h")]
