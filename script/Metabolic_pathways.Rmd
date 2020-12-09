@@ -875,11 +875,20 @@ saveRDS(pred.deMicheli.m, file = "./../saved/R_objects/pred_deMicheli_m")
 # De Micheli
 tab.deMicheli.m <- t(table(pred.deMicheli.m$pruned.labels, denoised.sce.m$sample)[, c("control", "cap50", "cap50_r4h","cap50_r8h","cap50_r16h")])
 tab.deMicheli.m
+
+# Perform chi-seq test
+chisq.deMicheli.m <- chisq.test(tab.deMicheli.m)
+
+# Print some statistics
+chisq.deMicheli.m$p.value
+chisq.deMicheli.m$expected
+chisq.deMicheli.m$residuals
 ```
 
 **balloon plots**
 ```{r balloon-plot-pred-deMicheli-m}
 df.deMicheli.m <- melt(t(tab.deMicheli.m))
+
 colnames(df.deMicheli.m) <- c("cell_type", "sample", "count")
 
 df.deMicheli.m.missing.rows <- data.frame("cell_type" = c(rep("d0_MuSCs_and_progenitors", 5),
@@ -904,6 +913,35 @@ saveRDS(balloon.deMicheli.m, file = "./../saved/R_objects/plot_balloon_deMicheli
 ```
 
 
+**DE analysis between the control cells mapping to mature muscle**
+```{r de-analysis-of-control-cells-mapping-to-musc-and-muscle, eval=FALSE}
+# Assign de Micheli cell types to primary data and inspect sample vs. prediction
+denoised.sce.m.control <- denoised.sce.m
+denoised.sce.m.control$cell_type_deMicheli_m <- pred.deMicheli.m$pruned.labels
+denoised.sce.m.control <- denoised.sce.m.control[, denoised.sce.m.control$sample == "control"]
+
+# Inspect the amount of cells belonging to the cell types
+table(denoised.sce.m.control$sample, denoised.sce.m.control$cell_type_deMicheli_m)
+
+# Perform DE analysis
+markers.control.wmw <- findMarkers(denoised.sce.m.control,
+                                   groups = denoised.sce.m.control$cell_type_deMicheli_m,
+                                   lfc = log2(1.5),
+                                   test="wilcox")
+
+# Choose markers for the muscle sample
+muscle.markers.wmw <- markers.control.wmw[["d5_mature_skeletal_muscle"]]
+
+# Flip the direction of up / down regulation
+muscle.markers.wmw <- data.frame(as.data.frame(muscle.markers.wmw)[1:3], apply(muscle.markers.wmw[4:5], 2, function(x) {abs(1-x)}))
+
+# apply thresholds
+muscle.markers.wmw <- muscle.markers.wmw[(muscle.markers.wmw$FDR <= 0.1) & (muscle.markers.wmw$summary.AUC >= 0.7 |muscle.markers.wmw$summary.AUC <= 0.3), ]
+
+muscle.markers.wmw
+```
+
+
 
 #### 4.1.4 Diagnostic plots
 **De Micheli**
@@ -921,6 +959,14 @@ plotScoreDistribution(results = pred.deMicheli.m, show = "delta.med")
 # Markers
 all.markers.deMicheli <- metadata(pred.deMicheli.m)$de.genes
 denoised.sce.m$cell_type_deMicheli.m <- pred.deMicheli.m$labels
+
+# Delta for only control cells
+# pred.deMicheli.m.control <- pred.deMicheli.m[rownames(pred.deMicheli.m) %in% colnames(denoised.sce.m.control), ]
+# 
+# # Assign delta
+# pred.deMicheli.m.control <- na.omit(pred.deMicheli.m.control)
+# pred.deMicheli.m.control$delta <- getDeltaFromMedian(pred.deMicheli.m.control)
+
 ```
 
 **Pdf heatmaps**
