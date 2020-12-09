@@ -182,6 +182,17 @@ pheatmap(AUCs.de.strong.control, breaks=seq(0, 1, length.out=21), color=viridis:
 ## Cap50
 pheatmap(AUCs.best.cap50, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): cap50 vs. other samples (Top 6)")
 pheatmap(AUCs.de.strong.cap50, breaks=seq(0, 1, length.out=21), color=viridis::viridis(21), main = "Marker genes (wmw): cap50 vs. other samples (FDR <= 0.2 & AUC >= 0.8 | AUC <= 0.2)", fontsize_row = 3)
+
+
+# Count the number of upregulated and downregulated genes
+n_upregulated = nrow(de.genes.control[de.genes.control$summary.AUC >= 0.7, ])
+n_downregulated = nrow(de.genes.control[de.genes.control$summary.AUC <= 0.3, ])
+
+print(paste0("Number of upregulated genes in cap samples: ", n_upregulated))
+print(paste0("Number of downregulated genes in cap samples: ", n_downregulated))
+
+
+
 ```
 
 
@@ -195,6 +206,14 @@ AUCs.de.very.strong.control <- AUCs.de.very.strong.control[, c("cap50", "cap50_r
 p.de.strong.control.r <- pheatmap(AUCs.de.very.strong.control, breaks=seq(0, 1, length.out=21),
                                 color=viridis::viridis(21), cluster_cols = F)
 saveRDS(p.de.strong.control.r, file = "./../saved/R_objects/de_genes_plot_control")
+
+# Top de genes
+de.genes.control.best <- control.markers.wmw[(control.markers.wmw$Top <= 30) & (control.markers.wmw$FDR <= 0.1) & (control.markers.wmw$summary.AUC >= 0.7 |control.markers.wmw$summary.AUC <= 0.3), ]
+AUCs.de.control.best <- getMarkerEffects(de.genes.control.best, prefix="AUC")
+AUCs.de.control.best <- AUCs.de.control.best[, c("cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h")]
+p.de.control.best <- pheatmap(AUCs.de.control.best, breaks=seq(0, 1, length.out=21),
+                                color=viridis::viridis(21), cluster_cols = F)
+
 
 # Save plot as pdf
 ## Control
