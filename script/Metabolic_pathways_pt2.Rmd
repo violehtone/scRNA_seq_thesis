@@ -1267,6 +1267,15 @@ print(toString(all.shared.pathways.f))
 combined.pathways <-c(all.shared.pathways, all.shared.pathways.f) %>% unique()
 print(combined.pathways %>% length())
 print(combined.pathways %>% toString())
+
+#########
+# Venn De Micheli with and without muscle
+#########
+venn.deMicheli.pathways <- venn(data = list(de_Micheli_data = pathway.names.deMicheli$pathway_name,
+                                            de_Micheli_data_f = pathway.names.deMicheli.f$pathway_name))
+print(attr(venn.deMicheli.pathways ,"intersections"))
+
+
 ```
 
 
@@ -1537,12 +1546,15 @@ p.dellOrso.pathways.important.f <- draw_trajectory_heatmap(expr_sel.dellOrso.pat
                                                             progression_group = group_name.dellOrso.pathway.f,
                                                             show_labels_row = TRUE)
 ```
-**save heatmaps as R objects**
+**save heatmaps & Venn diagrams as R objects**
 ```{r save-traj-heatmaps-as-R-objects, eval=FALSE}
 saveRDS(p.primary.pathways.important, file = "./../saved/R_objects/plot_primary_pathways_important")
 saveRDS(p.deMicheli.pathways.important, file = "./../saved/R_objects/plot_deMicheli_pathways_important")
 saveRDS(p.deMicheli.pathways.important.f, file = "./../saved/R_objects/plot_deMicheli_pathways_important_f")
 saveRDS(p.dellOrso.pathways.important.f, file = "./../saved/R_objects/plot_dellOrso_pathways_important")
+
+saveRDS(venn.pathways.names, file = "./../saved/R_objects/plot_venn_metabolic_pathways_names")
+saveRDS(venn.pathways.f.names, file = "./../saved/R_objects/plot_venn_metabolic_pathways_names_f")
 ```
 
 
