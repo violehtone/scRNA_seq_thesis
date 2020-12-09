@@ -47,7 +47,20 @@ pdf("./../saved/figures/thesis_figure_1_traj_plots.pdf", width = 18, height = 14
 traj.plots2
 dev.off()
 
+# Without cc corrected
+traj.plots3a <- ggarrange(p.primary, p.dellOrso,
+                         ncol = 2, nrow = 1, align = "h",
+                         labels = c("A", "B"))
+traj.plots3b <- ggarrange(p.deMicheli,
+                          ncol = 1, nrow = 1,
+                          labels = c("C"))                         
 
+traj.plots3.final <- ggarrange(traj.plots3a, traj.plots3b,
+                               ncol = 1, nrow = 2, align = "h")
+
+pdf("./../saved/figures/thesis_figure_1_traj_plots_without_cc.pdf", width = 18, height = 14)
+traj.plots3.final
+dev.off()
 
 ###########################################################
 # Figure 2: Cell annotation balloon plots and trajectories
@@ -102,6 +115,24 @@ dev.off()
 
 
 ###########################################################
+# Extra: SingleR annotations
+###########################################################
+# Read all plot files
+# Combine balloon plots
+balloon.plots1.new <- ggarrange(balloon.deMicheli + theme(legend.position = "none"),
+                            balloon.deMicheli.m + ggtitle("", subtitle = ""),
+                            ncol = 2, nrow = 1, align = "hv", labels = c("A", "B"))
+
+# Combine trajectory and balloon plots
+figure2.new <- ggarrange(balloon.plots1.new, balloon.plots2, traj.plot, align = "hv", nrow = 3, ncol = 1)
+
+pdf("./../saved/figures/thesis_figure_extra_balloon_plots.pdf", width = 10, height = 12)
+figure2.new
+dev.off()
+
+
+
+###########################################################
 # Figure 5: Pathway expression dynamics
 ###########################################################
 p.primary.pathways.important <- readRDS("./../saved/R_objects/plot_primary_pathways_important")
@@ -115,7 +146,17 @@ figure5 <- ggarrange(p.primary.pathways.important[[4]],
                      p.dellOrso.pathways.important.f[[4]],
                      ncol = 2, nrow = 2, labels = c("A", "B", "C", "D"))
 
-pdf("./../saved/figures/thesis_figure_5.pdf", width = 20, height = 20)
+pdf("./../saved/figures/thesis_figure_5.pdf", width = 18, height = 7)
 figure5
 dev.off()
 
+figure5_venn <- ggarrange(p.primary.pathways.important[[4]],
+                     p.deMicheli.pathways.important[[4]],
+                     p.deMicheli.pathways.important.f[[4]],
+                     p.dellOrso.pathways.important.f[[4]],
+                     NULL,NULL,
+                     ncol = 2, nrow = 3, labels = c("A", "B", "C", "D", "E", "F"))
+
+pdf("./../saved/figures/thesis_figure_5_venn.pdf", width = 18, height = 10)
+figure5_venn
+dev.off()
