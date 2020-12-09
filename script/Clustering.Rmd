@@ -213,6 +213,64 @@ p.umap.cc <- plotReducedDim(denoised.sce.cc,
 
 p.umap
 p.umap.cc
+
+## UMAP plots by cell cycle phases
+p.umap.phase <- plotReducedDim(denoised.sce, 
+                         colour_by = "Phase",
+                         text_by = "sample",
+                         dimred = "UMAP",
+                         point_alpha = 0.4,
+                         point_size = 1) +
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(title = "Phase", override.aes = list(size = 3, alpha = 1)))
+
+denoised.sce.cc$Phase2 <- denoised.sce$Phase2
+p.umap.phase.cc <- plotReducedDim(denoised.sce.cc, 
+                         colour_by = "Phase",
+                         text_by = "sample",
+                         dimred = "UMAP_cc",
+                         point_alpha = 0.4,
+                         point_size = 1) +
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(title = "Phase", override.aes = list(size = 3, alpha = 1)))
+
+
+p.umap.phase2 <- plotReducedDim(denoised.sce, 
+                         colour_by = "Phase2",
+                         text_by = "sample",
+                         dimred = "UMAP",
+                         point_alpha = 0.4,
+                         point_size = 1) +
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(title = "Phase", override.aes = list(size = 3, alpha = 1)))
+
+denoised.sce.cc$Phase2 <- denoised.sce$Phase2
+p.umap.phase2.cc <- plotReducedDim(denoised.sce.cc, 
+                         colour_by = "Phase2",
+                         text_by = "sample",
+                         dimred = "UMAP_cc",
+                         point_alpha = 0.4,
+                         point_size = 1) +
+  theme(legend.text = element_text(size = 16),
+        legend.title = element_text(size = 20, face = "bold"),
+        axis.title = element_text(size = 20, face = "bold")) +
+  scale_fill_discrete(type = c("#E41A1C", "#377EB8", "#4DAF4A", "#FFFF33", "#FF7F00"),
+                      guide = guide_legend(title = "Phase", override.aes = list(size = 3, alpha = 1)))
+
+gridExtra::grid.arrange(p.umap.phase, p.umap.phase.cc, ncol = 1)
+gridExtra::grid.arrange(p.umap.phase2, p.umap.phase2.cc, ncol = 1)
+
+
+
 ```
 
 
