@@ -38,6 +38,7 @@ library(RColorBrewer)
 library(gridExtra)
 library(gplots)
 library(ggplot2)
+library(ggpubr)
 ```
 
 ### 1.2 Load pre-calculated data
