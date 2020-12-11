@@ -850,9 +850,9 @@ df.dellOrso.missing.rows <- data.frame("cell_type" = rep("homeostatic_MuSCs", 5)
                                        "sample" = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"),
                                        "count" = rep(0, 5))
 
-df.dellOrso.missing.rows.f <- data.frame("cell_type" = rep("Primary_MB", 5),
-                                       "sample" = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"),
-                                       "count" = rep(0, 5))
+# df.dellOrso.missing.rows.f <- data.frame("cell_type" = rep("Primary_MB", 5),
+#                                        "sample" = c("control", "cap50", "cap50_r4h", "cap50_r8h", "cap50_r16h"),
+#                                        "count" = rep(0, 5))
 
 df.deMicheli <- rbind(df.deMicheli, df.deMicheli.missing.rows)
 df.dellOrso <- rbind(df.dellOrso, df.dellOrso.missing.rows)
