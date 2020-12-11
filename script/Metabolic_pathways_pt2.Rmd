@@ -1275,6 +1275,9 @@ venn.deMicheli.pathways <- venn(data = list(de_Micheli_data = pathway.names.deMi
                                             de_Micheli_data_f = pathway.names.deMicheli.f$pathway_name))
 print(attr(venn.deMicheli.pathways ,"intersections"))
 
+print(union(pathway.names.deMicheli$pathway_name, pathway.names.deMicheli.f$pathway_name))
+print(toString(union(pathway.names.deMicheli$pathway_name, pathway.names.deMicheli.f$pathway_name)))
+
 
 ```
 

@@ -1,5 +1,6 @@
 library(ggplot2)
 library(ggpubr)
+library(ggplots)
 setwd(dirname(rstudioapi::getActiveDocumentContext()$path))
 
 ###########################################################
@@ -91,6 +92,22 @@ pdf("./../saved/figures/thesis_figure_2.pdf", width = 10, height = 12)
 figure2
 dev.off()
 
+###########################################################
+# Figure 6: Final version
+###########################################################
+plot1 <- ggarrange(balloon.deMicheli + theme(legend.position = "none"),
+                   balloon.dellOrso.f,
+                   ncol = 2, nrow = 1, align = "hv", labels = c("A", "B"))
+plot2 <- ggarrange(balloon.segments.d5 + theme(legend.position = "none"),
+                   traj.plot.d5,
+                   ncol = 2, nrow = 1, align = "hv", labels = c("C", "D"))
+
+figure3.final <- ggarrange(plot1, plot2, align = "hv", nrow = 2, ncol = 1)
+
+pdf("./../saved/figures/thesis_figure_6_final.pdf", width = 12, height = 10)
+figure3.final
+dev.off()
+
 
 ###########################################################
 # Figure 3: Cell annotation balloon plots and trajectories
@@ -108,7 +125,7 @@ balloon.de.plot <- ggarrange(balloon.deMicheli.m + ggtitle("", subtitle = ""),
                              ncol = 2, nrow = 2, labels = c("A", "B", "C", "D"))
 
 # Save as pdf
-pdf("./../saved/figures/thesis_figure_3.pdf", width = 10, height = 10)
+pdf("./../saved/figures/thesis_figure_3.pdf", width = 12, height = 10)
 balloon.de.plot
 dev.off()
 
@@ -160,3 +177,14 @@ figure5_venn <- ggarrange(p.primary.pathways.important[[4]],
 pdf("./../saved/figures/thesis_figure_5_venn.pdf", width = 18, height = 10)
 figure5_venn
 dev.off()
+
+
+## table ##
+pathway.class.tb <- read.csv("./../saved/tables/pathway_type_table.csv")
+pathway.class.tb.melt <- melt(pathway.class.tb)
+
+ggballoonplot(pathway.class.tb, x = "sample", y = "cell_type", size = "count",
+                                     fill = "count", ggtheme = theme_bw()) +
+  scale_fill_viridis_c(option = "C") +
+  ggtitle("De Micheli et al. reference dataset: Mapping of primary data cells")
+
